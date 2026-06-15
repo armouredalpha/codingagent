@@ -1,0 +1,41 @@
+You are scoring a batch of ROS2 Humble coding-assessment questions on three
+subjective quality axes. Each question is a real engineering ticket a candidate
+must implement.
+
+Rate each question on:
+
+1. realism_score (0-100): how closely it resembles a real industrial robotics
+   engineering ticket. Reward a named robot/domain, concrete ROS interfaces
+   (topics, services, message types), measurable acceptance criteria, and a
+   plausible failure/feature framing. Penalise toy phrasing ("hello world",
+   "foo/bar", "example"), vague objectives, and missing interfaces.
+
+2. hiring_signal_score (0-100): how strong a hiring signal a correct solution
+   gives an interviewer. Reward integration of multiple skills, debugging/fixing
+   real behaviour, end-to-end tasks, and realistic ROS communication. Penalise
+   trivial single-call tasks that anyone could pass.
+
+3. market_readiness: the readiness level a candidate who consistently solves
+   questions like this demonstrates. Choose EXACTLY one of:
+   "Beginner", "Employable", "Job Ready", "Industry Ready",
+   "Advanced Industry Ready".
+
+Return ONLY this JSON (no markdown, no prose):
+
+{
+  "results": [
+    {
+      "id": "<question id, copied exactly>",
+      "realism_score": <int 0-100>,
+      "realism_reasons": ["<short reason>", "..."],
+      "hiring_signal_score": <int 0-100>,
+      "hiring_reasons": ["<short reason>", "..."],
+      "market_readiness": "<one of the five levels>",
+      "market_reasons": ["<short reason>", "..."]
+    }
+  ]
+}
+
+Score every question. Copy each "id" exactly. Questions:
+
+{questions}

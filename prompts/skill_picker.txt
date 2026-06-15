@@ -1,0 +1,25 @@
+You select ONE skill from a list based on user constraints.
+
+USER CONSTRAINTS:
+difficulty:     {difficulty}
+bloom_level:    {bloom_level}
+domain:         {domain}
+
+AVAILABLE SKILLS:
+{all_skills_list}
+
+ALREADY_GENERATED:
+{already_generated}
+
+SELECT the ONE skill that:
+1. Matches the difficulty tier (EXACT match preferred)
+2. Targets the Bloom level (equals or higher is OK)
+3. Fits the domain (or is cross-domain if unspecified)
+4. Is NOT in already_generated list
+5. Is distinct and testable in a 30-45 minute question
+
+OUTPUT ONLY JSON (no markdown, no text):
+{
+  "selected_skill": "exact skill name from list",
+  "reasoning": "one sentence why this matches"
+}

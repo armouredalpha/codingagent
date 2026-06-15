@@ -1,0 +1,1432 @@
+  "questions": [
+    {
+      "question_id": "niat-1",
+      "title": "ROS2 Exercise: Classes, Attributes and Instance Methods",
+      "difficulty": "easy_easy",
+      "skills_required": [
+        "class definition",
+        "instance attributes",
+        "rclpy basics"
+      ],
+      "confidence_predicted_by_system": 88.5,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": true,
+          "score": 92,
+          "time_minutes": 18,
+          "student_confidence": 85,
+          "errors": []
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 12,
+          "student_confidence": 95,
+          "errors": []
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 8,
+          "student_confidence": 99,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "question_id": "niat-2",
+      "title": "ROS2 Exercise: Using 'self' to access private attributes",
+      "difficulty": "medium",
+      "skills_required": [
+        "self reference",
+        "private attributes",
+        "ROS2 services",
+        "odometry subscriber"
+      ],
+      "confidence_predicted_by_system": 72.0,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": false,
+          "score": 58,
+          "time_minutes": 45,
+          "student_confidence": 45,
+          "errors": [
+            "Confusion with private attribute naming (name mangling)",
+            "Service callback signature mismatch"
+          ]
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": true,
+          "score": 88,
+          "time_minutes": 28,
+          "student_confidence": 75,
+          "errors": [
+            "Minor: forgot to initialize response.message initially"
+          ]
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 15,
+          "student_confidence": 98,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "question_id": "niat-3",
+      "title": "Define a ComputerUnit class to read total CPU load and total memory usage",
+      "difficulty": "medium_hard",
+      "skills_required": [
+        "composition",
+        "abstract base class",
+        "interface pattern",
+        "psutil"
+      ],
+      "confidence_predicted_by_system": 68.5,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": false,
+          "score": 35,
+          "time_minutes": 60,
+          "student_confidence": 25,
+          "errors": [
+            "ABC import and usage unfamiliar",
+            "Did not understand abstract method requirement",
+            "Missing psutil integration"
+          ]
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": true,
+          "score": 79,
+          "time_minutes": 35,
+          "student_confidence": 68,
+          "errors": [
+            "Initial confusion with ABC decorator syntax"
+          ]
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 18,
+          "student_confidence": 96,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "question_id": "niat-4",
+      "title": "RobotManagerComposition class with console output service",
+      "difficulty": "medium_hard",
+      "skills_required": [
+        "composition",
+        "ROS2 service server",
+        "SetBool service",
+        "state management"
+      ],
+      "confidence_predicted_by_system": 71.5,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": false,
+          "score": 52,
+          "time_minutes": 50,
+          "student_confidence": 40,
+          "errors": [
+            "Incomplete service callback implementation",
+            "Missing response message formatting"
+          ]
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": true,
+          "score": 91,
+          "time_minutes": 26,
+          "student_confidence": 82,
+          "errors": []
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 14,
+          "student_confidence": 99,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "question_id": "niat-5",
+      "title": "Inheritance: Create RobotManagerBase base class",
+      "difficulty": "medium",
+      "skills_required": [
+        "inheritance",
+        "base class",
+        "protected attributes",
+        "ROS2 Node subclass"
+      ],
+      "confidence_predicted_by_system": 74.0,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": false,
+          "score": 65,
+          "time_minutes": 38,
+          "student_confidence": 55,
+          "errors": [
+            "Missing protected attribute underscore convention",
+            "Partial method implementation"
+          ]
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": true,
+          "score": 94,
+          "time_minutes": 20,
+          "student_confidence": 88,
+          "errors": []
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 10,
+          "student_confidence": 99,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "question_id": "niat-6",
+      "title": "Inheritance: Create RobotManagerMobile derived class",
+      "difficulty": "medium",
+      "skills_required": [
+        "inheritance",
+        "derived class",
+        "super().__init__()",
+        "odometry subscriber"
+      ],
+      "confidence_predicted_by_system": 75.5,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": false,
+          "score": 68,
+          "time_minutes": 36,
+          "student_confidence": 58,
+          "errors": [
+            "super() call syntax error",
+            "Missing subscriber initialization"
+          ]
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": true,
+          "score": 96,
+          "time_minutes": 18,
+          "student_confidence": 90,
+          "errors": []
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 9,
+          "student_confidence": 99,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "question_id": "niat-7",
+      "title": "Generic ROS2 topic subscriber for Image using callable patterns",
+      "difficulty": "hard",
+      "skills_required": [
+        "callable objects",
+        "generic subscriber class",
+        "TypeVar",
+        "sensor_msgs/Image"
+      ],
+      "confidence_predicted_by_system": 55.0,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": false,
+          "score": 28,
+          "time_minutes": 60,
+          "student_confidence": 15,
+          "errors": [
+            "No understanding of TypeVar",
+            "Generic class syntax unfamiliar",
+            "Callback not properly parameterized"
+          ]
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": false,
+          "score": 52,
+          "time_minutes": 55,
+          "student_confidence": 35,
+          "errors": [
+            "Generic implementation incomplete",
+            "Type parameter not properly used in create_subscription"
+          ]
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 92,
+          "time_minutes": 28,
+          "student_confidence": 85,
+          "errors": [
+            "Minor: generic type hints could be stricter"
+          ]
+        }
+      ]
+    },
+    {
+      "question_id": "niat-8",
+      "title": "Reuse generic subscriber for PointCloud2",
+      "difficulty": "medium_hard",
+      "skills_required": [
+        "generic reuse",
+        "PointCloud2",
+        "type parameterization"
+      ],
+      "confidence_predicted_by_system": 64.5,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": false,
+          "score": 32,
+          "time_minutes": 45,
+          "student_confidence": 20,
+          "errors": [
+            "Could not reuse generic from previous exercise",
+            "PointCloud2 import missing",
+            "Callback logic flawed"
+          ]
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": true,
+          "score": 75,
+          "time_minutes": 32,
+          "student_confidence": 62,
+          "errors": [
+            "Had to look up PointCloud2 structure"
+          ]
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 98,
+          "time_minutes": 14,
+          "student_confidence": 94,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "question_id": "niat-9",
+      "title": "Final Exercise: Type-dispatched callbacks with edge detection and depth image",
+      "difficulty": "hard_hard",
+      "skills_required": [
+        "type-based dispatch",
+        "OpenCV",
+        "cv_bridge",
+        "Canny edge detection",
+        "PointCloud2 to depth image"
+      ],
+      "confidence_predicted_by_system": 45.0,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": false,
+          "score": 15,
+          "time_minutes": 60,
+          "student_confidence": 8,
+          "errors": [
+            "OpenCV integration unknown",
+            "cv_bridge usage incorrect",
+            "Type dispatch logic missing",
+            "Image processing pipeline incomplete"
+          ]
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": false,
+          "score": 42,
+          "time_minutes": 60,
+          "student_confidence": 28,
+          "errors": [
+            "Edge detection partially working",
+            "PointCloud to depth image conversion failed",
+            "Type dispatch incomplete"
+          ]
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 88,
+          "time_minutes": 42,
+          "student_confidence": 82,
+          "errors": [
+            "Minor: could optimize depth image conversion"
+          ]
+        }
+      ]
+    },
+    {
+      "question_id": "niat-10",
+      "title": "Basic Python Thread Creation",
+      "difficulty": "easy_easy",
+      "skills_required": [
+        "threading module",
+        "thread creation",
+        "join()"
+      ],
+      "confidence_predicted_by_system": 86.0,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": true,
+          "score": 95,
+          "time_minutes": 10,
+          "student_confidence": 90,
+          "errors": []
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 7,
+          "student_confidence": 98,
+          "errors": []
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 5,
+          "student_confidence": 99,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "question_id": "niat-11",
+      "title": "Validate robot turn velocity input using try/except/raise",
+      "difficulty": "easy_medium",
+      "skills_required": [
+        "try/except/raise",
+        "input validation",
+        "ValueError handling"
+      ],
+      "confidence_predicted_by_system": 79.0,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": true,
+          "score": 85,
+          "time_minutes": 15,
+          "student_confidence": 78,
+          "errors": [
+            "Minor: could have been more specific with exception messages"
+          ]
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": true,
+          "score": 98,
+          "time_minutes": 10,
+          "student_confidence": 95,
+          "errors": []
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 8,
+          "student_confidence": 99,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "question_id": "niat-12",
+      "title": "Custom exception class WrongTurnException",
+      "difficulty": "easy_medium",
+      "skills_required": [
+        "custom exception class",
+        "Exception inheritance",
+        "__str__ override"
+      ],
+      "confidence_predicted_by_system": 77.5,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": true,
+          "score": 82,
+          "time_minutes": 12,
+          "student_confidence": 75,
+          "errors": []
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 8,
+          "student_confidence": 98,
+          "errors": []
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 6,
+          "student_confidence": 99,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "question_id": "niat-13",
+      "title": "ROS2 Exercise: Custom Service Message with Duration Parameter",
+      "difficulty": "medium",
+      "skills_required": [
+        "custom service message",
+        "service server",
+        "duration parameter"
+      ],
+      "confidence_predicted_by_system": 70.0,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": false,
+          "score": 48,
+          "time_minutes": 40,
+          "student_confidence": 38,
+          "errors": [
+            "Custom service message definition incomplete",
+            "Service server callback signature wrong"
+          ]
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": true,
+          "score": 87,
+          "time_minutes": 25,
+          "student_confidence": 78,
+          "errors": [
+            "Minor: message field naming convention"
+          ]
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 12,
+          "student_confidence": 99,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "question_id": "niat-14",
+      "title": "ROS2 Services Quiz: BB-8 Square Movement Service",
+      "difficulty": "medium_hard",
+      "skills_required": [
+        "ROS service server",
+        "custom service message",
+        "square movement logic"
+      ],
+      "confidence_predicted_by_system": 62.5,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": false,
+          "score": 35,
+          "time_minutes": 55,
+          "student_confidence": 22,
+          "errors": [
+            "Service definition incomplete",
+            "Square movement algorithm flawed",
+            "Repetition logic missing"
+          ]
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": true,
+          "score": 81,
+          "time_minutes": 38,
+          "student_confidence": 70,
+          "errors": [
+            "Off by one error in repetition counter"
+          ]
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 97,
+          "time_minutes": 20,
+          "student_confidence": 92,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "question_id": "niat-15",
+      "title": "ROS2 Topics Quiz: Obstacle Avoidance with Laser",
+      "difficulty": "medium_hard",
+      "skills_required": [
+        "ROS subscriber",
+        "laser scan processing",
+        "obstacle avoidance logic",
+        "Twist commands"
+      ],
+      "confidence_predicted_by_system": 65.5,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": true,
+          "score": 72,
+          "time_minutes": 42,
+          "student_confidence": 65,
+          "errors": [
+            "Initial range extraction logic incorrect"
+          ]
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": true,
+          "score": 93,
+          "time_minutes": 28,
+          "student_confidence": 85,
+          "errors": []
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 16,
+          "student_confidence": 98,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "question_id": "niat-16",
+      "title": "ROS2 Actions Quiz: Drone Takeoff and Land",
+      "difficulty": "hard_hard",
+      "skills_required": [
+        "ROS action server",
+        "custom action message",
+        "goal handling",
+        "feedback and result"
+      ],
+      "confidence_predicted_by_system": 48.0,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": false,
+          "score": 22,
+          "time_minutes": 60,
+          "student_confidence": 12,
+          "errors": [
+            "Action message structure unknown",
+            "Action server callback not implemented",
+            "Feedback and result publishing missing"
+          ]
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": false,
+          "score": 58,
+          "time_minutes": 50,
+          "student_confidence": 42,
+          "errors": [
+            "Action server partially working",
+            "Feedback not published correctly",
+            "Result callback incomplete"
+          ]
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 94,
+          "time_minutes": 32,
+          "student_confidence": 88,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "question_id": "niat-17",
+      "title": "Probability Exercise 4.2: Distribution Analysis",
+      "difficulty": "easy_easy",
+      "skills_required": [
+        "probability distribution",
+        "expected value",
+        "variance",
+        "standard deviation"
+      ],
+      "confidence_predicted_by_system": 84.0,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": true,
+          "score": 88,
+          "time_minutes": 12,
+          "student_confidence": 82,
+          "errors": []
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 9,
+          "student_confidence": 97,
+          "errors": []
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 7,
+          "student_confidence": 99,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "question_id": "niat-18",
+      "title": "Calculus Exercise 3.3: Robot Velocity and Position Integration",
+      "difficulty": "easy_medium",
+      "skills_required": [
+        "Twist message",
+        "velocity functions",
+        "position integration",
+        "kinematics"
+      ],
+      "confidence_predicted_by_system": 72.5,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": true,
+          "score": 78,
+          "time_minutes": 20,
+          "student_confidence": 72,
+          "errors": [
+            "Minor: velocity function could be more precise"
+          ]
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": true,
+          "score": 96,
+          "time_minutes": 14,
+          "student_confidence": 92,
+          "errors": []
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 10,
+          "student_confidence": 99,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "question_id": "niat-19",
+      "title": "Probability Exercise 4.3: Bayesian Belief Update",
+      "difficulty": "easy_medium",
+      "skills_required": [
+        "Bayes rule",
+        "conditional probability",
+        "belief update"
+      ],
+      "confidence_predicted_by_system": 75.0,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": true,
+          "score": 82,
+          "time_minutes": 16,
+          "student_confidence": 75,
+          "errors": []
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 11,
+          "student_confidence": 98,
+          "errors": []
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 8,
+          "student_confidence": 99,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "question_id": "niat-20",
+      "title": "ROS2 Actions Exercise 9.12: Fibonacci Action Server",
+      "difficulty": "medium_hard",
+      "skills_required": [
+        "ROS action server",
+        "Fibonacci algorithm",
+        "goal execution",
+        "feedback publishing"
+      ],
+      "confidence_predicted_by_system": 61.0,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": false,
+          "score": 42,
+          "time_minutes": 50,
+          "student_confidence": 32,
+          "errors": [
+            "Action server setup incomplete",
+            "Fibonacci algorithm correct but feedback not published",
+            "Result handling missing"
+          ]
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": true,
+          "score": 84,
+          "time_minutes": 35,
+          "student_confidence": 75,
+          "errors": [
+            "Off-by-one in sequence generation"
+          ]
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 18,
+          "student_confidence": 97,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "question_id": "niat-21",
+      "title": "Probability Exercise 4.1: Maze Door Probability",
+      "difficulty": "easy_easy",
+      "skills_required": [
+        "conditional probability",
+        "maze navigation",
+        "Bayes theorem"
+      ],
+      "confidence_predicted_by_system": 82.5,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": true,
+          "score": 90,
+          "time_minutes": 10,
+          "student_confidence": 88,
+          "errors": []
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 7,
+          "student_confidence": 99,
+          "errors": []
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 5,
+          "student_confidence": 99,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "question_id": "niat-22",
+      "title": "TF2 Exercise 1.5: Create a Coordinate Frame",
+      "difficulty": "easy_medium",
+      "skills_required": [
+        "coordinate frames",
+        "TF2",
+        "static_transform_publisher"
+      ],
+      "confidence_predicted_by_system": 78.0,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": true,
+          "score": 85,
+          "time_minutes": 14,
+          "student_confidence": 80,
+          "errors": []
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": true,
+          "score": 98,
+          "time_minutes": 9,
+          "student_confidence": 96,
+          "errors": []
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 6,
+          "student_confidence": 99,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "question_id": "niat-23",
+      "title": "URDF Exercise 6.1: Add RGB Camera and PointCloud Sensors",
+      "difficulty": "medium_hard",
+      "skills_required": [
+        "URDF sensors",
+        "RGB camera",
+        "PointCloud2",
+        "Gazebo simulation"
+      ],
+      "confidence_predicted_by_system": 60.5,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": false,
+          "score": 38,
+          "time_minutes": 50,
+          "student_confidence": 28,
+          "errors": [
+            "URDF sensor syntax unfamiliar",
+            "Gazebo plugin configuration incorrect",
+            "Camera and LiDAR not properly linked"
+          ]
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": true,
+          "score": 82,
+          "time_minutes": 35,
+          "student_confidence": 72,
+          "errors": [
+            "Minor: FOV parameter units needed adjustment"
+          ]
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 98,
+          "time_minutes": 20,
+          "student_confidence": 94,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "question_id": "niat-24",
+      "title": "Bayes Filter Exercise 2.10: Predict Step with Convolution",
+      "difficulty": "medium_hard",
+      "skills_required": [
+        "predict step",
+        "convolution",
+        "belief update",
+        "noisy movement"
+      ],
+      "confidence_predicted_by_system": 59.0,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": false,
+          "score": 32,
+          "time_minutes": 55,
+          "student_confidence": 18,
+          "errors": [
+            "Convolution operation not understood",
+            "Kernel shifting logic incorrect",
+            "Belief distribution update failed"
+          ]
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": false,
+          "score": 48,
+          "time_minutes": 48,
+          "student_confidence": 35,
+          "errors": [
+            "Partial convolution implementation",
+            "Belief normalization missing"
+          ]
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 95,
+          "time_minutes": 25,
+          "student_confidence": 90,
+          "errors": [
+            "Minor: could use scipy.signal for efficiency"
+          ]
+        }
+      ]
+    },
+    {
+      "question_id": "niat-25",
+      "title": "Nav2 Exercise 3.3: Set Robot Initial Pose",
+      "difficulty": "easy_easy",
+      "skills_required": [
+        "initial pose",
+        "amcl localization",
+        "PoseWithCovariance"
+      ],
+      "confidence_predicted_by_system": 87.0,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": true,
+          "score": 94,
+          "time_minutes": 8,
+          "student_confidence": 92,
+          "errors": []
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 5,
+          "student_confidence": 99,
+          "errors": []
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 4,
+          "student_confidence": 99,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "question_id": "niat-26",
+      "title": "Nav3 Exercise 4.3: Send Navigation Goal via Topic",
+      "difficulty": "easy_medium",
+      "skills_required": [
+        "navigation goal",
+        "action client",
+        "PoseStamped",
+        "Nav2 goals"
+      ],
+      "confidence_predicted_by_system": 76.0,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": true,
+          "score": 86,
+          "time_minutes": 12,
+          "student_confidence": 80,
+          "errors": []
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": true,
+          "score": 99,
+          "time_minutes": 8,
+          "student_confidence": 97,
+          "errors": []
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 5,
+          "student_confidence": 99,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "question_id": "niat-27",
+      "title": "Nav4 Exercise 5.5: Create Single Navigation Launch File",
+      "difficulty": "medium_hard",
+      "skills_required": [
+        "navigation launch file",
+        "lifecycle manager",
+        "multiple nodes",
+        "single entry point"
+      ],
+      "confidence_predicted_by_system": 63.0,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": false,
+          "score": 45,
+          "time_minutes": 45,
+          "student_confidence": 35,
+          "errors": [
+            "Launch file structure incomplete",
+            "lifecycle_manager not properly configured",
+            "Node dependencies not ordered correctly"
+          ]
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": true,
+          "score": 86,
+          "time_minutes": 32,
+          "student_confidence": 76,
+          "errors": [
+            "Initial lifecycle ordering issue"
+          ]
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 100,
+          "time_minutes": 18,
+          "student_confidence": 97,
+          "errors": []
+        }
+      ]
+    },
+    {
+      "question_id": "niat-28",
+      "title": "Final Project: Autonomous Maze Navigation",
+      "difficulty": "hard_hard",
+      "skills_required": [
+        "random decision making",
+        "probability",
+        "maze navigation",
+        "class design",
+        "TurtleBot simulation"
+      ],
+      "confidence_predicted_by_system": 52.0,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": false,
+          "score": 28,
+          "time_minutes": 60,
+          "student_confidence": 15,
+          "errors": [
+            "Maze navigation logic incomplete",
+            "Probability-based decisions not working",
+            "Class design not robust",
+            "Robot gets stuck in loops"
+          ]
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": false,
+          "score": 55,
+          "time_minutes": 58,
+          "student_confidence": 40,
+          "errors": [
+            "Basic maze logic works",
+            "Probability decisions only partially correct",
+            "Intersection detection sometimes fails"
+          ]
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 91,
+          "time_minutes": 38,
+          "student_confidence": 85,
+          "errors": [
+            "Minor: could optimize path memory for better navigation"
+          ]
+        }
+      ]
+    },
+    {
+      "question_id": "niat-29",
+      "title": "Intermediate ROS2 Final Project: Circle Detection and Navigation",
+      "difficulty": "hard_hard",
+      "skills_required": [
+        "circle detection",
+        "laser scan processing",
+        "clustering",
+        "robot movement",
+        "sensor fusion"
+      ],
+      "confidence_predicted_by_system": 46.5,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": false,
+          "score": 18,
+          "time_minutes": 60,
+          "student_confidence": 8,
+          "errors": [
+            "Laser scan processing unknown",
+            "Clustering not implemented",
+            "Circle detection algorithm missing",
+            "Navigation logic incomplete"
+          ]
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": false,
+          "score": 45,
+          "time_minutes": 60,
+          "student_confidence": 32,
+          "errors": [
+            "Laser scan partially processed",
+            "Clustering partially working",
+            "Circle center calculation has issues",
+            "Navigation integration incomplete"
+          ]
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 92,
+          "time_minutes": 45,
+          "student_confidence": 88,
+          "errors": [
+            "Minor: could use more robust clustering algorithm"
+          ]
+        }
+      ]
+    },
+    {
+      "question_id": "niat-30",
+      "title": "Behavior Trees Course Project: Multi-Cell Robot Navigation",
+      "difficulty": "hard_hard",
+      "skills_required": [
+        "behavior tree",
+        "action nodes",
+        "condition nodes",
+        "tree structure",
+        "robot autonomy"
+      ],
+      "confidence_predicted_by_system": 50.0,
+      "student_attempts": [
+        {
+          "student_id": "s_beginner_nav2",
+          "student_name": "Alex",
+          "passed": false,
+          "score": 22,
+          "time_minutes": 60,
+          "student_confidence": 10,
+          "errors": [
+            "Behavior tree framework unknown",
+            "Action and condition nodes not properly implemented",
+            "Tree structure not defined",
+            "Door state management missing"
+          ]
+        },
+        {
+          "student_id": "s_intermediate_gazebo",
+          "student_name": "Jordan",
+          "passed": false,
+          "score": 48,
+          "time_minutes": 60,
+          "student_confidence": 35,
+          "errors": [
+            "Basic tree structure present",
+            "Condition nodes partially working",
+            "Action execution incomplete",
+            "Cell transitions not robust"
+          ]
+        },
+        {
+          "student_id": "s_advanced_slam",
+          "student_name": "Sam",
+          "passed": true,
+          "score": 89,
+          "time_minutes": 42,
+          "student_confidence": 84,
+          "errors": [
+            "Minor: could add more sophisticated state management"
+          ]
+        }
+      ]
+    }
+  ],
+  "summary_statistics": {
+    "total_attempts": 90,
+    "passed_attempts": 65,
+    "failed_attempts": 25,
+    "overall_pass_rate": "72.2%",
+    "by_student": {
+      "s_beginner_nav2": {
+        "attempts": 30,
+        "passed": 13,
+        "failed": 17,
+        "pass_rate": "43.3%",
+        "avg_score": 57.2,
+        "avg_time_minutes": 37.8,
+        "avg_confidence": 52.1
+      },
+      "s_intermediate_gazebo": {
+        "attempts": 30,
+        "passed": 24,
+        "failed": 6,
+        "pass_rate": "80.0%",
+        "avg_score": 81.5,
+        "avg_time_minutes": 25.3,
+        "avg_confidence": 74.8
+      },
+      "s_advanced_slam": {
+        "attempts": 30,
+        "passed": 28,
+        "failed": 2,
+        "pass_rate": "93.3%",
+        "avg_score": 96.2,
+        "avg_time_minutes": 18.5,
+        "avg_confidence": 92.7
+      }
+    },
+    "by_difficulty": {
+      "easy_easy": {
+        "total_attempts": 15,
+        "passed": 15,
+        "avg_system_confidence": 85.4,
+        "avg_student_confidence": 90.3
+      },
+      "easy_medium": {
+        "total_attempts": 18,
+        "passed": 17,
+        "avg_system_confidence": 76.3,
+        "avg_student_confidence": 81.0
+      },
+      "medium": {
+        "total_attempts": 12,
+        "passed": 9,
+        "avg_system_confidence": 71.6,
+        "avg_student_confidence": 71.5
+      },
+      "medium_hard": {
+        "total_attempts": 27,
+        "passed": 17,
+        "avg_system_confidence": 63.4,
+        "avg_student_confidence": 63.2
+      },
+      "hard": {
+        "total_attempts": 3,
+        "passed": 1,
+        "avg_system_confidence": 55.0,
+        "avg_student_confidence": 44.3
+      },
+      "hard_hard": {
+        "total_attempts": 15,
+        "passed": 6,
+        "avg_system_confidence": 48.3,
+        "avg_student_confidence": 44.5
+      }
+    }
+  }
+}

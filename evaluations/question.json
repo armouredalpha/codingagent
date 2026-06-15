@@ -1,0 +1,2085 @@
+{
+  "questions": [
+    {
+      "question_id": "niat-1",
+      "metadata": {
+        "topic": "Classes and Objects",
+        "difficulty_level": "easy",
+        "estimated_time_minutes": 25,
+        "language": "Python",
+        "ros_version": "ROS2",
+        "concepts": [
+          "class definition",
+          "instance attributes",
+          "instance method",
+          "Python module",
+          "rclpy logging",
+          "setup.py entry point"
+        ]
+      },
+      "title": "ROS2 Exercise: Classes, Attributes and Instance Methods",
+      "context": "Create a RobotManager class that logs robot specifications. Split the code into a module file robot_manager.py containing the class and a separate node file robot_manager_node.py containing the main entry point. Use rclpy for ROS2 integration.",
+      "prerequisites": [],
+      "notes": null,
+      "parts": [
+        {
+          "label": "Part I",
+          "tasks": [
+            "Create ROS2 Python package 'my_robot_manager' with dependency rclpy",
+            "Create robot_manager.py inside the my_robot_manager/ module directory",
+            "Define class RobotManager with instance attributes: robot_name (str), robot_model (str), battery_capacity_kwh (float), total_operation_hours (int)",
+            "Set default values in __init__: battery_capacity_kwh = 0.16, total_operation_hours = 2560",
+            "Write method print_specifications() that logs all attributes using self.get_logger().info() \u2014 inherit from rclpy Node or accept a logger parameter",
+            "Update setup.py to include the module"
+          ]
+        },
+        {
+          "label": "Part II",
+          "tasks": [
+            "Create robot_manager_node.py in my_robot_manager/",
+            "Import RobotManager class",
+            "Initialize rclpy and create a ROS2 node named 'robot_manager'",
+            "Instantiate one RobotManager object and assign: robot_name = 'my_robot', robot_model = 'TurtleBot3'",
+            "Call print_specifications()",
+            "Add entry point 'robot_manager_node' in setup.py pointing to robot_manager_node:main"
+          ]
+        }
+      ],
+      "tasks": null,
+      "file_structure": {
+        "ros_package": "my_robot_manager",
+        "dependencies": [
+          "rclpy"
+        ],
+        "files_to_create": [
+          {
+            "path": "my_robot_manager/robot_manager.py",
+            "role": "class module"
+          },
+          {
+            "path": "my_robot_manager/robot_manager_node.py",
+            "role": "ROS2 node entry point"
+          }
+        ]
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "[INFO] [<timestamp>] [robot_manager]: Robot Name: my_robot\n[INFO] [<timestamp>] [robot_manager]: Robot Model: TurtleBot3\n[INFO] [<timestamp>] [robot_manager]: Battery Capacity (kWh): 0.16\n[INFO] [<timestamp>] [robot_manager]: Total Operation Hours: 2560"
+        }
+      ],
+      "run_commands": [
+        "ros2 run my_robot_manager robot_manager_node"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": [
+          "robot_manager"
+        ],
+        "topics_subscribed": null,
+        "topics_published": null,
+        "services": null,
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "niat-2",
+      "metadata": {
+        "topic": "Classes and Objects",
+        "difficulty_level": "medium",
+        "estimated_time_minutes": 30,
+        "language": "Python",
+        "ros_version": "ROS2",
+        "concepts": [
+          "self reference",
+          "private attributes (name mangling)",
+          "ROS2 Service Server",
+          "Trigger service",
+          "odometry subscriber",
+          "class variable"
+        ]
+      },
+      "title": "ROS2 Exercise: Using 'self' to access private attributes",
+      "context": "Modify the RobotManager class from the previous exercise. Instead of printing [X,Y] in odom_callback(), create a ROS2 Trigger service that logs the current robot position when called. Use self to access private attributes current_x_position and current_y_position.",
+      "prerequisites": [
+        "unit_3_ex_3.4 \u2014 my_robot_manager package with RobotManager class"
+      ],
+      "notes": "Open the existing files: robot_manager.py and robot_manager_node.py inside the my_robot_manager package.",
+      "parts": null,
+      "tasks": [
+        "Declare two new private attributes: self._current_x_position (float) and self._current_y_position (float), initialized to 0.0",
+        "In odom_callback(), assign msg.pose.pose.position.x to self._current_x_position and y similarly",
+        "Remove any get_logger().info() call that logs position from odom_callback()",
+        "Create a Trigger service whose name is self.robot_name + '/log_current_position'",
+        "In the trigger callback, log self._current_x_position and self._current_y_position",
+        "Set response.success = True and response.message = 'Position logged'",
+        "Import Trigger from std_srvs.srv and add std_srvs to package dependencies",
+        "Update package.xml and setup.py with std_srvs dependency"
+      ],
+      "file_structure": {
+        "ros_package": "my_robot_manager",
+        "dependencies": [
+          "rclpy",
+          "nav_msgs",
+          "std_srvs"
+        ],
+        "files_to_create": []
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1 (node)",
+          "output": "[INFO] [<timestamp>] [robot_manager]: Robot 1 created.\n[INFO] [<timestamp>] [robot_manager]: Robot Name: Turty1\n[INFO] [<timestamp>] [robot_manager]: Robot Model: TurtleBot3\n[INFO] [<timestamp>] [robot_manager]: Battery Capacity (kWh): 0.16\n[INFO] [<timestamp>] [robot_manager]: Total Operation Hours: 2560"
+        },
+        {
+          "shell": "Shell #2 (service call)",
+          "output": "success: True\nmessage: \"Position logged\""
+        },
+        {
+          "shell": "Shell #1 (after service call)",
+          "output": "[INFO] [<timestamp>] [robot_manager]: Turty1 position (x,y): <x_value>, <y_value>"
+        }
+      ],
+      "run_commands": [
+        "ros2 run my_robot_manager robot_manager_node",
+        "ros2 service call /Turty1/log_current_position std_srvs/srv/Trigger \"{}\""
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": [
+          "robot_manager"
+        ],
+        "topics_subscribed": [
+          "/odom"
+        ],
+        "topics_published": null,
+        "services": [
+          "/<robot_name>/log_current_position"
+        ],
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "niat-3",
+      "metadata": {
+        "topic": "Object Oriented Programming",
+        "difficulty_level": "medium",
+        "estimated_time_minutes": 10,
+        "language": "Python",
+        "ros_version": "ROS2",
+        "concepts": [
+          "composition",
+          "abstract base class (ABC)",
+          "abstract method",
+          "psutil for system metrics",
+          "interface pattern"
+        ]
+      },
+      "title": "Define a ComputerUnit class to read total CPU load and total memory usage",
+      "context": "Create a ComputerUnit class that reads system performance metrics (CPU load, memory usage) using an abstract ISystemInformation interface and a SystemInformation implementation. This class will later be embedded inside a RobotManagerComposition class via composition. Code for ISystemInformation and SystemInformation is provided.",
+      "prerequisites": [],
+      "notes": "Create ROS2 Python package robot_manager_composition with dependencies rclpy and std_srvs. The ISystemInformation interface and SystemInformation implementation code is provided \u2014 copy it into system_information.py.",
+      "parts": null,
+      "tasks": [
+        "Create ROS2 Python package 'robot_manager_composition' with dependencies rclpy and std_srvs",
+        "Create system_information.py in robot_manager_composition/ using the provided code",
+        "Create system_information_test_node.py in robot_manager_composition/ with a main() that instantiates ComputerUnit and calls print_info()",
+        "Add entry point 'system_information_test' in setup.py pointing to system_information_test_node:main"
+      ],
+      "file_structure": {
+        "ros_package": "robot_manager_composition",
+        "dependencies": [
+          "rclpy",
+          "std_srvs"
+        ],
+        "files_to_create": [
+          {
+            "path": "robot_manager_composition/system_information.py",
+            "role": "provided \u2014 ComputerUnit + ISystemInformation + SystemInformation"
+          },
+          {
+            "path": "robot_manager_composition/system_information_test_node.py",
+            "role": "test entry point"
+          }
+        ]
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "Total CPU usage: <value>%\nTotal memory usage: <value>%"
+        }
+      ],
+      "run_commands": [
+        "ros2 run robot_manager_composition system_information_test"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": [
+          "system_information_test"
+        ],
+        "topics_subscribed": null,
+        "topics_published": null,
+        "services": null,
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "niat-4",
+      "metadata": {
+        "topic": "Object Oriented Programming",
+        "difficulty_level": "medium",
+        "estimated_time_minutes": 20,
+        "language": "Python",
+        "ros_version": "ROS2",
+        "concepts": [
+          "composition",
+          "ROS2 Service Server",
+          "SetBool service",
+          "boolean state management"
+        ]
+      },
+      "title": "RobotManagerComposition class with console output service",
+      "context": "Create a RobotManagerComposition class inside the robot_manager_composition package. It starts a ROS2 SetBool service called 'robot_manager_output' that enables or disables console output via the output_enabled boolean flag.",
+      "prerequisites": [
+        "unit_4_ex_4.1.1_part1 \u2014 robot_manager_composition package with ComputerUnit"
+      ],
+      "notes": null,
+      "parts": null,
+      "tasks": [
+        "Create robot_manager_composition.py in robot_manager_composition/",
+        "Define class RobotManagerComposition(Node) with protected attribute self._output_enabled = False",
+        "Add a ROS2 service server and method _init_config_output_srv()",
+        "Advertise service named 'robot_manager_output' of type std_srvs/srv/SetBool",
+        "In callback _config_output_callback: set self._output_enabled from request.data, return appropriate response message ('Console output enabled.' or 'Console output disabled.')",
+        "Create robot_manager_composition_node.py in robot_manager_composition/ with main()",
+        "Add entry point 'robot_manager_composition_node' in setup.py"
+      ],
+      "file_structure": {
+        "ros_package": "robot_manager_composition",
+        "dependencies": [
+          "rclpy",
+          "std_srvs"
+        ],
+        "files_to_create": [
+          {
+            "path": "robot_manager_composition/robot_manager_composition.py",
+            "role": "class module"
+          },
+          {
+            "path": "robot_manager_composition/robot_manager_composition_node.py",
+            "role": "ROS2 node entry point"
+          }
+        ]
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1 (node)",
+          "output": "[INFO] [<timestamp>] [robot_manager_composition]: Enable Output Service created"
+        },
+        {
+          "shell": "Shell #2 (service true)",
+          "output": "success: True\nmessage: \"Console output enabled.\""
+        },
+        {
+          "shell": "Shell #2 (service false)",
+          "output": "success: True\nmessage: \"Console output disabled.\""
+        }
+      ],
+      "run_commands": [
+        "ros2 run robot_manager_composition robot_manager_composition_node",
+        "ros2 service call /robot_manager_output std_srvs/srv/SetBool \"data: true\"",
+        "ros2 service call /robot_manager_output std_srvs/srv/SetBool \"data: false\""
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": [
+          "robot_manager_composition"
+        ],
+        "topics_subscribed": null,
+        "topics_published": null,
+        "services": [
+          "/robot_manager_output"
+        ],
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "niat-5",
+      "metadata": {
+        "topic": "Object Oriented Programming",
+        "difficulty_level": "medium",
+        "estimated_time_minutes": 25,
+        "language": "Python",
+        "ros_version": "ROS2",
+        "concepts": [
+          "inheritance",
+          "base class",
+          "SetBool service",
+          "protected attributes",
+          "rclpy Node subclass"
+        ]
+      },
+      "title": "Inheritance: Create RobotManagerBase base class",
+      "context": "Create a new Robot Manager program using inheritance. RobotManagerBase is the base class for all robot types. RobotManagerMobile is the derived class for mobile bases. Start with the base class.",
+      "prerequisites": [],
+      "notes": "Create ROS2 Python package robot_manager_inheritance with dependencies rclpy, nav_msgs, std_srvs.",
+      "parts": null,
+      "tasks": [
+        "Create ROS2 Python package 'robot_manager_inheritance' with dependencies rclpy, nav_msgs, std_srvs",
+        "Create base_robot_manager.py in robot_manager_inheritance/",
+        "Define class RobotManagerBase(Node) with protected: self._output_enabled = False, method _init_config_output_srv()",
+        "In _init_config_output_srv(): advertise service 'robot_manager_output' of type std_srvs/srv/SetBool",
+        "Implement _config_output_callback: enable/disable self._output_enabled, return appropriate response messages",
+        "Create base_robot_manager_node.py in robot_manager_inheritance/ with main() for testing the base class",
+        "Add entry point 'robot_manager_base_class_test_node' in setup.py"
+      ],
+      "file_structure": {
+        "ros_package": "robot_manager_inheritance",
+        "dependencies": [
+          "rclpy",
+          "nav_msgs",
+          "std_srvs"
+        ],
+        "files_to_create": [
+          {
+            "path": "robot_manager_inheritance/base_robot_manager.py",
+            "role": "base class module"
+          },
+          {
+            "path": "robot_manager_inheritance/base_robot_manager_node.py",
+            "role": "test entry point for base class"
+          }
+        ]
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #2 (service call)",
+          "output": "success: True\nmessage: \"Console output enabled.\""
+        }
+      ],
+      "run_commands": [
+        "ros2 run robot_manager_inheritance robot_manager_base_class_test_node",
+        "ros2 service call /robot_manager_output std_srvs/srv/SetBool \"data: true\""
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": [
+          "robot_manager_base_class_test_node"
+        ],
+        "topics_subscribed": null,
+        "topics_published": null,
+        "services": [
+          "/robot_manager_output"
+        ],
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "niat-6",
+      "metadata": {
+        "topic": "Object Oriented Programming",
+        "difficulty_level": "medium",
+        "estimated_time_minutes": 20,
+        "language": "Python",
+        "ros_version": "ROS2",
+        "concepts": [
+          "inheritance",
+          "derived class",
+          "super().__init__()",
+          "odometry subscriber",
+          "Python class hierarchy"
+        ]
+      },
+      "title": "Inheritance: Create RobotManagerMobile derived class",
+      "context": "Create a minimal derived class RobotManagerMobile that inherits from RobotManagerBase and calls the parent class methods to initialize the robot_manager_output service and an odometry subscriber.",
+      "prerequisites": [
+        "unit_4_ex_4.2.2_part1 \u2014 robot_manager_inheritance package with RobotManagerBase"
+      ],
+      "notes": null,
+      "parts": null,
+      "tasks": [
+        "Create mobile_robot_manager.py in robot_manager_inheritance/",
+        "Define class MobileRobotManager(RobotManagerBase) importing from base_robot_manager",
+        "In __init__: call super().__init__(node_name), then call self._init_config_output_srv()",
+        "Subscribe to /odom topic of type nav_msgs/msg/Odometry",
+        "Create mobile_robot_manager_node.py in robot_manager_inheritance/ with main() function",
+        "Add entry point 'mobile_robot_manager_node' in setup.py"
+      ],
+      "file_structure": {
+        "ros_package": "robot_manager_inheritance",
+        "dependencies": [
+          "rclpy",
+          "nav_msgs",
+          "std_srvs"
+        ],
+        "files_to_create": [
+          {
+            "path": "robot_manager_inheritance/mobile_robot_manager.py",
+            "role": "derived class module"
+          },
+          {
+            "path": "robot_manager_inheritance/mobile_robot_manager_node.py",
+            "role": "ROS2 node entry point"
+          }
+        ]
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1 (node)",
+          "output": "[INFO] [<timestamp>] [mobile_robot_manager]: Enable Output Service created\n[INFO] [<timestamp>] [mobile_robot_manager]: Odometry subscriber created"
+        }
+      ],
+      "run_commands": [
+        "ros2 run robot_manager_inheritance mobile_robot_manager_node",
+        "ros2 service call /robot_manager_output std_srvs/srv/SetBool \"data: true\""
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": [
+          "mobile_robot_manager"
+        ],
+        "topics_subscribed": [
+          "/odom"
+        ],
+        "topics_published": null,
+        "services": [
+          "/robot_manager_output"
+        ],
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "niat-7",
+      "metadata": {
+        "topic": "Generics and Callable Patterns",
+        "difficulty_level": "hard",
+        "estimated_time_minutes": 30,
+        "language": "Python",
+        "ros_version": "ROS2",
+        "concepts": [
+          "callable objects",
+          "generic subscriber class",
+          "TypeVar",
+          "Python generics",
+          "ROS2 subscriber",
+          "sensor_msgs/Image"
+        ]
+      },
+      "title": "Generic ROS2 topic subscriber for Image using callable patterns",
+      "context": "Create a generic subscriber pattern in Python for subscribing to a ROS2 topic. Build two nodes: one using standalone generic functions (topic_subscriber_function_node.py) and one using a generic subscriber class (topic_subscriber_class_node.py). Both subscribe to /camera/rgb/image_raw of type sensor_msgs/Image and print msg.data[0].",
+      "prerequisites": [],
+      "notes": "Hint: Start by creating a basic ROS2 topic subscriber WITHOUT generics first. Once working, add the generic/callable abstraction.",
+      "parts": null,
+      "tasks": [
+        "Create topic_subscriber_function_node.py: use a generic callback function that accepts any message type and a topic string; subscribe to /camera/rgb/image_raw",
+        "Create topic_subscriber_class_node.py: define a GenericSubscriber class that takes a message type and topic as constructor parameters",
+        "Both nodes: callback must print the first element of msg.data using msg.data[0]",
+        "topic_subscriber_function_node.py: generic behavior is achieved via a parameterized function, no class-level type parameter",
+        "topic_subscriber_class_node.py: the class stores the message type and uses it in create_subscription()",
+        "Add both entry points in setup.py"
+      ],
+      "file_structure": {
+        "ros_package": "unit6_exercises",
+        "dependencies": [
+          "rclpy",
+          "sensor_msgs"
+        ],
+        "files_to_create": [
+          {
+            "path": "unit6_exercises/topic_subscriber_function_node.py",
+            "role": "node using generic callback functions"
+          },
+          {
+            "path": "unit6_exercises/topic_subscriber_class_node.py",
+            "role": "node using generic subscriber class"
+          }
+        ]
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "[INFO] [<timestamp>] [topic_subscriber]: Callback Topic Image Data[0]=<value>"
+        }
+      ],
+      "run_commands": [
+        "ros2 run unit6_exercises topic_subscriber_function_node",
+        "ros2 run unit6_exercises topic_subscriber_class_node"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": [
+          "topic_subscriber_function_node",
+          "topic_subscriber_class_node"
+        ],
+        "topics_subscribed": [
+          "/camera/rgb/image_raw"
+        ],
+        "topics_published": null,
+        "services": null,
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "niat-8",
+      "metadata": {
+        "topic": "Generics and Callable Patterns",
+        "difficulty_level": "medium",
+        "estimated_time_minutes": 18,
+        "language": "Python",
+        "ros_version": "ROS2",
+        "concepts": [
+          "generic reuse",
+          "PointCloud2",
+          "ROS2 subscriber",
+          "type parameterization"
+        ]
+      },
+      "title": "Reuse generic subscriber for PointCloud2",
+      "context": "Extend the work from Exercise 6.1 by creating a new node pcl_topic_subscriber_node.py that reuses the same generic subscriber implementation from the Image subscriber to subscribe to a PointCloud2 topic.",
+      "prerequisites": [
+        "unit_6_ex_6.1 \u2014 unit6_exercises package with generic subscriber implementation"
+      ],
+      "notes": null,
+      "parts": null,
+      "tasks": [
+        "Create pcl_topic_subscriber_node.py in unit6_exercises/",
+        "Import and reuse the GenericSubscriber class from Exercise 6.1",
+        "Subscribe to /camera/depth_registered/points of type sensor_msgs/msg/PointCloud2",
+        "Instantiate GenericSubscriber passing PointCloud2 as the message type",
+        "Use msg.data[0] in the callback same as for Image",
+        "Add entry point 'pcl_topic_subscriber_node' in setup.py"
+      ],
+      "file_structure": {
+        "ros_package": "unit6_exercises",
+        "dependencies": [
+          "rclpy",
+          "sensor_msgs"
+        ],
+        "files_to_create": [
+          {
+            "path": "unit6_exercises/pcl_topic_subscriber_node.py",
+            "role": "PointCloud2 subscriber node"
+          }
+        ]
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "[INFO] [<timestamp>] [pcl_topic_subscriber]: Callback Topic PointCloud2 Data[0]=<value>"
+        }
+      ],
+      "run_commands": [
+        "ros2 run unit6_exercises pcl_topic_subscriber_node"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": [
+          "pcl_topic_subscriber"
+        ],
+        "topics_subscribed": [
+          "/camera/depth_registered/points"
+        ],
+        "topics_published": null,
+        "services": null,
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "niat-9",
+      "metadata": {
+        "topic": "Generics and Callable Patterns",
+        "difficulty_level": "hard",
+        "estimated_time_minutes": 40,
+        "language": "Python",
+        "ros_version": "ROS2",
+        "concepts": [
+          "type-based dispatch",
+          "OpenCV",
+          "cv_bridge",
+          "Canny edge detection",
+          "PointCloud2 to depth image",
+          "ROS2 publisher",
+          "isinstance"
+        ]
+      },
+      "title": "Final Exercise: Type-dispatched callbacks with edge detection and depth image",
+      "context": "Add type-specific processing to the generic subscriber callbacks for Image and PointCloud2 types. For Image: perform Canny edge detection and publish to /out/edge_detection. For PointCloud2: convert to depth image and publish to /out/depth_image. For any other type: print the message.",
+      "prerequisites": [
+        "unit_6_ex_6.2 \u2014 unit6_exercises with generic subscriber class"
+      ],
+      "notes": "Recommended: First implement edge detection and PointCloud-to-depth-image as standalone scripts to test independently, then integrate into the type-dispatch pattern.",
+      "parts": null,
+      "tasks": [
+        "Create specialised_complete.py and specialised_complete_node.py in unit6_exercises/",
+        "For Image callback (detected via isinstance or message type): convert to grayscale, apply GaussianBlur, run Canny edge detection, publish result to /out/edge_detection using cv_bridge",
+        "For PointCloud2 callback: convert pointcloud to depth image using sensor_msgs_py or open3d, publish to /out/depth_image",
+        "For any other message type: just log the message",
+        "Node name: specialised_complete_node",
+        "Update package.xml and setup.py: add cv_bridge, sensor_msgs_py, std_msgs dependencies and entry point"
+      ],
+      "file_structure": {
+        "ros_package": "unit6_exercises",
+        "dependencies": [
+          "rclpy",
+          "sensor_msgs",
+          "cv_bridge",
+          "std_msgs"
+        ],
+        "files_to_create": [
+          {
+            "path": "unit6_exercises/specialised_complete.py",
+            "role": "type-dispatched subscriber module"
+          },
+          {
+            "path": "unit6_exercises/specialised_complete_node.py",
+            "role": "ROS2 node entry point"
+          }
+        ]
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "[INFO] [<timestamp>] [specialised_complete_node]: Callback Topic Image Data[0]=<value>"
+        }
+      ],
+      "run_commands": [
+        "ros2 run unit6_exercises specialised_complete_node",
+        "ros2 run rqt_image_view rqt_image_view"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": [
+          "specialised_complete_node"
+        ],
+        "topics_subscribed": [
+          "/camera/rgb/image_raw",
+          "/camera/depth_registered/points"
+        ],
+        "topics_published": [
+          "/out/edge_detection",
+          "/out/depth_image"
+        ],
+        "services": null,
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "niat-10",
+      "metadata": {
+        "topic": "Concurrency",
+        "difficulty_level": "easy",
+        "estimated_time_minutes": 10,
+        "language": "Python",
+        "ros_version": "none",
+        "concepts": [
+          "threading module",
+          "Thread creation",
+          "join()",
+          "concurrency basics",
+          "target function"
+        ]
+      },
+      "title": "Basic Python Thread Creation",
+      "context": "Create a simple Python program using the threading module. Launch a thread that executes a function and ensure the main thread waits for it to finish using join().",
+      "prerequisites": [],
+      "notes": null,
+      "parts": null,
+      "tasks": [
+        "Create a new directory multithreading_exercises in your home directory",
+        "Create exercise1.py inside it",
+        "Import the threading module",
+        "Create a function that the thread will execute \u2014 it should print a message",
+        "Create a threading.Thread object with target set to the function",
+        "Call thread.start() to launch the thread",
+        "Call thread.join() to wait for the thread to finish before main() exits",
+        "Run with: python3 exercise1.py"
+      ],
+      "file_structure": {
+        "ros_package": null,
+        "dependencies": [],
+        "files_to_create": [
+          {
+            "path": "~/multithreading_exercises/exercise1.py",
+            "role": "standalone Python program"
+          }
+        ]
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "Executing work on a thread!"
+        }
+      ],
+      "run_commands": [
+        "python3 exercise1.py"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": null,
+        "topics_subscribed": null,
+        "topics_published": null,
+        "services": null,
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "niat-11",
+      "metadata": {
+        "topic": "Exception Handling",
+        "difficulty_level": "easy",
+        "estimated_time_minutes": 14,
+        "language": "Python",
+        "ros_version": "ROS2",
+        "concepts": [
+          "try",
+          "except",
+          "raise",
+          "input validation",
+          "ValueError",
+          "broad except clause"
+        ]
+      },
+      "title": "Validate robot turn velocity input using try/except/raise",
+      "context": "Use the robot_commander library to steer a simulated robot based on user input. Validate that the turn velocity is a decimal number between -1.0 and 0.0. Use try/except/raise to handle invalid inputs gracefully.",
+      "prerequisites": [
+        "robot_commander library \u2014 clone from theconstructcore/modern_cpp_course (Python port)"
+      ],
+      "notes": "Inside ~/ros2_ws/src/exercises_unit_8/exercises_unit_8/ create validate_user_input.py. Paste the starter code and read it before writing new code.",
+      "parts": null,
+      "tasks": [
+        "Include exception handling using try, except and raise inside the while loop",
+        "Read turn_velocity using: turn_velocity_str = input('Enter turn velocity: ')",
+        "Try to convert input to float; if it fails (ValueError), raise an exception for non-decimal input",
+        "If turn_velocity is between -1.0 and 0.0: call my_robot.turn(turn_velocity, 5)",
+        "Else: raise a ValueError for out-of-range value",
+        "Add an except ValueError block: print 'Enter turn velocity between -1.0 and 0.0'",
+        "Add a broad except Exception block: print 'Please enter a decimal number.'",
+        "Update package.xml and setup.py: add robot_commander dependency and entry point"
+      ],
+      "file_structure": {
+        "ros_package": "exercises_unit_8",
+        "dependencies": [
+          "rclpy",
+          "robot_commander"
+        ],
+        "files_to_create": [
+          {
+            "path": "exercises_unit_8/validate_user_input.py",
+            "role": "main entry point with exception handling"
+          }
+        ]
+      },
+      "starter_code": [
+        {
+          "filename": "validate_user_input.py",
+          "content": "import rclpy\nfrom robot_commander.robot_commander import RobotCommander\n\ndef main():\n    rclpy.init()\n    my_robot = RobotCommander()\n    n = 0\n    while n < 5:\n        # INSERT YOUR CODE BELOW THIS LINE\n\n        # INSERT YOUR CODE ABOVE THIS LINE\n        n += 1\n    rclpy.shutdown()\n\nif __name__ == '__main__':\n    main()"
+        }
+      ],
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "[INFO] [<timestamp>] [robot_commander]: Initializing node\nEnter turn velocity: 5\nEnter turn velocity between -1.0 and 0.0\nEnter turn velocity: -6\nEnter turn velocity between -1.0 and 0.0\nEnter turn velocity: -0.5\n[INFO] [<timestamp>] [robot_commander]: Turning clockwise\n[INFO] [<timestamp>] [robot_commander]: Stopping the robot\nEnter turn velocity: g\nPlease enter a decimal number."
+        }
+      ],
+      "run_commands": [
+        "ros2 run exercises_unit_8 validate_user_input"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": [
+          "robot_commander"
+        ],
+        "topics_subscribed": null,
+        "topics_published": [
+          "/cmd_vel"
+        ],
+        "services": null,
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "niat-12",
+      "metadata": {
+        "topic": "Exception Handling",
+        "difficulty_level": "easy",
+        "estimated_time_minutes": 12,
+        "language": "Python",
+        "ros_version": "ROS2",
+        "concepts": [
+          "custom exception class",
+          "Exception inheritance",
+          "__str__ override",
+          "user-defined exception",
+          "raise"
+        ]
+      },
+      "title": "Custom exception class WrongTurnException",
+      "context": "Continue from Exercise 8.1. Replace the generic ValueError with a custom exception class WrongTurnException that inherits from Exception and overrides __str__() to return a descriptive error message.",
+      "prerequisites": [
+        "unit_8_ex_8.1 \u2014 exercises_unit_8 package with validate_user_input.py"
+      ],
+      "notes": "Open ~/ros2_ws/src/exercises_unit_8/exercises_unit_8/validate_user_input.py for editing.",
+      "parts": null,
+      "tasks": [
+        "Define class WrongTurnException(Exception) in validate_user_input.py",
+        "Override __str__() to return: 'Allowed turn velocity only between -1.0 and 0.0'",
+        "Modify the try/except block to raise WrongTurnException() instead of ValueError for out-of-range values",
+        "Add a specific except WrongTurnException as e block that calls str(e) or print(e)",
+        "Keep the broad except Exception block for non-decimal input errors"
+      ],
+      "file_structure": {
+        "ros_package": "exercises_unit_8",
+        "dependencies": [
+          "rclpy",
+          "robot_commander"
+        ],
+        "files_to_create": []
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "[INFO] [<timestamp>] [robot_commander]: Initializing node\nEnter turn velocity: 5\nAllowed turn velocity only between -1.0 and 0.0\nEnter turn velocity: -6\nAllowed turn velocity only between -1.0 and 0.0\nEnter turn velocity: -0.5\n[INFO] [<timestamp>] [robot_commander]: Turning clockwise\n[INFO] [<timestamp>] [robot_commander]: Stopping the robot\nEnter turn velocity: g\nPlease enter a decimal number."
+        }
+      ],
+      "run_commands": [
+        "ros2 run exercises_unit_8 validate_user_input"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": [
+          "robot_commander"
+        ],
+        "topics_subscribed": null,
+        "topics_published": [
+          "/cmd_vel"
+        ],
+        "services": null,
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "niat-13",
+      "metadata": {
+        "topic": "Python Classes in ROS",
+        "difficulty_level": "medium",
+        "estimated_time_minutes": 18,
+        "language": "Python",
+        "ros_version": "ROS2",
+        "concepts": [
+          "custom service message",
+          "BB-8 robot",
+          "duration parameter",
+          "service server modification"
+        ]
+      },
+      "title": "ROS2 Exercise: Custom Service Message with Duration Parameter",
+      "context": "Modify the Python scripts to include a custom service message. The BB-8 robot service now accepts a duration parameter that specifies how long the robot should execute movement commands.",
+      "prerequisites": [
+        "python_classes_Snippet5 \u2014 basic ROS2 Python classes"
+      ],
+      "notes": "Modify existing Python class to pass duration parameter to service message and update service server code accordingly.",
+      "parts": null,
+      "tasks": [
+        "Define a custom service message with int32 duration field",
+        "Modify the Python class so duration is passed to the service message",
+        "Update the Service Server code to accept and use the specified duration",
+        "Test that the BB-8 robot executes movement for the specified duration"
+      ],
+      "file_structure": {
+        "ros_package": "my_robot_manager",
+        "dependencies": [
+          "rclpy"
+        ],
+        "files_to_create": []
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "[INFO] [<timestamp>] [robot_commander]: Robot executing for <duration> seconds"
+        }
+      ],
+      "run_commands": [
+        "ros2 run my_robot_manager robot_manager_node"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": [
+          "robot_manager"
+        ],
+        "topics_subscribed": null,
+        "topics_published": null,
+        "services": [
+          "/<robot_name>/move_custom"
+        ],
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "niat-14",
+      "metadata": {
+        "topic": "Understanding ROS Services - Server",
+        "difficulty_level": "medium",
+        "estimated_time_minutes": 45,
+        "language": "Python",
+        "ros_version": "ROS2",
+        "concepts": [
+          "ROS Service Server",
+          "custom service message",
+          "BB8CustomServiceMessage",
+          "square movement",
+          "repetitions"
+        ]
+      },
+      "title": "ROS2 Services Quiz: BB-8 Square Movement Service",
+      "context": "Create a ROS2 Service Server that commands BB-8 to move in a square pattern. The service accepts side length and number of repetitions as parameters.",
+      "prerequisites": [],
+      "notes": "Package name: services_quiz. Service name: /move_bb8_in_square_custom. Service message type: BB8CustomServiceMessage.",
+      "parts": null,
+      "tasks": [
+        "Create services_quiz ROS2 package",
+        "Define BB8CustomServiceMessage.srv with side (float64) and repetitions (int32) fields",
+        "Create service server that accepts side and repetitions parameters",
+        "Implement square movement logic",
+        "Repeat the square movement based on repetitions parameter",
+        "Create corresponding service client to test the server",
+        "Make sure service name is /move_bb8_in_square_custom"
+      ],
+      "file_structure": {
+        "ros_package": "services_quiz",
+        "dependencies": [
+          "rclpy"
+        ],
+        "files_to_create": [
+          {
+            "path": "srv/BB8CustomServiceMessage.srv",
+            "role": "custom service definition"
+          },
+          {
+            "path": "services_quiz/bb8_square_service_server.py",
+            "role": "service server"
+          },
+          {
+            "path": "services_quiz/bb8_square_service_client.py",
+            "role": "service client for testing"
+          }
+        ]
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1 (server)",
+          "output": "[INFO] [<timestamp>] [bb8_square_server]: Service /move_bb8_in_square_custom ready"
+        }
+      ],
+      "run_commands": [
+        "ros2 run services_quiz bb8_square_service_server",
+        "ros2 run services_quiz bb8_square_service_client"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": [
+          "bb8_square_server"
+        ],
+        "topics_subscribed": null,
+        "topics_published": [
+          "/cmd_vel"
+        ],
+        "services": [
+          "/move_bb8_in_square_custom"
+        ],
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "niat-15",
+      "metadata": {
+        "topic": "Understanding ROS Topics - Subscribers",
+        "difficulty_level": "medium",
+        "estimated_time_minutes": 45,
+        "language": "Python",
+        "ros_version": "ROS2",
+        "concepts": [
+          "ROS Subscriber",
+          "laser scan",
+          "obstacle avoidance",
+          "conditional logic",
+          "Twist command"
+        ]
+      },
+      "title": "ROS2 Topics Quiz: Obstacle Avoidance with Laser",
+      "context": "Create a ROS2 node that subscribes to laser scan data and publishes velocity commands to avoid obstacles. The robot should navigate forward and turn when detecting obstacles closer than 1 meter.",
+      "prerequisites": [],
+      "notes": "Package: topics_quiz. Node: topics_quiz_node. Subscribe to /kobuki/laser/scan. Publish to /cmd_vel. Logic: if front < 1m \u2192 turn left; if right < 1m \u2192 turn left; if left < 1m \u2192 turn right; else \u2192 move forward.",
+      "parts": null,
+      "tasks": [
+        "Create topics_quiz ROS2 package with rclpy dependency",
+        "Create topics_quiz_node that subscribes to /kobuki/laser/scan topic",
+        "Extract ranges array from LaserScan message",
+        "Implement obstacle avoidance logic based on laser ranges",
+        "If front reading < 1m: publish turn left command to /cmd_vel",
+        "If right reading < 1m: publish turn left command",
+        "If left reading < 1m: publish turn right command",
+        "Else: publish forward movement command",
+        "Test the node with simulated or real laser data"
+      ],
+      "file_structure": {
+        "ros_package": "topics_quiz",
+        "dependencies": [
+          "rclpy",
+          "sensor_msgs"
+        ],
+        "files_to_create": [
+          {
+            "path": "topics_quiz/obstacle_avoidance_node.py",
+            "role": "subscriber and publisher node"
+          }
+        ]
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "[INFO] [<timestamp>] [topics_quiz_node]: Obstacle detected, turning left"
+        },
+        {
+          "shell": "Shell #1 (continued)",
+          "output": "[INFO] [<timestamp>] [topics_quiz_node]: Path clear, moving forward"
+        }
+      ],
+      "run_commands": [
+        "ros2 run topics_quiz obstacle_avoidance_node"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": [
+          "topics_quiz_node"
+        ],
+        "topics_subscribed": [
+          "/kobuki/laser/scan"
+        ],
+        "topics_published": [
+          "/cmd_vel"
+        ],
+        "services": null,
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "niat-16",
+      "metadata": {
+        "topic": "Understanding ROS Actions - Servers",
+        "difficulty_level": "hard",
+        "estimated_time_minutes": 90,
+        "language": "Python",
+        "ros_version": "ROS2",
+        "concepts": [
+          "ROS Action Server",
+          "custom action message",
+          "drone takeoff/land",
+          "goal handling",
+          "feedback",
+          "result"
+        ]
+      },
+      "title": "ROS2 Actions Quiz: Drone Takeoff and Land",
+      "context": "Create a ROS2 Action Server that controls drone takeoff and landing. The action server receives goals (TAKEOFF or LAND commands), executes them, provides feedback on progress, and returns results on success or failure.",
+      "prerequisites": [],
+      "notes": "Package: actions_quiz. Action: /action_custom_msg_as. Goal: string (TAKEOFF or LAND). Feedback: string (current action status). Result: bool (success flag).",
+      "parts": null,
+      "tasks": [
+        "Create actions_quiz ROS2 package",
+        "Define CustomActionMsg.action with string goal, string feedback, bool success result",
+        "Create action server that accepts TAKEOFF or LAND goals",
+        "Implement takeoff: transition drone from landed to flying state",
+        "Implement land: transition drone from flying to landed state",
+        "Publish feedback during action execution showing current status",
+        "Return result with success = true when action completes",
+        "Create action client to test the server with both TAKEOFF and LAND goals"
+      ],
+      "file_structure": {
+        "ros_package": "actions_quiz",
+        "dependencies": [
+          "rclpy",
+          "rclpy.action"
+        ],
+        "files_to_create": [
+          {
+            "path": "action/CustomActionMsg.action",
+            "role": "custom action definition"
+          },
+          {
+            "path": "actions_quiz/drone_action_server.py",
+            "role": "action server"
+          },
+          {
+            "path": "actions_quiz/drone_action_client.py",
+            "role": "action client for testing"
+          }
+        ]
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1 (server)",
+          "output": "[INFO] [<timestamp>] [drone_server]: Action server /action_custom_msg_as started"
+        }
+      ],
+      "run_commands": [
+        "ros2 run actions_quiz drone_action_server",
+        "ros2 run actions_quiz drone_action_client"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": [
+          "drone_action_server"
+        ],
+        "topics_subscribed": null,
+        "topics_published": [
+          "/drone/status"
+        ],
+        "services": null,
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "niat-17",
+      "metadata": {
+        "topic": "Probability and Statistics",
+        "difficulty_level": "easy",
+        "estimated_time_minutes": 12,
+        "language": "Python",
+        "ros_version": "none",
+        "concepts": [
+          "probability distribution",
+          "plot_distro",
+          "expected value",
+          "variance",
+          "standard deviation"
+        ]
+      },
+      "title": "Probability Exercise 4.2: Distribution Analysis",
+      "context": "Analyze a probability distribution for robot position predictions. Given possible positions and their probabilities, calculate expected value, variance, and standard deviation.",
+      "prerequisites": [],
+      "notes": "Use numpy functions: np.dot, np.multiply, np.sqrt. Use utilities.plot_distro to visualize. File location: ~/catkin_ws/src/mathsrobotics/unit4_exercises/unit4_exercise2.py",
+      "parts": null,
+      "tasks": [
+        "Plot the distribution using plot_distro(x, p, 'normal')",
+        "Calculate expected value E[X] = sum(x * p(x))",
+        "Calculate E[X^2] = sum(x^2 * p(x))",
+        "Calculate variance Var = E[X^2] - E[X]^2",
+        "Calculate standard deviation STD = sqrt(Var)",
+        "Print all calculated values"
+      ],
+      "file_structure": {
+        "ros_package": null,
+        "dependencies": [
+          "numpy",
+          "utilities"
+        ],
+        "files_to_create": [
+          {
+            "path": "~/catkin_ws/src/mathsrobotics/unit4_exercises/unit4_exercise2.py",
+            "role": "python script"
+          }
+        ]
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "Expected value: 5.0\nVariance: 4.0\nStandard deviation: 2.0"
+        }
+      ],
+      "run_commands": [
+        "python ~/catkin_ws/src/mathsrobotics/unit4_exercises/unit4_exercise2.py"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": null,
+        "topics_subscribed": null,
+        "topics_published": null,
+        "services": null,
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "niat-18",
+      "metadata": {
+        "topic": "Calculus and Kinematics",
+        "difficulty_level": "easy",
+        "estimated_time_minutes": 20,
+        "language": "Python",
+        "ros_version": "ROS2",
+        "concepts": [
+          "Twist message",
+          "velocity functions",
+          "position integration",
+          "kinematics"
+        ]
+      },
+      "title": "Calculus Exercise 3.3: Robot Velocity and Position Integration",
+      "context": "Work with TurtleBot kinematics by implementing velocity functions to move the robot. Choose between constant velocity, linear velocity, or quadratic velocity functions and observe how position changes over time.",
+      "prerequisites": [],
+      "notes": "File: move_velocity.py in ~/catkin_ws/src/mathsrobotics/move_robot/src/. Implement one of three velocity functions: v(t)=0, v(t)=1, or v(t)=0.002t. Publish to /cmd_vel topic.",
+      "parts": null,
+      "tasks": [
+        "Import rospy, Twist, Odometry from nav_msgs",
+        "Create TurtlebotMoves class with odometry subscriber and velocity publisher",
+        "Implement odometryCallback to extract x position from /odom topic",
+        "Implement move() function with one of three velocity options",
+        "Choose velocity function: constant (0), linear (1), or quadratic (0.002*t)",
+        "Create Twist message and publish velocity command to /cmd_vel",
+        "Observe robot motion and position output"
+      ],
+      "file_structure": {
+        "ros_package": null,
+        "dependencies": [
+          "rospy",
+          "geometry_msgs",
+          "nav_msgs"
+        ],
+        "files_to_create": [
+          {
+            "path": "~/catkin_ws/src/mathsrobotics/move_robot/src/move_velocity.py",
+            "role": "robot control script"
+          }
+        ]
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "X position of the robot: 0.123456\nX position of the robot: 0.234567\nX position of the robot: 0.345678"
+        }
+      ],
+      "run_commands": [
+        "cd ~/catkin_ws/src/mathsrobotics/move_robot/src/ && python move_velocity.py"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": [
+          "move_velocity"
+        ],
+        "topics_subscribed": [
+          "/odom"
+        ],
+        "topics_published": [
+          "/cmd_vel"
+        ],
+        "services": null,
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "niat-19",
+      "metadata": {
+        "topic": "Probability and Statistics",
+        "difficulty_level": "easy",
+        "estimated_time_minutes": 12,
+        "language": "Python",
+        "ros_version": "none",
+        "concepts": [
+          "Bayes rule",
+          "conditional probability",
+          "belief update",
+          "robot state estimation"
+        ]
+      },
+      "title": "Probability Exercise 4.3: Bayesian Belief Update",
+      "context": "Apply Bayes' rule to update robot beliefs about door state. Given an action (closing a door) and prior belief, calculate posterior belief using conditional probabilities.",
+      "prerequisites": [],
+      "notes": "Robot in front of door. Action: close door. Prior: P(open) = 0.67. Calculate P(open|action) and P(closed|action) using Bayes rule and given conditional probabilities.",
+      "parts": null,
+      "tasks": [
+        "Given P(open) = 0.67 (prior probability door is open)",
+        "Given P(closed|open, action) = 0.9 (action succeeds 90% of time when door open)",
+        "Given P(open|open, action) = 0.1 (action fails 10% of time when door open)",
+        "Given P(closed|closed, action) = 1.0 (action always succeeds when door already closed)",
+        "Given P(open|closed, action) = 0.0 (action never changes closed door to open)",
+        "Apply Bayes rule: P(state|action) = sum(P(state|action,x) * P(x))",
+        "Calculate posterior P(open|action) and P(closed|action)",
+        "Print belief values"
+      ],
+      "file_structure": {
+        "ros_package": null,
+        "dependencies": [
+          "python3"
+        ],
+        "files_to_create": [
+          {
+            "path": "~/catkin_ws/src/mathsrobotics/unit4_exercises/unit4_exercise3.py",
+            "role": "python script"
+          }
+        ]
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "P(open|action) = 0.067\nP(closed|action) = 0.933"
+        }
+      ],
+      "run_commands": [
+        "python ~/catkin_ws/src/mathsrobotics/unit4_exercises/unit4_exercise3.py"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": null,
+        "topics_subscribed": null,
+        "topics_published": null,
+        "services": null,
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "niat-20",
+      "metadata": {
+        "topic": "Understanding ROS Actions - Advanced",
+        "difficulty_level": "medium",
+        "estimated_time_minutes": 30,
+        "language": "Python",
+        "ros_version": "ROS2",
+        "concepts": [
+          "ROS Action Server",
+          "Fibonacci action",
+          "goal execution",
+          "result publishing",
+          "feedback during execution"
+        ]
+      },
+      "title": "ROS2 Actions Exercise 9.12: Fibonacci Action Server",
+      "context": "Create a Fibonacci action server that receives an order parameter and computes Fibonacci sequence. The server publishes feedback with current sequence elements and returns the complete sequence as the result.",
+      "prerequisites": [],
+      "notes": "Use actionlib_tutorials Fibonacci action message. Server must handle goal execution and publish result when done.",
+      "parts": null,
+      "tasks": [
+        "Launch Fibonacci action server using provided code from actionlib_tutorials",
+        "Test the server by calling it with different Fibonacci order values",
+        "Echo the result topic to see published results",
+        "Echo the feedback topic to see feedback during computation",
+        "Call the action server: rostopic pub /fibonacci_as/goal actionlib_tutorials/FibonacciActionGoal 'header: {}, goal_id: {}, goal: {order: 10}'",
+        "Verify sequence is computed correctly and returned"
+      ],
+      "file_structure": {
+        "ros_package": "actionlib_tutorials",
+        "dependencies": [
+          "rospy",
+          "actionlib"
+        ],
+        "files_to_create": []
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1 (result topic)",
+          "output": "sequence: [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]"
+        },
+        {
+          "shell": "Shell #2 (feedback topic)",
+          "output": "sequence: [0]\nsequence: [0, 1]\nsequence: [0, 1, 1]"
+        }
+      ],
+      "run_commands": [
+        "ros2 run actionlib_tutorials fibonacci_server",
+        "ros2 topic echo /fibonacci_as/result"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": [
+          "fibonacci_server"
+        ],
+        "topics_subscribed": null,
+        "topics_published": [
+          "/fibonacci_as/result",
+          "/fibonacci_as/feedback"
+        ],
+        "services": null,
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "niat-21",
+      "metadata": {
+        "topic": "Probability and Statistics",
+        "difficulty_level": "easy",
+        "estimated_time_minutes": 7,
+        "language": "Python",
+        "ros_version": "none",
+        "concepts": [
+          "conditional probability",
+          "maze navigation",
+          "Bayes theorem",
+          "door probability"
+        ]
+      },
+      "title": "Probability Exercise 4.1: Maze Door Probability",
+      "context": "A robot escapes a maze by randomly choosing left or right at each crossroad. Given conditional probabilities at each decision point, calculate the probability of exiting at each of 8 doors.",
+      "prerequisites": [],
+      "notes": "Robot must choose: left (50%), right (50%). Compute probability of reaching each door using conditional probability logic.",
+      "parts": null,
+      "tasks": [
+        "Create probability maze diagram with 8 possible exit doors",
+        "At each crossroad, robot has 50% chance to go left, 50% to go right",
+        "Calculate conditional probabilities: P(Door i) = P(left|left)*P(left|left)*P(left) etc.",
+        "For Door 1: P = 0.5 * 0.33 * 0.5 = 0.0825",
+        "For Door 2: P = 0.5 * 0.33 * 0.5 = 0.0825",
+        "For Door 3: P = 0.5 * 0.33 = 0.165",
+        "For Doors 4-8: calculate similarly",
+        "Print all door probabilities",
+        "Verify most likely door is Door 5 with P=0.25"
+      ],
+      "file_structure": {
+        "ros_package": null,
+        "dependencies": [
+          "python3"
+        ],
+        "files_to_create": [
+          {
+            "path": "~/catkin_ws/src/mathsrobotics/unit4_exercises/unit4_exercise1.py",
+            "role": "python script"
+          }
+        ]
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "P(Door 1) = 0.0825\nP(Door 2) = 0.0825\nP(Door 3) = 0.165\nP(Door 4) = 0.165\nP(Door 5) = 0.25\nP(Door 6) = 0.0825\nP(Door 7) = 0.0825\nP(Door 8) = 0.0825"
+        }
+      ],
+      "run_commands": [
+        "python ~/catkin_ws/src/mathsrobotics/unit4_exercises/unit4_exercise1.py"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": null,
+        "topics_subscribed": null,
+        "topics_published": null,
+        "services": null,
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "niat-22",
+      "metadata": {
+        "topic": "Introduction to TF2 (Transform Framework)",
+        "difficulty_level": "easy",
+        "estimated_time_minutes": 3,
+        "language": "Python",
+        "ros_version": "ROS2",
+        "concepts": [
+          "coordinate frames",
+          "TF2",
+          "static_transform_publisher",
+          "frame relationships"
+        ]
+      },
+      "title": "TF2 Exercise 1.5: Create a Coordinate Frame",
+      "context": "Learn to create and publish coordinate frames using ROS2 TF2. Use the static_transform_publisher to define spatial relationships between parent and child frames.",
+      "prerequisites": [],
+      "notes": "Use tf2_ros package. Command structure: ros2 run tf2_ros static_transform_publisher x y z yaw pitch roll frame_id child_frame_id",
+      "parts": null,
+      "tasks": [
+        "Launch static_transform_publisher node",
+        "Define relationship between parent frame (map) and child frame (robot_base)",
+        "Provide 6DOF transformation: x, y, z (position) and yaw, pitch, roll (rotation)",
+        "Verify frame is published using ros2 tf2_echo command",
+        "Check frame tree using ros2 run tf2_tools view_frames"
+      ],
+      "file_structure": {
+        "ros_package": null,
+        "dependencies": [
+          "tf2_ros"
+        ],
+        "files_to_create": []
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "[INFO] [<timestamp>]: Spinning ROS node, listening for transforms. Press Ctrl+C to exit."
+        }
+      ],
+      "run_commands": [
+        "ros2 run tf2_ros static_transform_publisher 1 0 0 0 0 0 map robot_base"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": [
+          "static_transform_publisher"
+        ],
+        "topics_subscribed": null,
+        "topics_published": [
+          "/tf"
+        ],
+        "services": null,
+        "publish_rate": 10
+      }
+    },
+    {
+      "question_id": "niat-23",
+      "metadata": {
+        "topic": "URDF and Robot Sensing",
+        "difficulty_level": "medium",
+        "estimated_time_minutes": 25,
+        "language": "XML/Python",
+        "ros_version": "ROS2",
+        "concepts": [
+          "URDF sensors",
+          "RGB camera",
+          "PointCloud2",
+          "Gazebo simulation",
+          "sensor configuration"
+        ]
+      },
+      "title": "URDF Exercise 6.1: Add RGB Camera and PointCloud Sensors",
+      "context": "Extend a robot URDF model by adding two sensors: an RGB wide-angle camera and a PointCloud camera (LiDAR). Configure both sensors in Gazebo simulation with appropriate parameters.",
+      "prerequisites": [],
+      "notes": "Modify box_bot URDF. Add two sensor links and joints. Configure camera properties: resolution, FOV, format. Configure LiDAR: scan samples, angle range, update rate.",
+      "parts": null,
+      "tasks": [
+        "Add RGB wide-angle camera sensor to robot model",
+        "Configure camera: horizontal FOV 6.283, image size 320x240, format R8G8B8",
+        "Add PointCloud (LiDAR) sensor to robot model",
+        "Configure LiDAR: 50 horizontal samples, 50 vertical samples, scan range min/max",
+        "Create camera link and joint connected to chassis",
+        "Create pointcloud link and joint connected to chassis",
+        "Set publish rate to 30Hz for both sensors",
+        "Create launch file: spawn_robot_ros2_final.launch.xml",
+        "Create visualization launch: urdf_visualize_final.launch.py"
+      ],
+      "file_structure": {
+        "ros_package": "robot_manager_composition",
+        "dependencies": [
+          "roscpp",
+          "gazebo_ros"
+        ],
+        "files_to_create": [
+          {
+            "path": "urdf/box_bot_final.urdf",
+            "role": "robot model with sensors"
+          },
+          {
+            "path": "launch/spawn_robot_ros2_final.launch.xml",
+            "role": "robot spawn launch"
+          },
+          {
+            "path": "launch/urdf_visualize_final.launch.py",
+            "role": "visualization launch"
+          }
+        ]
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "[INFO] [<timestamp>]: Gazebo launching robot model with sensors"
+        }
+      ],
+      "run_commands": [
+        "ros2 launch robot_manager_composition spawn_robot_ros2_final.launch.xml",
+        "ros2 launch robot_manager_composition urdf_visualize_final.launch.py"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": [
+          "gazebo",
+          "robot_state_publisher"
+        ],
+        "topics_subscribed": null,
+        "topics_published": [
+          "/rgb_camera",
+          "/pointcloud"
+        ],
+        "services": null,
+        "publish_rate": 30
+      }
+    },
+    {
+      "question_id": "niat-24",
+      "metadata": {
+        "topic": "Bayes Filter and Kalman Filter",
+        "difficulty_level": "medium",
+        "estimated_time_minutes": 16,
+        "language": "Python",
+        "ros_version": "ROS2",
+        "concepts": [
+          "predict step",
+          "convolution",
+          "kernel sliding",
+          "belief update",
+          "noisy movement"
+        ]
+      },
+      "title": "Bayes Filter Exercise 2.10: Predict Step with Convolution",
+      "context": "Implement the predict step of a Bayes Filter for robot localization. Use convolution to model how movement noise spreads the robot's position belief across the map.",
+      "prerequisites": [],
+      "notes": "Implement predict_step() function that convolves a kernel (movement noise model) with the belief distribution. File: bayes_filter.py in bayes_tutorials package.",
+      "parts": null,
+      "tasks": [
+        "Open bayes_filter.py in bayes_tutorials package",
+        "Locate movement_callback() function",
+        "Implement predict_step(belief, offset, kernel) function",
+        "Shift kernel by offset to model movement distance",
+        "Apply convolution: elementwise multiply kernel with belief, sum results",
+        "For each position: output[i] += belief[index] * kernel[k]",
+        "Call predict_step in movement_callback after measurement",
+        "Launch bayes_filter node and visualize belief distribution",
+        "Call measurement update and predict step services"
+      ],
+      "file_structure": {
+        "ros_package": "bayes_tutorials",
+        "dependencies": [
+          "rclpy"
+        ],
+        "files_to_create": []
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "[INFO] [<timestamp>]: Bayes Filter predict step applied. Belief updated with movement noise."
+        }
+      ],
+      "run_commands": [
+        "ros2 launch bayes_tutorials bayes_filter.launch.py",
+        "ros2 service call /request_measurement_update std_srvs/srv/Empty {}",
+        "ros2 service call /request_motion_update std_srvs/srv/Empty {}"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": [
+          "bayes_filter"
+        ],
+        "topics_subscribed": null,
+        "topics_published": [
+          "/belief"
+        ],
+        "services": [
+          "/request_measurement_update",
+          "/request_motion_update"
+        ],
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "niat-25",
+      "metadata": {
+        "topic": "Robot Navigation and Localization",
+        "difficulty_level": "easy",
+        "estimated_time_minutes": 4,
+        "language": "Python",
+        "ros_version": "ROS2",
+        "concepts": [
+          "initial pose",
+          "amcl localization",
+          "geometry_msgs",
+          "PoseWithCovariance"
+        ]
+      },
+      "title": "Nav2 Exercise 3.3: Set Robot Initial Pose",
+      "context": "Set the robot's initial pose for navigation and localization. Use RVIZ to identify coordinates and publish them to the /initialpose topic so the localization system knows where the robot starts.",
+      "prerequisites": [],
+      "notes": "Use ros2 topic pub command to publish to /initialpose. Topic type: geometry_msgs/msg/PoseWithCovariance. Get coordinates from RVIZ Publish Point tool.",
+      "parts": null,
+      "tasks": [
+        "Open RVIZ and view the map",
+        "Use 'Publish Point' tool to click a location on the map",
+        "Note the coordinates displayed in the terminal",
+        "Use ros2 topic pub to publish initial pose to /initialpose",
+        "Include position x, y coordinates and orientation quaternion",
+        "Run command: ros2 topic pub -1 /initialpose geometry_msgs/msg/PoseWithCovariance '{header: ...}'"
+      ],
+      "file_structure": {
+        "ros_package": null,
+        "dependencies": [
+          "geometry_msgs"
+        ],
+        "files_to_create": []
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "publisher: beginning loop\npublishing #1: geometry_msgs.PoseWithCovariance(...)"
+        }
+      ],
+      "run_commands": [
+        "ros2 topic pub -l /initialpose geometry_msgs/msg/PoseWithCovariance \"{header: {}, pose: {position: {x: 1.0, y: 2.0}}, covariance: [0.0]}\""
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": null,
+        "topics_subscribed": null,
+        "topics_published": [
+          "/initialpose"
+        ],
+        "services": null,
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "niat-26",
+      "metadata": {
+        "topic": "Robot Navigation and Path Planning",
+        "difficulty_level": "easy",
+        "estimated_time_minutes": 10,
+        "language": "Python",
+        "ros_version": "ROS2",
+        "concepts": [
+          "navigation goal",
+          "action client",
+          "PoseStamped",
+          "Nav2 goals"
+        ]
+      },
+      "title": "Nav3 Exercise 4.3: Send Navigation Goal via Topic",
+      "context": "Send a navigation goal to the robot using the /goal_pose topic. The robot will compute a path and navigate to the specified location on the map.",
+      "prerequisites": [],
+      "notes": "Use ros2 topic pub to send goal. Goal type: geometry_msgs/msg/PoseStamped. Use RVIZ Publish Point to get coordinates.",
+      "parts": null,
+      "tasks": [
+        "Get goal position from RVIZ Publish Point tool",
+        "Click on a target location in RVIZ map view",
+        "Note the coordinates displayed",
+        "Publish goal to /goal_pose topic using ros2 topic pub",
+        "Include position (x, y, z) and orientation (quaternion)",
+        "Robot will start moving toward the goal"
+      ],
+      "file_structure": {
+        "ros_package": null,
+        "dependencies": [
+          "geometry_msgs"
+        ],
+        "files_to_create": []
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "publisher: beginning loop\npublishing #1: geometry_msgs.PoseStamped(...)"
+        }
+      ],
+      "run_commands": [
+        "ros2 topic pub -l /goal_pose geometry_msgs/msg/PoseStamped \"{header: {frame_id: 'map'}, pose: {position: {x: 5.0, y: 3.0}}}\""
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": null,
+        "topics_subscribed": null,
+        "topics_published": [
+          "/goal_pose"
+        ],
+        "services": null,
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "niat-27",
+      "metadata": {
+        "topic": "Robot Navigation and Obstacle Avoidance",
+        "difficulty_level": "medium",
+        "estimated_time_minutes": 10,
+        "language": "Python",
+        "ros_version": "ROS2",
+        "concepts": [
+          "navigation launch file",
+          "lifecycle manager",
+          "nav2_lifecycle_manager",
+          "multiple nodes",
+          "single entry point"
+        ]
+      },
+      "title": "Nav4 Exercise 5.5: Create Single Navigation Launch File",
+      "context": "Consolidate multiple navigation nodes (map_server, localization, planner, controller, recovery_server) into a single launch file managed by a nav2_lifecycle_manager for cleaner robot startup.",
+      "prerequisites": [],
+      "notes": "File: navigation.launch.py in pathplanner_server package. Include: map_server, amcl, controller, planner, recovery_server, lifecycle_manager. Use lifecycle_manager to manage all nodes.",
+      "parts": null,
+      "tasks": [
+        "Create navigation.launch.py in pathplanner_server package",
+        "Import LaunchDescription, Node from launch packages",
+        "Define nodes for: nav2_map_server, nav2_amcl, nav2_controller, nav2_planner, nav2_recoveries_server",
+        "Create nav2_lifecycle_manager node to manage all navigation nodes",
+        "Configure lifecycle_manager with generic name 'lifecycle_manager'",
+        "Include config files for each node from package share directories",
+        "Return LaunchDescription with all nodes",
+        "Test launch file: ros2 launch pathplanner_server navigation.launch.py"
+      ],
+      "file_structure": {
+        "ros_package": "pathplanner_server",
+        "dependencies": [
+          "launch",
+          "launch_ros"
+        ],
+        "files_to_create": [
+          {
+            "path": "launch/navigation.launch.py",
+            "role": "unified navigation launch file"
+          }
+        ]
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "[INFO] [launch]: All specified launch arguments are in use\n[INFO] [nav2_map_server]: Map server started\n[INFO] [nav2_amcl]: AMCL started\n[INFO] [lifecycle_manager]: Lifecycle manager started"
+        }
+      ],
+      "run_commands": [
+        "ros2 launch pathplanner_server navigation.launch.py"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": [
+          "map_server",
+          "amcl",
+          "controller",
+          "planner",
+          "recoveries_server",
+          "lifecycle_manager"
+        ],
+        "topics_subscribed": null,
+        "topics_published": null,
+        "services": null,
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "niat-28",
+      "metadata": {
+        "topic": "Final Project: Maze Escape",
+        "difficulty_level": "hard",
+        "estimated_time_minutes": 180,
+        "language": "Python",
+        "ros_version": "ROS2",
+        "concepts": [
+          "random decision making",
+          "probability",
+          "maze navigation",
+          "class design",
+          "TurtleBot simulation"
+        ]
+      },
+      "title": "Final Project: Autonomous Maze Navigation",
+      "context": "Program a simulated TurtleBot to navigate and escape a maze autonomously. The robot randomly chooses to go left or right at each intersection using probability-based decision making.",
+      "prerequisites": [],
+      "notes": "Modify TurtlebotProject class to implement decide_left_or_right() function. Use numpy.random.uniform for probability. Robot starts at top of maze, oriented right. Goal: exit at bottom.",
+      "parts": null,
+      "tasks": [
+        "Create decide_left_or_right(limit=0.8) function in TurtlebotProject class",
+        "Use np.random.uniform(0, 1) to generate random number",
+        "If random < limit: return True (go right, with 80% probability)",
+        "Else: return False (go left, with 20% probability)",
+        "Integrate function into movement logic for maze navigation",
+        "Robot must navigate from start (top, facing right) to exit (bottom)",
+        "Test behavior: robot should randomly explore maze",
+        "Verify: robot reaches exit with different random paths on each run"
+      ],
+      "file_structure": {
+        "ros_package": "maze_robot",
+        "dependencies": [
+          "rclpy",
+          "numpy"
+        ],
+        "files_to_create": [
+          {
+            "path": "maze_robot/turtle_project.py",
+            "role": "maze navigation main class"
+          }
+        ]
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "Robot entering maze\nRandom decision: go right (0.623 < 0.8)\nRobot at intersection\nRandom decision: go left (0.921 > 0.8)\nRobot reached exit!"
+        }
+      ],
+      "run_commands": [
+        "ros2 run maze_robot turtle_project"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": [
+          "turtle_project"
+        ],
+        "topics_subscribed": [
+          "/camera/image_raw"
+        ],
+        "topics_published": [
+          "/cmd_vel"
+        ],
+        "services": null,
+        "publish_rate": 10
+      }
+    },
+    {
+      "question_id": "niat-29",
+      "metadata": {
+        "topic": "Intermediate ROS2 Final Project",
+        "difficulty_level": "hard",
+        "estimated_time_minutes": 480,
+        "language": "Python",
+        "ros_version": "ROS2",
+        "concepts": [
+          "circle detection",
+          "laser scan processing",
+          "clustering",
+          "robot movement",
+          "sensor fusion"
+        ]
+      },
+      "title": "Intermediate ROS2 Final Project: Circle Detection and Navigation",
+      "context": "Create a ROS2 system that detects circular shapes using laser scan data, extracts their positions and radii, and commands the robot to move toward them. This capstone project integrates sensing, data processing, and robot control.",
+      "prerequisites": [],
+      "notes": "Package: ros2_intermediate_project. Use LaserDataProcess class to detect circles. Use sklearn clustering and rclpy library for circle detection from laser scans.",
+      "parts": null,
+      "tasks": [
+        "Create ros2_intermediate_project ROS2 package",
+        "Create LaserDataProcess class with circle detection capability",
+        "Subscribe to /scan topic (sensor_msgs/msg/LaserScan)",
+        "Convert laser scan ranges to X-Y Cartesian coordinates",
+        "Use sklearn AgglomerativeClustering for grouping nearby points",
+        "Use sklearn neighbors.kneighbors_graph for connectivity",
+        "Detect circular patterns in clustered data",
+        "Extract circle center (X, Y) and radius from clustered points",
+        "Publish detected circles to output topic",
+        "Create navigation node to move robot toward detected circles",
+        "Publish velocity commands to /cmd_vel based on circle position"
+      ],
+      "file_structure": {
+        "ros_package": "ros2_intermediate_project",
+        "dependencies": [
+          "rclpy",
+          "sensor_msgs",
+          "scikit-learn",
+          "numpy"
+        ],
+        "files_to_create": [
+          {
+            "path": "ros2_intermediate_project/laser_data_processing.py",
+            "role": "circle detection module"
+          },
+          {
+            "path": "ros2_intermediate_project/circle_navigator_node.py",
+            "role": "navigation node"
+          }
+        ]
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "[INFO] [circle_navigator]: Detected circle at X=1.2, Y=2.3, radius=0.15\n[INFO] [circle_navigator]: Moving toward circle\n[INFO] [circle_navigator]: Reached circle position"
+        }
+      ],
+      "run_commands": [
+        "ros2 launch ros2_intermediate_project circle_detection.launch.py"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": [
+          "circle_navigator_node"
+        ],
+        "topics_subscribed": [
+          "/scan"
+        ],
+        "topics_published": [
+          "/detected_circles",
+          "/cmd_vel"
+        ],
+        "services": null,
+        "publish_rate": 10
+      }
+    },
+    {
+      "question_id": "niat-30",
+      "metadata": {
+        "topic": "Behavior Trees for Robot Control",
+        "difficulty_level": "hard",
+        "estimated_time_minutes": 240,
+        "language": "Python/C++",
+        "ros_version": "ROS2",
+        "concepts": [
+          "behavior tree",
+          "action nodes",
+          "condition nodes",
+          "tree structure",
+          "robot autonomy"
+        ]
+      },
+      "title": "Behavior Trees Course Project: Multi-Cell Robot Navigation",
+      "context": "Design and implement a behavior tree for a robot to autonomously navigate between cells. The robot must use a laser to detect freeways, open doors when needed, and traverse multiple cells using branching behavior tree logic.",
+      "prerequisites": [],
+      "notes": "Environment: 3-cell world with doorways. Robot starts in cell 1, must reach cell 3. Doors can be manually opened. Use behavior tree framework (py_trees or BT++) to define robot logic.",
+      "parts": null,
+      "tasks": [
+        "Create behavior tree ROS2 package",
+        "Define behavior tree structure: Root \u2192 Selector \u2192 Sequences \u2192 Actions",
+        "Implement condition nodes: is_door_open, is_wall_ahead, is_goal_reached",
+        "Implement action nodes: scan_environment, open_door, move_forward, turn",
+        "Robot must transition from cell 1 to cell 2: detect freeway, navigate",
+        "At doorway: check if door open; if closed, wait until open",
+        "Robot must transition from cell 2 to cell 3: same logic",
+        "Use laser scan feedback for navigation decisions",
+        "Implement tree execution in ROS2 node",
+        "Test behavior tree with manual door opening via terminal commands"
+      ],
+      "file_structure": {
+        "ros_package": "behavior_tree_robot",
+        "dependencies": [
+          "rclpy",
+          "py_trees",
+          "sensor_msgs"
+        ],
+        "files_to_create": [
+          {
+            "path": "behavior_tree_robot/robot_behavior_tree.py",
+            "role": "behavior tree definitions"
+          },
+          {
+            "path": "behavior_tree_robot/bt_executor_node.py",
+            "role": "tree execution in ROS2"
+          }
+        ]
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "[INFO] [bt_executor]: Robot in Cell 1\n[INFO] [bt_executor]: Scanning for freeway\n[INFO] [bt_executor]: Freeway detected\n[INFO] [bt_executor]: Moving to Cell 2\n[INFO] [bt_executor]: Door detected\n[INFO] [bt_executor]: Waiting for door to open..."
+        }
+      ],
+      "run_commands": [
+        "ros2 launch behavior_tree_robot launch_world_project.launch.py"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "nodes": [
+          "bt_executor_node"
+        ],
+        "topics_subscribed": [
+          "/scan",
+          "/door_state"
+        ],
+        "topics_published": [
+          "/cmd_vel",
+          "/tree_status"
+        ],
+        "services": null,
+        "publish_rate": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+quality_bar:
+  min_confidence: 85.0
+  min_realism_score: 60
+
+confidence_weights:
+  coverage: 0.15
+  difficulty_correctness: 0.20
+  originality: 0.15
+  scope_compliance: 0.15
+  auto_grading: 0.20
+  format_quality: 0.15
+
+originality:
+  similarity_threshold: 0.75
+
+scope:
+  forbidden_technologies:
+    - Nav2
+    - SLAM
+    - MoveIt
+    - OpenCV
+    - micro-ROS
+    - perception
+    - ros2_control
+    - Gazebo plugins
+
+boilerplate:
+  require_todo_markers: true
+  reference_must_differ_from_starter: true
+
+auto_grading:
+  min_criteria: 3
+  total_points_required: 100

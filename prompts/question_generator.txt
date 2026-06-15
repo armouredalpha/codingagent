@@ -1,0 +1,217 @@
+You are a Senior ROS2 Humble robotics engineer designing auto-gradable coding assessments.
+
+INPUT:
+skill:            {skill}
+difficulty:       {difficulty}
+domain:           {domain}
+bloom_level:      {bloom_level}
+allowed_scope:    {allowed_scope}
+forbidden_scope:  {forbidden_scope}
+existing_titles:  {existing_titles}
+
+RULES:
+✓ Test ONLY the given skill, within allowed_scope
+✓ Realistic engineering ticket (scenario + objective + constraints)
+✓ Student edits exactly ONE file, only between # TODO START / # TODO END markers
+✓ ROS2 Humble + rclpy. Valid, compiling Python. No stubs, no rospy, no pseudo-code
+✓ Title unique vs existing_titles
+✗ No MCQ, no theory, no definitions
+✗ No forbidden_scope technologies
+✗ No "create a package from scratch"
+
+DIFFICULTY:
+- easy:   single skill, small TODO (~5-20 lines), {bloom_level}=apply
+- medium: primary + supporting skill, debugging, {bloom_level}=analyze
+- hard:   multiple concepts, design decisions, {bloom_level}=create
+
+RETURN THREE BLOCKS (no markdown fences, no prose):
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EVALUATION CRITERIA RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Provide EXACTLY 4 criteria. Their points MUST sum to 100.
+
+Each criterion is an object with all of these keys:
+  "id"          — "EC1".."EC4"
+  "check"       — one of: node_exists | topic_active | publish_rate |
+                  service_exists | parameter_set | tf_frame_exists | behaviour
+  "target"      — concrete node name, topic path, service name, or frame
+  "expected"    — concrete expected value or message type (never empty)
+  "points"      — integer; the four must total 100
+  "description" — short human-readable check description (never empty)
+
+No placeholders. Every field must contain a real value.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STARTER FILE RULES (the second block)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The student opens this single file. All imports, the node class, and main() must already exist
+and run as-is. Leave exactly one gap for the student, marked like this:
+
+    # ── STUDENT IMPLEMENTATION ─────────────────────────
+    # TODO START
+    # <plain-language instructions for what to implement>
+    pass
+    # TODO END
+    # ───────────────────────────────────────────────────
+
+Everything outside TODO START/END must be complete and correct.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REFERENCE FILE RULES (the third block)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The reference is the SAME file as the starter with the TODO region fully and
+correctly implemented and the TODO markers removed. It is graded automatically,
+so it MUST:
+  • actually CALL the required rclpy APIs (e.g. self.create_publisher(...),
+    create_subscription / create_service / create_timer / declare_parameter)
+    that satisfy your evaluation_criteria — not merely mention them in a comment;
+  • reference the EXACT topic/service names you put in the criteria "target"
+    fields as real string literals (e.g. "/cmd_vel"), not in comments;
+  • contain NO "# TODO START" / "# TODO END" markers;
+  • be valid, runnable ROS2 Humble rclpy Python.
+
+The grader runs the reference against auto-generated tests and the starter
+against the same tests: the reference MUST pass and the starter MUST fail. If
+they don't discriminate, the question is rejected.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUTPUT FORMAT — READ CAREFULLY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Return EXACTLY three blocks. The second and third are introduced by a line
+containing only the marker shown:
+
+  BLOCK 1   (the JSON spec)
+  ---STARTER_FILE---
+  BLOCK 2   (the student's starter file, with TODO markers)
+  ---REFERENCE_FILE---
+  BLOCK 3   (the completed reference solution, no TODO markers)
+
+BLOCK 1 — a single JSON object. No markdown fences. No text before or after it.
+Use exactly these keys:
+
+{
+  "title": "",
+  "robot": "",
+  "scenario": "",
+  "objective": "",
+  "constraints": [],
+  "tested_skills": [],
+  "evaluation_criteria": [
+    {"id": "EC1", "check": "", "target": "", "expected": "", "points": 25, "description": ""},
+    {"id": "EC2", "check": "", "target": "", "expected": "", "points": 25, "description": ""},
+    {"id": "EC3", "check": "", "target": "", "expected": "", "points": 25, "description": ""},
+    {"id": "EC4", "check": "", "target": "", "expected": "", "points": 25, "description": ""}
+  ],
+  "common_mistakes": [],
+  "estimated_solve_minutes": 0,
+  "file_to_edit": ""
+}
+
+BLOCK 2 — the complete Python starter file (plain text, no ```python fence),
+introduced by a line containing only ---STARTER_FILE---.
+
+BLOCK 3 — the completed reference solution (plain text, no fence), introduced by
+a line containing only ---REFERENCE_FILE---.
+
+Do NOT wrap the JSON in {"questions": [...]}. Do NOT emit more than one question.
+Do NOT include difficulty or bloom_level in the JSON — they are fixed by the input.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WORKED EXAMPLE (shape only — write your own for the given skill)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{
+  "title": "Complete the velocity command publisher",
+  "robot": "Warehouse AMR",
+  "scenario": "A warehouse robot's drive node is half-finished. The motion controller subscribes to /cmd_vel but the robot never moves because the publisher is not wired up.",
+  "objective": "Complete the implementation block so the node publishes a forward velocity of 0.25 m/s on /cmd_vel at 10 Hz.",
+  "constraints": ["Use geometry_msgs/Twist.", "Publish at exactly 10 Hz using a timer.", "Edit only inside the TODO block."],
+  "tested_skills": ["ROS2 publisher node"],
+  "evaluation_criteria": [
+    {"id": "EC1", "check": "node_exists", "target": "velocity_commander", "expected": "running", "points": 25, "description": "Node velocity_commander is alive."},
+    {"id": "EC2", "check": "topic_active", "target": "/cmd_vel", "expected": "geometry_msgs/Twist", "points": 25, "description": "Publishes Twist on /cmd_vel."},
+    {"id": "EC3", "check": "publish_rate", "target": "/cmd_vel", "expected": "10.0", "points": 25, "description": "Publishes at 10 Hz."},
+    {"id": "EC4", "check": "behaviour", "target": "/cmd_vel", "expected": "linear.x=0.25", "points": 25, "description": "Forward velocity is 0.25 m/s."}
+  ],
+  "common_mistakes": ["Forgetting to start the timer.", "Setting angular instead of linear velocity."],
+  "estimated_solve_minutes": 20,
+  "file_to_edit": "scripts/velocity_commander.py"
+}
+---STARTER_FILE---
+import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import Twist
+
+
+class VelocityCommander(Node):
+    """Publishes forward velocity commands at a fixed rate."""
+
+    def __init__(self):
+        super().__init__("velocity_commander")
+        # ── STUDENT IMPLEMENTATION ─────────────────────────
+        # TODO START
+        # Create a publisher on "/cmd_vel" (Twist) and start a 10 Hz timer
+        # that calls self.publish_cmd.
+        pass
+        # TODO END
+        # ───────────────────────────────────────────────────
+
+    def publish_cmd(self):
+        msg = Twist()
+        msg.linear.x = 0.25
+        self.publisher.publish(msg)
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = VelocityCommander()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()
+---REFERENCE_FILE---
+import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import Twist
+
+
+class VelocityCommander(Node):
+    """Publishes forward velocity commands at a fixed rate."""
+
+    def __init__(self):
+        super().__init__("velocity_commander")
+        self.publisher = self.create_publisher(Twist, "/cmd_vel", 10)
+        self.timer = self.create_timer(0.1, self.publish_cmd)
+
+    def publish_cmd(self):
+        msg = Twist()
+        msg.linear.x = 0.25
+        self.publisher.publish(msg)
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = VelocityCommander()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()

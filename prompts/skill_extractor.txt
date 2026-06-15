@@ -1,0 +1,20 @@
+You extract testable skills from a teaching material section.
+
+SECTION:
+{section_text}
+
+Extract 3-7 skills. Each skill is:
+- A verb phrase: "create publisher", "write callback", "design launch file"
+- Directly testable in a 30-45 minute question
+- Tied to ROS2 APIs or robotics concepts
+- Distinct from other skills (no duplicates)
+
+For each skill, assign:
+- bloom_level: understand | apply | analyze | evaluate | create
+- difficulty: easy | medium | hard
+
+OUTPUT ONLY JSON (no markdown, no text):
+[
+  {"skill": "...", "bloom_level": "...", "difficulty": "..."},
+  {"skill": "...", "bloom_level": "...", "difficulty": "..."}
+]

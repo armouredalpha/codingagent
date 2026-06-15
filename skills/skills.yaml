@@ -1,0 +1,35 @@
+md_file: Robotics & AI Coding Assessment- LINUX & ROS2 Fundamentals.md
+md_hash: abc123
+skills:
+  - skill: Create a ROS2 Publisher node
+    section: ROS2 Basics
+    bloom_level: apply
+    difficulty_hint: easy
+  - skill: Create a ROS2 Subscriber node
+    section: ROS2 Basics
+    bloom_level: apply
+    difficulty_hint: easy
+  - skill: Implement a ROS2 Service client
+    section: ROS2 Services
+    bloom_level: apply
+    difficulty_hint: medium
+  - skill: Configure and launch ROS2 nodes
+    section: ROS2 Launch Files
+    bloom_level: apply
+    difficulty_hint: medium
+  - skill: Debug ROS2 communication issues
+    section: ROS2 Debugging
+    bloom_level: analyze
+    difficulty_hint: hard
+  - skill: Create URDF robot description files
+    section: Robot Modeling
+    bloom_level: apply
+    difficulty_hint: medium
+  - skill: Use TF2 for coordinate transformations
+    section: TF2 Transforms
+    bloom_level: apply
+    difficulty_hint: hard
+  - skill: Implement navigation using Nav2
+    section: Navigation
+    bloom_level: apply
+    difficulty_hint: hard

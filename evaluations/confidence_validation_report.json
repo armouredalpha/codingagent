@@ -1,0 +1,690 @@
+{
+  "timestamp": "2026-06-13",
+  "total_questions_analyzed": 30,
+  "metrics": {
+    "pearson_correlation": 0.886,
+    "spearman_correlation": 0.886,
+    "mean_absolute_error_percent": 14.13,
+    "rmse_percent": 16.55,
+    "well_calibrated_count": 6,
+    "overconfident_count": 10,
+    "underconfident_count": 14
+  },
+  "questions": [
+    {
+      "q_id": "niat-1",
+      "title": "ROS2 Exercise: Classes, Attributes and Instance Me",
+      "predicted": 88.5,
+      "actual": 100.0,
+      "error": 11.5,
+      "passed": 3,
+      "total": 3,
+      "avg_score": 97.33333333333333,
+      "avg_time": 12.666666666666666,
+      "errors": [],
+      "difficulty": "easy_easy",
+      "skills": [
+        "class definition",
+        "instance attributes",
+        "rclpy basics"
+      ]
+    },
+    {
+      "q_id": "niat-2",
+      "title": "ROS2 Exercise: Using 'self' to access private attr",
+      "predicted": 72.0,
+      "actual": 66.66666666666666,
+      "error": 5.333333333333343,
+      "passed": 2,
+      "total": 3,
+      "avg_score": 82.0,
+      "avg_time": 29.333333333333332,
+      "errors": [
+        "Confusion with private attribute naming (name mangling)",
+        "Service callback signature mismatch",
+        "Minor: forgot to initialize response.message initially"
+      ],
+      "difficulty": "medium",
+      "skills": [
+        "self reference",
+        "private attributes",
+        "ROS2 services",
+        "odometry subscriber"
+      ]
+    },
+    {
+      "q_id": "niat-3",
+      "title": "Define a ComputerUnit class to read total CPU load",
+      "predicted": 68.5,
+      "actual": 66.66666666666666,
+      "error": 1.8333333333333428,
+      "passed": 2,
+      "total": 3,
+      "avg_score": 71.33333333333333,
+      "avg_time": 37.666666666666664,
+      "errors": [
+        "ABC import and usage unfamiliar",
+        "Did not understand abstract method requirement",
+        "Missing psutil integration",
+        "Initial confusion with ABC decorator syntax"
+      ],
+      "difficulty": "medium_hard",
+      "skills": [
+        "composition",
+        "abstract base class",
+        "interface pattern",
+        "psutil"
+      ]
+    },
+    {
+      "q_id": "niat-4",
+      "title": "RobotManagerComposition class with console output ",
+      "predicted": 71.5,
+      "actual": 66.66666666666666,
+      "error": 4.833333333333343,
+      "passed": 2,
+      "total": 3,
+      "avg_score": 81.0,
+      "avg_time": 30.0,
+      "errors": [
+        "Incomplete service callback implementation",
+        "Missing response message formatting"
+      ],
+      "difficulty": "medium_hard",
+      "skills": [
+        "composition",
+        "ROS2 service server",
+        "SetBool service",
+        "state management"
+      ]
+    },
+    {
+      "q_id": "niat-5",
+      "title": "Inheritance: Create RobotManagerBase base class",
+      "predicted": 74.0,
+      "actual": 66.66666666666666,
+      "error": 7.333333333333343,
+      "passed": 2,
+      "total": 3,
+      "avg_score": 86.33333333333333,
+      "avg_time": 22.666666666666668,
+      "errors": [
+        "Missing protected attribute underscore convention",
+        "Partial method implementation"
+      ],
+      "difficulty": "medium",
+      "skills": [
+        "inheritance",
+        "base class",
+        "protected attributes",
+        "ROS2 Node subclass"
+      ]
+    },
+    {
+      "q_id": "niat-6",
+      "title": "Inheritance: Create RobotManagerMobile derived cla",
+      "predicted": 75.5,
+      "actual": 66.66666666666666,
+      "error": 8.833333333333343,
+      "passed": 2,
+      "total": 3,
+      "avg_score": 88.0,
+      "avg_time": 21.0,
+      "errors": [
+        "super() call syntax error",
+        "Missing subscriber initialization"
+      ],
+      "difficulty": "medium",
+      "skills": [
+        "inheritance",
+        "derived class",
+        "super().__init__()",
+        "odometry subscriber"
+      ]
+    },
+    {
+      "q_id": "niat-7",
+      "title": "Generic ROS2 topic subscriber for Image using call",
+      "predicted": 55.0,
+      "actual": 33.33333333333333,
+      "error": 21.66666666666667,
+      "passed": 1,
+      "total": 3,
+      "avg_score": 57.333333333333336,
+      "avg_time": 47.666666666666664,
+      "errors": [
+        "No understanding of TypeVar",
+        "Generic class syntax unfamiliar",
+        "Callback not properly parameterized",
+        "Generic implementation incomplete",
+        "Type parameter not properly used in create_subscription",
+        "Minor: generic type hints could be stricter"
+      ],
+      "difficulty": "hard",
+      "skills": [
+        "callable objects",
+        "generic subscriber class",
+        "TypeVar",
+        "sensor_msgs/Image"
+      ]
+    },
+    {
+      "q_id": "niat-8",
+      "title": "Reuse generic subscriber for PointCloud2",
+      "predicted": 64.5,
+      "actual": 66.66666666666666,
+      "error": 2.166666666666657,
+      "passed": 2,
+      "total": 3,
+      "avg_score": 68.33333333333333,
+      "avg_time": 30.333333333333332,
+      "errors": [
+        "Could not reuse generic from previous exercise",
+        "PointCloud2 import missing",
+        "Callback logic flawed",
+        "Had to look up PointCloud2 structure"
+      ],
+      "difficulty": "medium_hard",
+      "skills": [
+        "generic reuse",
+        "PointCloud2",
+        "type parameterization"
+      ]
+    },
+    {
+      "q_id": "niat-9",
+      "title": "Final Exercise: Type-dispatched callbacks with edg",
+      "predicted": 45.0,
+      "actual": 33.33333333333333,
+      "error": 11.666666666666671,
+      "passed": 1,
+      "total": 3,
+      "avg_score": 48.333333333333336,
+      "avg_time": 54.0,
+      "errors": [
+        "OpenCV integration unknown",
+        "cv_bridge usage incorrect",
+        "Type dispatch logic missing",
+        "Image processing pipeline incomplete",
+        "Edge detection partially working",
+        "PointCloud to depth image conversion failed",
+        "Type dispatch incomplete",
+        "Minor: could optimize depth image conversion"
+      ],
+      "difficulty": "hard_hard",
+      "skills": [
+        "type-based dispatch",
+        "OpenCV",
+        "cv_bridge",
+        "Canny edge detection",
+        "PointCloud2 to depth image"
+      ]
+    },
+    {
+      "q_id": "niat-10",
+      "title": "Basic Python Thread Creation",
+      "predicted": 86.0,
+      "actual": 100.0,
+      "error": 14.0,
+      "passed": 3,
+      "total": 3,
+      "avg_score": 98.33333333333333,
+      "avg_time": 7.333333333333333,
+      "errors": [],
+      "difficulty": "easy_easy",
+      "skills": [
+        "threading module",
+        "thread creation",
+        "join()"
+      ]
+    },
+    {
+      "q_id": "niat-11",
+      "title": "Validate robot turn velocity input using try/excep",
+      "predicted": 79.0,
+      "actual": 100.0,
+      "error": 21.0,
+      "passed": 3,
+      "total": 3,
+      "avg_score": 94.33333333333333,
+      "avg_time": 11.0,
+      "errors": [
+        "Minor: could have been more specific with exception messages"
+      ],
+      "difficulty": "easy_medium",
+      "skills": [
+        "try/except/raise",
+        "input validation",
+        "ValueError handling"
+      ]
+    },
+    {
+      "q_id": "niat-12",
+      "title": "Custom exception class WrongTurnException",
+      "predicted": 77.5,
+      "actual": 100.0,
+      "error": 22.5,
+      "passed": 3,
+      "total": 3,
+      "avg_score": 94.0,
+      "avg_time": 8.666666666666666,
+      "errors": [],
+      "difficulty": "easy_medium",
+      "skills": [
+        "custom exception class",
+        "Exception inheritance",
+        "__str__ override"
+      ]
+    },
+    {
+      "q_id": "niat-13",
+      "title": "ROS2 Exercise: Custom Service Message with Duratio",
+      "predicted": 70.0,
+      "actual": 66.66666666666666,
+      "error": 3.333333333333343,
+      "passed": 2,
+      "total": 3,
+      "avg_score": 78.33333333333333,
+      "avg_time": 25.666666666666668,
+      "errors": [
+        "Custom service message definition incomplete",
+        "Service server callback signature wrong",
+        "Minor: message field naming convention"
+      ],
+      "difficulty": "medium",
+      "skills": [
+        "custom service message",
+        "service server",
+        "duration parameter"
+      ]
+    },
+    {
+      "q_id": "niat-14",
+      "title": "ROS2 Services Quiz: BB-8 Square Movement Service",
+      "predicted": 62.5,
+      "actual": 66.66666666666666,
+      "error": 4.166666666666657,
+      "passed": 2,
+      "total": 3,
+      "avg_score": 71.0,
+      "avg_time": 37.666666666666664,
+      "errors": [
+        "Service definition incomplete",
+        "Square movement algorithm flawed",
+        "Repetition logic missing",
+        "Off by one error in repetition counter"
+      ],
+      "difficulty": "medium_hard",
+      "skills": [
+        "ROS service server",
+        "custom service message",
+        "square movement logic"
+      ]
+    },
+    {
+      "q_id": "niat-15",
+      "title": "ROS2 Topics Quiz: Obstacle Avoidance with Laser",
+      "predicted": 65.5,
+      "actual": 100.0,
+      "error": 34.5,
+      "passed": 3,
+      "total": 3,
+      "avg_score": 88.33333333333333,
+      "avg_time": 28.666666666666668,
+      "errors": [
+        "Initial range extraction logic incorrect"
+      ],
+      "difficulty": "medium_hard",
+      "skills": [
+        "ROS subscriber",
+        "laser scan processing",
+        "obstacle avoidance logic",
+        "Twist commands"
+      ]
+    },
+    {
+      "q_id": "niat-16",
+      "title": "ROS2 Actions Quiz: Drone Takeoff and Land",
+      "predicted": 48.0,
+      "actual": 33.33333333333333,
+      "error": 14.666666666666671,
+      "passed": 1,
+      "total": 3,
+      "avg_score": 58.0,
+      "avg_time": 47.333333333333336,
+      "errors": [
+        "Action message structure unknown",
+        "Action server callback not implemented",
+        "Feedback and result publishing missing",
+        "Action server partially working",
+        "Feedback not published correctly",
+        "Result callback incomplete"
+      ],
+      "difficulty": "hard_hard",
+      "skills": [
+        "ROS action server",
+        "custom action message",
+        "goal handling",
+        "feedback and result"
+      ]
+    },
+    {
+      "q_id": "niat-17",
+      "title": "Probability Exercise 4.2: Distribution Analysis",
+      "predicted": 84.0,
+      "actual": 100.0,
+      "error": 16.0,
+      "passed": 3,
+      "total": 3,
+      "avg_score": 96.0,
+      "avg_time": 9.333333333333334,
+      "errors": [],
+      "difficulty": "easy_easy",
+      "skills": [
+        "probability distribution",
+        "expected value",
+        "variance",
+        "standard deviation"
+      ]
+    },
+    {
+      "q_id": "niat-18",
+      "title": "Calculus Exercise 3.3: Robot Velocity and Position",
+      "predicted": 72.5,
+      "actual": 100.0,
+      "error": 27.5,
+      "passed": 3,
+      "total": 3,
+      "avg_score": 91.33333333333333,
+      "avg_time": 14.666666666666666,
+      "errors": [
+        "Minor: velocity function could be more precise"
+      ],
+      "difficulty": "easy_medium",
+      "skills": [
+        "Twist message",
+        "velocity functions",
+        "position integration",
+        "kinematics"
+      ]
+    },
+    {
+      "q_id": "niat-19",
+      "title": "Probability Exercise 4.3: Bayesian Belief Update",
+      "predicted": 75.0,
+      "actual": 100.0,
+      "error": 25.0,
+      "passed": 3,
+      "total": 3,
+      "avg_score": 94.0,
+      "avg_time": 11.666666666666666,
+      "errors": [],
+      "difficulty": "easy_medium",
+      "skills": [
+        "Bayes rule",
+        "conditional probability",
+        "belief update"
+      ]
+    },
+    {
+      "q_id": "niat-20",
+      "title": "ROS2 Actions Exercise 9.12: Fibonacci Action Serve",
+      "predicted": 61.0,
+      "actual": 66.66666666666666,
+      "error": 5.666666666666657,
+      "passed": 2,
+      "total": 3,
+      "avg_score": 75.33333333333333,
+      "avg_time": 34.333333333333336,
+      "errors": [
+        "Action server setup incomplete",
+        "Fibonacci algorithm correct but feedback not published",
+        "Result handling missing",
+        "Off-by-one in sequence generation"
+      ],
+      "difficulty": "medium_hard",
+      "skills": [
+        "ROS action server",
+        "Fibonacci algorithm",
+        "goal execution",
+        "feedback publishing"
+      ]
+    },
+    {
+      "q_id": "niat-21",
+      "title": "Probability Exercise 4.1: Maze Door Probability",
+      "predicted": 82.5,
+      "actual": 100.0,
+      "error": 17.5,
+      "passed": 3,
+      "total": 3,
+      "avg_score": 96.66666666666667,
+      "avg_time": 7.333333333333333,
+      "errors": [],
+      "difficulty": "easy_easy",
+      "skills": [
+        "conditional probability",
+        "maze navigation",
+        "Bayes theorem"
+      ]
+    },
+    {
+      "q_id": "niat-22",
+      "title": "TF2 Exercise 1.5: Create a Coordinate Frame",
+      "predicted": 78.0,
+      "actual": 100.0,
+      "error": 22.0,
+      "passed": 3,
+      "total": 3,
+      "avg_score": 94.33333333333333,
+      "avg_time": 9.666666666666666,
+      "errors": [],
+      "difficulty": "easy_medium",
+      "skills": [
+        "coordinate frames",
+        "TF2",
+        "static_transform_publisher"
+      ]
+    },
+    {
+      "q_id": "niat-23",
+      "title": "URDF Exercise 6.1: Add RGB Camera and PointCloud S",
+      "predicted": 60.5,
+      "actual": 66.66666666666666,
+      "error": 6.166666666666657,
+      "passed": 2,
+      "total": 3,
+      "avg_score": 72.66666666666667,
+      "avg_time": 35.0,
+      "errors": [
+        "URDF sensor syntax unfamiliar",
+        "Gazebo plugin configuration incorrect",
+        "Camera and LiDAR not properly linked",
+        "Minor: FOV parameter units needed adjustment"
+      ],
+      "difficulty": "medium_hard",
+      "skills": [
+        "URDF sensors",
+        "RGB camera",
+        "PointCloud2",
+        "Gazebo simulation"
+      ]
+    },
+    {
+      "q_id": "niat-24",
+      "title": "Bayes Filter Exercise 2.10: Predict Step with Conv",
+      "predicted": 59.0,
+      "actual": 33.33333333333333,
+      "error": 25.66666666666667,
+      "passed": 1,
+      "total": 3,
+      "avg_score": 58.333333333333336,
+      "avg_time": 42.666666666666664,
+      "errors": [
+        "Convolution operation not understood",
+        "Kernel shifting logic incorrect",
+        "Belief distribution update failed",
+        "Partial convolution implementation",
+        "Belief normalization missing",
+        "Minor: could use scipy.signal for efficiency"
+      ],
+      "difficulty": "medium_hard",
+      "skills": [
+        "predict step",
+        "convolution",
+        "belief update",
+        "noisy movement"
+      ]
+    },
+    {
+      "q_id": "niat-25",
+      "title": "Nav2 Exercise 3.3: Set Robot Initial Pose",
+      "predicted": 87.0,
+      "actual": 100.0,
+      "error": 13.0,
+      "passed": 3,
+      "total": 3,
+      "avg_score": 98.0,
+      "avg_time": 5.666666666666667,
+      "errors": [],
+      "difficulty": "easy_easy",
+      "skills": [
+        "initial pose",
+        "amcl localization",
+        "PoseWithCovariance"
+      ]
+    },
+    {
+      "q_id": "niat-26",
+      "title": "Nav3 Exercise 4.3: Send Navigation Goal via Topic",
+      "predicted": 76.0,
+      "actual": 100.0,
+      "error": 24.0,
+      "passed": 3,
+      "total": 3,
+      "avg_score": 95.0,
+      "avg_time": 8.333333333333334,
+      "errors": [],
+      "difficulty": "easy_medium",
+      "skills": [
+        "navigation goal",
+        "action client",
+        "PoseStamped",
+        "Nav2 goals"
+      ]
+    },
+    {
+      "q_id": "niat-27",
+      "title": "Nav4 Exercise 5.5: Create Single Navigation Launch",
+      "predicted": 63.0,
+      "actual": 66.66666666666666,
+      "error": 3.666666666666657,
+      "passed": 2,
+      "total": 3,
+      "avg_score": 77.0,
+      "avg_time": 31.666666666666668,
+      "errors": [
+        "Launch file structure incomplete",
+        "lifecycle_manager not properly configured",
+        "Node dependencies not ordered correctly",
+        "Initial lifecycle ordering issue"
+      ],
+      "difficulty": "medium_hard",
+      "skills": [
+        "navigation launch file",
+        "lifecycle manager",
+        "multiple nodes",
+        "single entry point"
+      ]
+    },
+    {
+      "q_id": "niat-28",
+      "title": "Final Project: Autonomous Maze Navigation",
+      "predicted": 52.0,
+      "actual": 33.33333333333333,
+      "error": 18.66666666666667,
+      "passed": 1,
+      "total": 3,
+      "avg_score": 58.0,
+      "avg_time": 52.0,
+      "errors": [
+        "Maze navigation logic incomplete",
+        "Probability-based decisions not working",
+        "Class design not robust",
+        "Robot gets stuck in loops",
+        "Basic maze logic works",
+        "Probability decisions only partially correct",
+        "Intersection detection sometimes fails",
+        "Minor: could optimize path memory for better navigation"
+      ],
+      "difficulty": "hard_hard",
+      "skills": [
+        "random decision making",
+        "probability",
+        "maze navigation",
+        "class design",
+        "TurtleBot simulation"
+      ]
+    },
+    {
+      "q_id": "niat-29",
+      "title": "Intermediate ROS2 Final Project: Circle Detection ",
+      "predicted": 46.5,
+      "actual": 33.33333333333333,
+      "error": 13.166666666666671,
+      "passed": 1,
+      "total": 3,
+      "avg_score": 51.666666666666664,
+      "avg_time": 55.0,
+      "errors": [
+        "Laser scan processing unknown",
+        "Clustering not implemented",
+        "Circle detection algorithm missing",
+        "Navigation logic incomplete",
+        "Laser scan partially processed",
+        "Clustering partially working",
+        "Circle center calculation has issues",
+        "Navigation integration incomplete",
+        "Minor: could use more robust clustering algorithm"
+      ],
+      "difficulty": "hard_hard",
+      "skills": [
+        "circle detection",
+        "laser scan processing",
+        "clustering",
+        "robot movement",
+        "sensor fusion"
+      ]
+    },
+    {
+      "q_id": "niat-30",
+      "title": "Behavior Trees Course Project: Multi-Cell Robot Na",
+      "predicted": 50.0,
+      "actual": 33.33333333333333,
+      "error": 16.66666666666667,
+      "passed": 1,
+      "total": 3,
+      "avg_score": 53.0,
+      "avg_time": 54.0,
+      "errors": [
+        "Behavior tree framework unknown",
+        "Action and condition nodes not properly implemented",
+        "Tree structure not defined",
+        "Door state management missing",
+        "Basic tree structure present",
+        "Condition nodes partially working",
+        "Action execution incomplete",
+        "Cell transitions not robust",
+        "Minor: could add more sophisticated state management"
+      ],
+      "difficulty": "hard_hard",
+      "skills": [
+        "behavior tree",
+        "action nodes",
+        "condition nodes",
+        "tree structure",
+        "robot autonomy"
+      ]
+    }
+  ]
+}

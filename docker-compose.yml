@@ -1,0 +1,14 @@
+services:
+  robo-assess:
+    build: .
+    image: robo-assess:latest
+    environment:
+      # Offline by default. To enable the LLM path, set a provider + key:
+      # ROBO_PROVIDER: openrouter
+      # ROBO_OPENROUTER_KEY: ${ROBO_OPENROUTER_KEY}
+      ROBO_PROVIDER: offline
+    volumes:
+      - ./outputs:/app/outputs
+      - ./reports:/app/reports
+      - ./configs:/app/configs:ro
+    command: ["generate", "--request", "configs/ros2_fundamentals.yaml"]

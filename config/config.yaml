@@ -1,0 +1,100 @@
+# =============================================================================
+# robo_assess — system configuration
+# =============================================================================
+# Set provider + model here (or override via .env / env vars).
+#
+# PROVIDER          KEY ENV VAR            EXAMPLE MODELS
+# -----------       -------------------    -----------------------------------
+# openrouter        OPENROUTER_API_KEY     openai/gpt-4o, anthropic/claude-sonnet-4-6
+# anthropic         ANTHROPIC_API_KEY      claude-haiku-4-5-20251001, claude-sonnet-4-6
+# =============================================================================
+
+# ---- Provider ---------------------------------------------------------------
+provider: openrouter
+model: openai/gpt-4o
+# For Anthropic Claude (uncomment and set ANTHROPIC_API_KEY):
+# provider: anthropic
+# model: claude-sonnet-4-6
+temperature: 0.7
+max_tokens: 2200
+
+# ---- Generation -------------------------------------------------------------
+num_questions: 6
+difficulty_distribution:
+  easy: 0.30
+  medium: 0.50
+  hard: 0.20
+over_generation_factor: 1.0
+max_regeneration_attempts: 2
+
+# ---- Coverage ---------------------------------------------------------------
+# Coverage is a TARGET fraction, not an implicit 100% gate. Generation is
+# coverage-driven (each slot is aimed at an uncovered syllabus skill) and, when
+# auto_scale_questions is on, num_questions is raised toward the skill count
+# (capped at max_questions) so the target is actually reachable. This is the fix
+# for "broad syllabus ⇒ supervisor REJECTED by construction".
+coverage_target: 0.85
+auto_scale_questions: true
+max_questions: 14
+
+# ---- Concurrency ------------------------------------------------------------
+# Per-slot generation runs on a thread pool, not a serial loop. Each worker is
+# one blocking provider call. Raise for higher throughput on hosted APIs.
+generation_concurrency: 4
+
+# ---- Executable grading backend ---------------------------------------------
+# "ast"          : static analysis — reference must call the required rclpy APIs
+#                  and the unsolved starter must fail (default; no ROS2 needed).
+# "ros2_sandbox" : runs the node for real in a network-isolated ros:humble
+#                  container and observes it with the ros2 CLI (live topics,
+#                  publish rates, services, TF). Degrades to SKIPPED_NO_RUNTIME
+#                  — never a false PASS — when Docker or the image is absent.
+#                  Prereq:  docker pull ros:humble
+grading_backend: ast
+sandbox_image: ros:humble
+sandbox_timeout_s: 180
+sandbox_warmup_s: 5.0
+sandbox_cpus: "2"
+sandbox_memory: 1g
+sandbox_pids_limit: 256
+
+# ---- Autonomy / planner -----------------------------------------------------
+# The run is driven by a PlannerAgent (observe → decide → act), not a fixed
+# sequence. It loops generate → validate → reflect → regenerate until the quality
+# bar is met or the budget is spent.
+agentic_mode: true
+max_planner_steps: 8          # hard ceiling on control-loop ticks (safety)
+
+quality_bar:
+  min_confidence: 85.0
+  require_discriminating: true
+  require_judge_approve: true
+  max_similarity: 0.75
+  require_in_scope: true
+  min_difficulty_fit: 0.6
+
+# ---- Quality gates ----------------------------------------------------------
+similarity_reject_threshold: 0.75
+min_confidence: 85.0
+min_realism_score: 60
+
+critic_batch_size: 10
+
+# ---- Sources ----------------------------------------------------------------
+chunk_size: 1000
+chunk_overlap: 100
+top_k: 3
+
+# ---- Storage / logging ------------------------------------------------------
+log_level: INFO
+log_db_path: logs/runs.db
+memory_db_path: memory/memory.db
+vectorstore_path: vectorstore/index.json
+prompts_dir: prompts
+outputs_dir: outputs
+reports_dir: reports
+
+# ---- Pricing (cost reporting only) ------------------------------------------
+pricing:
+  input_per_million_tokens: 0.15
+  output_per_million_tokens: 0.60

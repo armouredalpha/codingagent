@@ -1,0 +1,148 @@
+# =============================================================================
+# ROS2 CORRECTNESS GUARDRAILS — domain technical truth
+# =============================================================================
+# These catch the domain-specific hallucinations LLMs make about ROS2 Humble.
+# This is the single highest-leverage file for question quality: a question that
+# looks great but uses a non-existent message field is worthless.
+# =============================================================================
+
+target_platform:
+  distro: humble
+  python: "3.10"
+  rmw_default: rmw_fastrtps_cpp
+
+# -----------------------------------------------------------------------------
+# VALID MESSAGE TYPES & FIELDS — whitelist of common interfaces
+# -----------------------------------------------------------------------------
+# A solution referencing a (type, field) pair NOT in this map is flagged for
+# manual review. Extend this as you add topics.
+message_field_whitelist:
+  "geometry_msgs/msg/Twist":        ["linear.x", "linear.y", "linear.z",
+                                      "angular.x", "angular.y", "angular.z"]
+  "geometry_msgs/msg/Pose":         ["position.x", "position.y", "position.z",
+                                      "orientation.x", "orientation.y",
+                                      "orientation.z", "orientation.w"]
+  "geometry_msgs/msg/PoseStamped":  ["header.frame_id", "header.stamp",
+                                      "pose.position.x", "pose.orientation.w"]
+  "geometry_msgs/msg/TransformStamped": ["header.frame_id", "child_frame_id",
+                                      "transform.translation.x",
+                                      "transform.rotation.w"]
+  "sensor_msgs/msg/LaserScan":      ["angle_min", "angle_max", "angle_increment",
+                                      "range_min", "range_max", "ranges",
+                                      "intensities", "header.frame_id"]
+  "sensor_msgs/msg/Image":          ["height", "width", "encoding", "data",
+                                      "header.frame_id"]
+  "sensor_msgs/msg/JointState":     ["name", "position", "velocity", "effort"]
+  "nav_msgs/msg/Odometry":          ["header.frame_id", "child_frame_id",
+                                      "pose.pose.position.x",
+                                      "twist.twist.linear.x"]
+  "std_msgs/msg/Bool":              ["data"]
+  "std_msgs/msg/Float64":           ["data"]
+  "std_msgs/msg/String":            ["data"]
+  "std_srvs/srv/SetBool":           ["request.data", "response.success",
+                                      "response.message"]
+  "std_srvs/srv/Trigger":           ["response.success", "response.message"]
+
+rules:
+  - id: message_field_exists
+    severity: REJECT
+    rationale: Catch hallucinated fields like Twist.speed or LaserScan.distance.
+    check: every_field_access_in_whitelist
+
+  - id: correct_humble_topic_naming
+    severity: REJECT
+    rationale: Message types must use the Humble `pkg/msg/Type` form, not ROS1.
+    check: message_imports_use_msg_subpackage
+
+# -----------------------------------------------------------------------------
+# RCLPY API CORRECTNESS — modern idioms only
+# -----------------------------------------------------------------------------
+rclpy_api:
+  required_idioms:
+    node_init: "super().__init__('<node_name>')"
+    publisher: "self.create_publisher(<Type>, '<topic>', <qos_or_depth>)"
+    subscription: "self.create_subscription(<Type>, '<topic>', <cb>, <qos_or_depth>)"
+    service: "self.create_service(<Srv>, '<name>', <cb>)"
+    client: "self.create_client(<Srv>, '<name>')"
+    timer: "self.create_timer(<period_sec>, <cb>)"
+    parameter: "self.declare_parameter('<name>', <default>)"
+    spin: "rclpy.spin(node)"
+    shutdown: "rclpy.shutdown()"
+  banned_idioms:                  # ROS1 or deprecated — auto REJECT
+    - "rospy"
+    - "rospy.init_node"
+    - "rospy.Publisher"
+    - "rospy.Subscriber"
+    - "rospy.Rate"
+    - "rospy.spin"
+    - "tf.TransformBroadcaster"   # ROS1 tf, not tf2_ros
+    - "queue_size="               # ROS1 arg name
+  rules:
+    - id: no_ros1_apis
+      severity: REJECT
+      check: solution_contains_no_banned_idioms
+    - id: lifecycle_complete
+      severity: WARN
+      rationale: If rclpy.init is shown, rclpy.shutdown must also appear.
+      check: init_paired_with_shutdown
+    - id: node_name_declared
+      severity: REJECT
+      rationale: super().__init__ must receive a non-empty node name string.
+      check: node_has_explicit_name
+
+# -----------------------------------------------------------------------------
+# QoS CORRECTNESS — the silent killer of ROS2 questions
+# -----------------------------------------------------------------------------
+qos_correctness:
+  rationale: >
+    Sensor data (LaserScan, Image) typically uses BEST_EFFORT; commands and TF
+    use RELIABLE. A question testing sensor subscription with default RELIABLE
+    QoS may silently never receive data on real hardware.
+  guidance_by_topic_class:
+    sensor_streams:   { reliability: best_effort, history: keep_last, depth: 10 }
+    commands:         { reliability: reliable,    history: keep_last, depth: 10 }
+    transforms_tf:    { reliability: reliable,    history: keep_last, depth: 100 }
+    latched_config:   { durability: transient_local, depth: 1 }
+  rule:
+    id: qos_appropriate_for_topic_class
+    severity: SCORE
+    rationale: Reward questions that use (or test) correct QoS for the data class.
+    check: qos_profile_matches_topic_semantics
+
+# -----------------------------------------------------------------------------
+# TF2 CORRECTNESS — frame conventions
+# -----------------------------------------------------------------------------
+tf2_correctness:
+  frame_conventions:
+    world_root: ["map", "odom"]
+    robot_root: ["base_link", "base_footprint"]
+    standard_chain: "map -> odom -> base_link -> <sensor_frame>"
+  rules:
+    - id: parent_child_not_swapped
+      severity: REJECT
+      rationale: >
+        In TransformStamped, header.frame_id = PARENT, child_frame_id = CHILD.
+        Swapping them is the most common TF bug and must never appear in the
+        reference solution.
+      check: transform_parent_child_follow_convention
+    - id: uses_tf2_ros_not_ros1_tf
+      severity: REJECT
+      check: tf_broadcasts_use_tf2_ros
+
+# -----------------------------------------------------------------------------
+# PACKAGE STRUCTURE CORRECTNESS — it must be a buildable ament package
+# -----------------------------------------------------------------------------
+package_structure:
+  required_files_for_python_pkg:
+    - "package.xml"
+    - "setup.py"
+    - "<pkg>/__init__.py"
+  rules:
+    - id: tree_is_valid_ament_python
+      severity: WARN
+      rationale: The package_tree must resemble a real ament_python package.
+      check: tree_contains_required_ament_files
+    - id: entry_point_matches_node
+      severity: WARN
+      rationale: setup.py console_scripts entry should map to the node's main().
+      check: declared_entry_point_resolves_to_main

@@ -1,0 +1,141 @@
+# =============================================================================
+# Guardrail Rules — Robotics Assessment System
+# =============================================================================
+# All hard rejection and soft warning thresholds live here.
+# Agents read from config.yaml for numeric thresholds; this file documents
+# the intent and maps each rule to the agent that enforces it.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# BOILERPLATE GUARDRAILS  (enforced by: boilerplate_generator.py)
+# -----------------------------------------------------------------------------
+boilerplate:
+  require_todo_start_marker: true          # starter_code must have # TODO START
+  require_todo_end_marker: true            # starter_code must have # TODO END
+  require_balanced_markers: true           # count(START) must == count(END)
+  require_reference_differs_from_starter: true  # solution != starter
+  reference_must_not_contain_todo: true    # no leftover TODO in solution
+  min_todo_blocks_per_file: 1
+  action_on_fail: REJECT                   # REJECT | WARN
+
+# -----------------------------------------------------------------------------
+# SCOPE GUARDRAILS  (enforced by: scope_agent.py)
+# -----------------------------------------------------------------------------
+scope:
+  # Technologies that are BLOCKED unless explicitly in the syllabus
+  gated_technologies:
+    nav2:        ["nav2", "navigation2", "nav2_msgs", "nav_msgs/Path"]
+    slam:        ["slam", "slam_toolbox", "cartographer", "gmapping"]
+    moveit:      ["moveit", "move_group", "moveit2"]
+    opencv:      ["opencv", "cv2", "cv_bridge"]
+    micro_ros:   ["micro-ros", "micro_ros"]
+    perception:  ["point cloud", "pointcloud", "pcl", "sensor_fusion"]
+    action:      ["action_msgs", "rclpy.action", "SimpleActionClient"]
+    lifecycle:   ["LifecycleNode", "lifecycle_msgs", "managed_node"]
+  action_on_violation: REJECT
+
+# -----------------------------------------------------------------------------
+# ORIGINALITY GUARDRAILS  (enforced by: originality_agent.py)
+# -----------------------------------------------------------------------------
+originality:
+  similarity_reject_threshold: 0.75        # cosine similarity above this → REJECT
+  compare_against_existing_bank: true
+  compare_within_batch: true
+  compare_against_memory: true             # vectorstore of all previous runs
+  action_on_duplicate: REJECT
+
+# -----------------------------------------------------------------------------
+# DIFFICULTY GUARDRAILS  (enforced by: difficulty_agent.py)
+# -----------------------------------------------------------------------------
+difficulty:
+  # Objective signals used to calibrate difficulty
+  easy_max_skills: 1
+  easy_max_solution_loc: 35
+  medium_max_skills: 3
+  medium_max_solution_loc: 90
+  # Bloom level overrides (can only pull UP, never down)
+  bloom_to_difficulty:
+    remember:   easy
+    understand: easy
+    apply:      medium
+    analyze:    medium
+    evaluate:   hard
+    create:     hard
+  action_on_mismatch: WARN                 # mismatch → recalibrate, not reject
+
+# -----------------------------------------------------------------------------
+# REALISM GUARDRAILS  (enforced by: realism_agent.py)
+# -----------------------------------------------------------------------------
+realism:
+  min_score: 60                            # 0-100 score; below this → WARN/REJECT
+  required_domains:                        # scenario must mention one of these
+    - warehouse
+    - inspection
+    - factory
+    - delivery
+    - rover
+    - conveyor
+    - patrol
+  toy_phrases_penalty:                     # these phrases trigger -30 penalty
+    - "hello world"
+    - "foo"
+    - "bar"
+    - "example_topic"
+    - "test_node"
+    - "lorem"
+  action_on_low_score: WARN
+
+# -----------------------------------------------------------------------------
+# AUTO-GRADING GUARDRAILS  (enforced by: grading_agent.py)
+# -----------------------------------------------------------------------------
+grading:
+  require_auto_gradable: true
+  min_hidden_checks: 3
+  min_hidden_tests: 3
+  required_test_kinds:                     # at least one of each
+    - positive
+    - negative
+    - edge
+  action_on_fail: REJECT
+
+# -----------------------------------------------------------------------------
+# CONFIDENCE GUARDRAILS  (enforced by: confidence_agent.py)
+# -----------------------------------------------------------------------------
+confidence:
+  min_confidence_score: 85.0              # 0-100; below this → REJECTED
+  # Scoring weights (must sum to 100)
+  weights:
+    coverage: 20
+    difficulty: 20
+    originality: 15
+    scope: 15
+    auto_grading: 15
+    format_quality: 15
+  # Hard blockers — any of these forces REJECTED regardless of score
+  hard_blockers:
+    - scope_violations_present
+    - not_auto_gradable
+    - similarity_above_threshold
+
+# -----------------------------------------------------------------------------
+# SUPERVISOR GUARDRAILS  (enforced by: supervisor.py)
+# -----------------------------------------------------------------------------
+supervisor:
+  min_validation_score: 80                # blend of eval score + pass rate
+  require_full_coverage: false            # coverage is judged against coverage_target, not a hard 100%
+  coverage_target: 0.85                   # fraction of syllabus skills that must be tested to pass
+  require_at_least_one_approved: true
+  no_approved_with_scope_violations: true
+  no_approved_non_auto_gradable: true
+  action_on_fail: REJECT_BATCH
+
+# -----------------------------------------------------------------------------
+# CONSTRUCT BENCHMARK  (reference for evaluation_agent.py)
+# -----------------------------------------------------------------------------
+construct_benchmark:
+  benchmark_file: guardrails/construct_benchmark.jsonl
+  # A generated question is considered "Construct-quality" if it scores >= these
+  # thresholds when compared to the benchmark distribution
+  min_realism_vs_benchmark: 0.80
+  min_complexity_vs_benchmark: 0.75
+  min_boilerplate_completeness: 1.0       # TODO markers must be perfect

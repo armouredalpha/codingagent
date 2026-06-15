@@ -1,0 +1,128 @@
+# =============================================================================
+# PEDAGOGICAL GUARDRAILS — learning-science rules
+# =============================================================================
+# A coding question is also a teaching instrument. These rules apply learning
+# science (Bloom's taxonomy, cognitive load theory, desirable difficulty,
+# scaffolding/fading) so questions TEACH while they ASSESS.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# BLOOM ALIGNMENT — the task verb must match the claimed cognitive level
+# -----------------------------------------------------------------------------
+bloom_alignment:
+  rationale: >
+    A question tagged "create" (hard) must demand synthesis, not recall. The
+    objective's main verb is the tell.
+  verb_to_bloom:
+    remember:   ["list", "name", "identify", "recall"]
+    understand: ["explain", "summarise", "classify"]
+    apply:      ["implement", "publish", "subscribe", "configure", "write", "call"]
+    analyze:    ["debug", "diagnose", "compare", "trace", "filter", "process"]
+    evaluate:   ["validate", "assess", "choose", "justify", "tune"]
+    create:     ["design", "compose", "orchestrate", "build a pipeline", "integrate"]
+  rule:
+    severity: WARN
+    check: objective_verb_matches_declared_bloom
+
+# -----------------------------------------------------------------------------
+# COGNITIVE LOAD — don't overload working memory
+# -----------------------------------------------------------------------------
+cognitive_load:
+  rationale: >
+    Cognitive Load Theory: novices can hold ~4 new elements at once. An EASY
+    question introducing 6 new APIs is mis-calibrated regardless of LOC.
+  rules:
+    - id: new_concepts_per_difficulty
+      severity: WARN
+      bounds:
+        easy:   { max_new_apis: 2, max_distinct_topics: 1 }
+        medium: { max_new_apis: 4, max_distinct_topics: 2 }
+        hard:   { max_new_apis: 7, max_distinct_topics: 4 }
+
+    - id: germane_over_extraneous
+      severity: WARN
+      rationale: >
+        Boilerplate should absorb EXTRANEOUS load (imports, main(), QoS plumbing)
+        so the candidate spends effort on the GERMANE concept being tested.
+      check: extraneous_plumbing_is_in_scaffold_not_todo
+
+# -----------------------------------------------------------------------------
+# DESIRABLE DIFFICULTY — challenge without frustration
+# -----------------------------------------------------------------------------
+desirable_difficulty:
+  rationale: >
+    Learning is maximised at the edge of ability. The TODO should require the
+    candidate to RETRIEVE the concept, not COPY it from a nearby line.
+  rules:
+    - id: no_answer_leakage_in_scaffold
+      severity: REJECT
+      rationale: >
+        The fixed scaffold must not contain a line that, if copied into the TODO,
+        solves it. e.g. don't show `self.create_publisher(...)` elsewhere if that
+        is exactly what the TODO asks for.
+      check: scaffold_does_not_leak_todo_answer
+
+    - id: hint_comments_guide_not_dictate
+      severity: WARN
+      rationale: >
+        TODO comments should specify WHAT and the interface contract, but not the
+        exact line of code. "Create a publisher on /cmd_vel (Twist, queue 10)" is
+        good; pasting the full create_publisher call is not.
+      check: todo_comment_describes_intent_not_literal_code
+
+# -----------------------------------------------------------------------------
+# SCAFFOLDING & FADING — difficulty should reduce hand-holding, not just add code
+# -----------------------------------------------------------------------------
+scaffolding_fade:
+  rationale: >
+    Across a difficulty ladder, support should FADE: easy gives detailed comments
+    and stubs; hard gives a contract and expects the candidate to structure it.
+  expected_support_by_difficulty:
+    easy:   { comment_detail: high,   stub_lines_provided: high,   structure_given: full }
+    medium: { comment_detail: medium, stub_lines_provided: medium, structure_given: partial }
+    hard:   { comment_detail: low,    stub_lines_provided: low,    structure_given: contract_only }
+  rule:
+    severity: SCORE
+    check: support_level_decreases_with_difficulty
+
+# -----------------------------------------------------------------------------
+# MISCONCEPTION TARGETING — common_mistakes must be pedagogically real
+# -----------------------------------------------------------------------------
+misconception_targeting:
+  rationale: >
+    The `common_mistakes` field should name REAL ROS2 misconceptions, so the
+    distractors and negative tests probe genuine misunderstandings.
+  curated_misconceptions:
+    - "forgetting rclpy.spin() so callbacks never fire"
+    - "using queue_size from ROS1 instead of a QoS depth"
+    - "publishing once instead of on a timer"
+    - "wrong frame_id in TransformStamped (parent/child swapped)"
+    - "not calling super().__init__() with the node name"
+    - "blocking the executor with time.sleep instead of a timer"
+    - "mutable default message reused across publishes"
+    - "subscribing but never storing/using the message"
+    - "hardcoding values that should be ROS parameters"
+    - "destroy_node not called, leaking the context"
+  rules:
+    - id: mistakes_are_specific
+      severity: WARN
+      rationale: Generic "syntax errors" is not a useful misconception.
+      check: common_mistakes_reference_real_ros2_pitfalls
+    - id: at_least_one_mistake_has_matching_negative_test
+      severity: WARN
+      rationale: >
+        The best questions turn a common mistake into a negative hidden test, so
+        the grader actively penalises the misconception.
+      check: at_least_one_common_mistake_maps_to_negative_test
+
+# -----------------------------------------------------------------------------
+# TRANSFER — does solving this build a reusable skill?
+# -----------------------------------------------------------------------------
+transfer_value:
+  rationale: >
+    Reward questions whose skill transfers to real robotics work, not narrow
+    puzzle tricks. A pub/sub/TF/param/lifecycle skill transfers; a contrived
+    string-parsing gimmick does not.
+  rule:
+    severity: SCORE
+    reward_if: tested_skill_is_a_core_ros2_competency

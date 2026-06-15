@@ -1,0 +1,57 @@
+# =============================================================================
+# Rejection Patterns
+# =============================================================================
+# Patterns that trigger automatic rejection at the question level.
+# These are checked as substring matches in the question text fields.
+# =============================================================================
+
+# Patterns in scenario / objective / title that indicate a theory question
+# (not a coding task) → REJECT
+theory_question_patterns:
+  - "explain why"
+  - "describe how"
+  - "what is the difference"
+  - "multiple choice"
+  - "true or false"
+  - "short answer"
+  - "define the term"
+  - "list three"
+
+# Patterns indicating the TODO block was not properly filled in reference solution
+incomplete_solution_patterns:
+  - "# TODO START"
+  - "# TODO END"
+  - "# TODO"
+  - "pass  # implement"
+  - "raise NotImplementedError"
+
+# Patterns indicating deprecated ROS2 APIs (Humble uses rclpy 0.9+)
+deprecated_api_patterns:
+  - "rospy."                          # ROS1 — never allowed
+  - "from rospy"
+  - "import rospy"
+  - "spin_once()"                     # deprecated pattern
+  - "Rate("                           # rospy pattern
+  - "Publisher("                      # bare rclpy <0.7 style
+  - "Subscriber("                     # bare rclpy <0.7 style
+
+# Patterns indicating toy / placeholder code in starter or scenario
+toy_code_patterns:
+  - "print('hello"
+  - "print(\"hello"
+  - "TODO: write your code here"
+  - "YOUR CODE HERE"
+  - "INSERT CODE"
+  - "foo_topic"
+  - "bar_node"
+  - "test_topic"
+  - "my_node"
+  - "example.py"
+
+# Patterns in hidden_checks that make them NOT auto-gradable
+non_gradable_check_patterns:
+  - "manually verify"
+  - "ask instructor"
+  - "human review"
+  - "visually inspect"
+  - "check by running"

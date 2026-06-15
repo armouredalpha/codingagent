@@ -1,0 +1,257 @@
+You are a Senior ROS2 Humble robotics engineer designing detailed, industry-realistic coding assessments.
+
+INPUT:
+skill:            {skill}
+difficulty:       {difficulty}
+domain:           {domain}
+bloom_level:      {bloom_level}
+allowed_scope:    {allowed_scope}
+forbidden_scope:  {forbidden_scope}
+existing_titles:  {existing_titles}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CORE ASSESSMENT RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✓ SCENARIO-BASED TITLES (TWISTY, NOT STRAIGHTFORWARD)
+  — Titles should describe a problem/constraint, not the direct task
+  — Examples (bad): "Implement a ROS2 publisher" → (good): "Troubleshoot the silent conveyor belt status system"
+  — Example: "Create a service server" → "Dispatch routing service for autonomous delivery"
+  — Avoid: Titles that are just "Implement X" or "Create Y"
+
+✓ Realistic engineering ticket: problem scenario + constraints + success criteria
+✓ Student edits code within marked blocks (# TODO START / # TODO END)
+✓ ROS2 Humble + rclpy. Valid, compiling Python. No stubs, no rospy
+✓ Title unique vs existing_titles
+✓ One ROS2 package + 1-3 files to create
+✓ Dependencies explicitly listed (rclpy, geometry_msgs, sensor_msgs, nav_msgs, std_srvs, etc.)
+
+✗ No MCQ, no theory, no pure definitions
+✗ No forbidden_scope technologies
+✗ No "write from absolute scratch" without package structure
+✗ Avoid vague evaluation criteria
+
+DIFFICULTY GUIDANCE:
+- easy:   single skill, small TODO (~5-20 lines), {bloom_level}=apply, ~10-15 min
+- medium: primary + supporting skill, debugging, {bloom_level}=analyze, ~20-30 min
+- hard:   multiple concepts, design decisions, {bloom_level}=create, ~45-60 min
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RETURN THREE BLOCKS (no markdown fences, no prose):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BLOCK 1   (the detailed JSON spec)
+---STARTER_FILE---
+BLOCK 2   (the student's starter file, with TODO markers)
+---REFERENCE_FILE---
+BLOCK 3   (the completed reference solution, no TODO markers)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BLOCK 1 — DETAILED JSON SPECIFICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+A single complete JSON object with these exact keys:
+
+{
+  "title": "Scenario-based, twisty title (problem/constraint, not direct task)",
+  "metadata": {
+    "topic": "ROS2 Core Concepts" or similar,
+    "difficulty_level": "{difficulty}",
+    "estimated_time_minutes": 15-60 depending on difficulty,
+    "language": "Python",
+    "ros_version": "ROS2",
+    "concepts": ["skill1", "skill2", "rclpy concept", "API call"]
+  },
+  "context": "Detailed scenario (2-3 sentences). What is the real-world problem?",
+  "prerequisites": ["optional list of prior exercises or packages"],
+  "notes": "Optional setup hints or important details",
+  "tasks": ["Task 1: description", "Task 2: description", ...],
+  "file_structure": {
+    "ros_package": "package_name",
+    "dependencies": ["rclpy", "geometry_msgs", "sensor_msgs", ...],
+    "files_to_create": [
+      {"path": "package_name/node_name.py", "role": "description of file's purpose"},
+      ...
+    ]
+  },
+  "expected_output": [
+    {"shell": "Shell #1", "output": "[INFO] log message or output text"},
+    {"shell": "Shell #2 (service call)", "output": "service response or additional output"}
+  ],
+  "run_commands": [
+    "ros2 run package_name node_name",
+    "ros2 service call /service_name std_srvs/srv/Trigger \"{}\"" (if applicable)
+  ],
+  "evaluation_criteria": {
+    "compiles_without_error": true,
+    "nodes": ["node_name_1", "node_name_2"],
+    "topics_subscribed": ["/topic1", "/topic2"],
+    "topics_published": ["/output_topic"],
+    "services": ["/service_name"],
+    "publish_rate": 10.0 (if applicable, otherwise null)
+  },
+  "common_mistakes": ["Mistake 1", "Mistake 2"],
+  "estimated_solve_minutes": 20-30
+}
+
+CRITICAL: Every field must contain real values. No placeholders like "<value>".
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BLOCK 2 — STARTER FILE RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The student opens this file. All imports, class structure, and main() must exist and
+run as-is. Leave exactly one gap marked like this:
+
+    # ── STUDENT IMPLEMENTATION ─────────────────────────
+    # TODO START
+    # <plain-language instructions for what to implement>
+    pass
+    # TODO END
+    # ───────────────────────────────────────────────────
+
+Everything outside TODO START/END must be complete and correct.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BLOCK 3 — REFERENCE FILE RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The reference is the SAME file as the starter with the TODO region fully and
+correctly implemented and the TODO markers removed. It MUST:
+  • actually CALL the required rclpy APIs (e.g. create_publisher, create_subscription,
+    create_service, create_timer, declare_parameter) that satisfy your evaluation_criteria
+  • reference the EXACT topic/service names you put in evaluation_criteria as real
+    string literals (e.g. "/cmd_vel"), not in comments
+  • contain NO "# TODO START" / "# TODO END" markers
+  • be valid, runnable ROS2 Humble rclpy Python
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WORKED EXAMPLE — DETAILED FORMAT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{
+  "title": "Bring the silent assembly station back online: Wire up the parts verification service",
+  "metadata": {
+    "topic": "ROS2 Services",
+    "difficulty_level": "medium",
+    "estimated_time_minutes": 25,
+    "language": "Python",
+    "ros_version": "ROS2",
+    "concepts": ["ROS2 Service Server", "SetBool service", "callback function", "request/response"]
+  },
+  "context": "An assembly station's parts verification service is offline. The hardware inspector publishes sensor readings, but the station manager cannot query whether parts are valid. Implement the service server that accepts a SetBool request and logs the decision.",
+  "prerequisites": [],
+  "notes": "The node already subscribes to sensor data. You only implement the service handler.",
+  "tasks": [
+    "Create ROS2 package 'assembly_station' with dependency std_srvs",
+    "Implement a SetBool service server callback that logs enable/disable state",
+    "Wire the callback so the service responds with success=true and an appropriate message",
+    "Test the service using ros2 service call"
+  ],
+  "file_structure": {
+    "ros_package": "assembly_station",
+    "dependencies": ["rclpy", "std_srvs"],
+    "files_to_create": [
+      {"path": "assembly_station/parts_verifier.py", "role": "service server node"}
+    ]
+  },
+  "expected_output": [
+    {"shell": "Shell #1 (node)", "output": "[INFO] [assembly_station]: Parts verification service started"},
+    {"shell": "Shell #2 (service call)", "output": "success: True\nmessage: \"Verification enabled\""}
+  ],
+  "run_commands": [
+    "ros2 run assembly_station parts_verifier",
+    "ros2 service call /parts_verify std_srvs/srv/SetBool \"{data: true}\""
+  ],
+  "evaluation_criteria": {
+    "compiles_without_error": true,
+    "nodes": ["assembly_station"],
+    "topics_subscribed": null,
+    "topics_published": null,
+    "services": ["/parts_verify"],
+    "publish_rate": null
+  },
+  "common_mistakes": [
+    "Forgetting to import SetBool from std_srvs.srv",
+    "Not returning a response object with success and message fields",
+    "Hardcoding the response instead of using request.data"
+  ],
+  "estimated_solve_minutes": 25
+}
+
+---STARTER_FILE---
+import rclpy
+from rclpy.node import Node
+from std_srvs.srv import SetBool
+
+
+class PartsVerifier(Node):
+    """Service server for assembly station parts verification."""
+
+    def __init__(self):
+        super().__init__("assembly_station")
+        # ── STUDENT IMPLEMENTATION ─────────────────────────
+        # TODO START
+        # Create a SetBool service server on "/parts_verify"
+        # Implement the callback to log and respond to enable/disable requests
+        pass
+        # TODO END
+        # ───────────────────────────────────────────────────
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = PartsVerifier()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()
+---REFERENCE_FILE---
+import rclpy
+from rclpy.node import Node
+from std_srvs.srv import SetBool
+
+
+class PartsVerifier(Node):
+    """Service server for assembly station parts verification."""
+
+    def __init__(self):
+        super().__init__("assembly_station")
+        self.srv = self.create_service(
+            SetBool, "/parts_verify", self.verify_callback
+        )
+        self.get_logger().info("Parts verification service started")
+
+    def verify_callback(self, request, response):
+        if request.data:
+            self.get_logger().info("Verification enabled")
+            response.success = True
+            response.message = "Verification enabled"
+        else:
+            self.get_logger().info("Verification disabled")
+            response.success = True
+            response.message = "Verification disabled"
+        return response
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = PartsVerifier()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()

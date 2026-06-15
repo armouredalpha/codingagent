@@ -1,0 +1,106 @@
+# =============================================================================
+# BATCH DIVERSITY GUARDRAILS — quality of the SET, not just each question
+# =============================================================================
+# When generating 60 questions, individual quality is not enough. A set of 60
+# near-identical publisher questions is a bad assessment. These rules operate
+# across the whole batch to guarantee variety, coverage, and balance.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# SKILL SPREAD — don't over-test one skill
+# -----------------------------------------------------------------------------
+skill_spread:
+  rationale: No single skill should dominate the assessment.
+  rules:
+    - id: max_share_per_skill
+      severity: WARN
+      rationale: A skill should be <= 30% of the batch unless syllabus is tiny.
+      max_fraction_per_skill: 0.30
+    - id: every_syllabus_skill_covered
+      severity: REJECT
+      rationale: 100% coverage — each syllabus skill tested by >= 1 question.
+      check: coverage_matrix_fully_marked
+
+# -----------------------------------------------------------------------------
+# DIFFICULTY BALANCE — match the target distribution
+# -----------------------------------------------------------------------------
+difficulty_balance:
+  target_distribution: { easy: 0.30, medium: 0.50, hard: 0.20 }
+  tolerance: 0.10                # actual may deviate by +/-10 percentage points
+  rule:
+    severity: WARN
+    check: batch_difficulty_within_tolerance
+
+# -----------------------------------------------------------------------------
+# DOMAIN VARIETY — rotate the industrial setting
+# -----------------------------------------------------------------------------
+domain_variety:
+  rationale: >
+    Rotating the robot/industry keeps the set engaging and prevents the LLM from
+    falling into a single template groove.
+  domain_pool: ["warehouse", "inspection", "factory", "delivery", "mobile rover",
+                "agriculture", "mining", "logistics", "search and rescue",
+                "hospital logistics", "solar farm", "port automation"]
+  rules:
+    - id: min_distinct_domains
+      severity: WARN
+      rationale: A 60-question set should span >= 6 distinct domains.
+      min_distinct_domains_per_10_questions: 3
+    - id: no_three_in_a_row_same_domain
+      severity: WARN
+      check: no_domain_repeats_thrice_consecutively
+
+# -----------------------------------------------------------------------------
+# INTERFACE VARIETY — vary the ROS primitives exercised
+# -----------------------------------------------------------------------------
+interface_variety:
+  rationale: >
+    A strong set exercises the full surface: topics, services, parameters, TF,
+    timers, launch, lifecycle. Don't ship 60 topic-publisher clones.
+  primitive_buckets: ["publisher", "subscriber", "service_server",
+                       "service_client", "parameter", "tf_broadcast",
+                       "tf_listen", "timer", "launch", "lifecycle"]
+  rule:
+    severity: WARN
+    rationale: Across the batch, >= 5 distinct primitive buckets must appear.
+    min_distinct_primitives: 5
+
+# -----------------------------------------------------------------------------
+# CROSS-QUESTION ORIGINALITY — pairwise novelty
+# -----------------------------------------------------------------------------
+cross_question_originality:
+  rationale: >
+    Beyond the global similarity threshold, enforce that NO two questions in the
+    same batch are near-duplicates, even if both are below the global bar.
+  rules:
+    - id: pairwise_similarity_cap
+      severity: REJECT
+      rationale: Any pair above this cosine similarity → regenerate the later one.
+      max_pairwise_similarity: 0.70
+    - id: distinct_titles
+      severity: REJECT
+      check: all_question_titles_unique
+    - id: distinct_node_names
+      severity: WARN
+      rationale: Reusing the same node/class name across questions reads as lazy.
+      check: node_class_names_mostly_unique
+
+# -----------------------------------------------------------------------------
+# PORTFOLIO COMPLETENESS — does the set make a candidate "job ready"?
+# -----------------------------------------------------------------------------
+portfolio_completeness:
+  rationale: >
+    The whole assessment should map to a real competency profile. Track which
+    industry-relevant areas are covered and flag the gaps.
+  target_competencies:
+    - node_communication        # pub/sub
+    - service_design            # request/response
+    - configuration             # parameters, launch
+    - spatial_reasoning         # TF2, frames
+    - sensor_processing         # laser/image/joint handling
+    - robot_control             # cmd_vel, motion
+    - system_composition        # launch, multi-node
+  rule:
+    severity: SCORE
+    rationale: Score the batch on how many target competencies it touches.
+    min_competencies_covered: 5

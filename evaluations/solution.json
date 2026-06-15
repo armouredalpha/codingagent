@@ -1,0 +1,1003 @@
+{
+  "solutions": [
+    {
+      "question_id": "niat-1",
+      "setup_commands": [
+        "cd ~/catkin_ws/src",
+        "catkin_create_pkg my_robot_manager roscpp"
+      ],
+      "files": [
+        {
+          "path": "include/my_robot_manager/robot_manager.h",
+          "content": "#pragma once\n#include <ros/ros.h>\n#include <string>\n\nclass RobotManager {\npublic:\n  std::string robot_name, robot_model;\n  float battery_capacity_kwh = 0.16;\n  int total_operation_hours = 2560;\n  void print_specifications();\n};"
+        },
+        {
+          "path": "src/robot_manager.cpp",
+          "content": "#include \"my_robot_manager/robot_manager.h\"\n\nvoid RobotManager::print_specifications() {\n  ROS_INFO(\"Robot Name: %s\", robot_name.c_str());\n  ROS_INFO(\"Robot Model: %s\", robot_model.c_str());\n  ROS_INFO(\"Battery Capacity (kWh): %.2f\", battery_capacity_kwh);\n  ROS_INFO(\"Total Operation Hours: %d\", total_operation_hours);\n}"
+        },
+        {
+          "path": "src/robot_manager_node.cpp",
+          "content": "#include \"my_robot_manager/robot_manager.h\"\n\nint main(int argc, char **argv) {\n  ros::init(argc, argv, \"robot_manager\");\n  RobotManager rm;\n  rm.robot_name = \"my_robot\";\n  rm.robot_model = \"TurtleBot3\";\n  rm.print_specifications();\n}"
+        },
+        {
+          "path": "CMakeLists.txt (additions)",
+          "content": "catkin_package(\n  INCLUDE_DIRS include/${PROJECT_NAME}/\n  LIBRARIES my_robot_manager\n  CATKIN_DEPENDS roscpp\n)\n\ninclude_directories(\n  include\n  ${catkin_INCLUDE_DIRS}\n)\n\nadd_library(${PROJECT_NAME}_lib\n  src/robot_manager.cpp\n)\n\nadd_executable(robot_manager_node\n  src/robot_manager_node.cpp\n  src/robot_manager.cpp\n)\ntarget_link_libraries(robot_manager_node\n  ${catkin_LIBRARIES}\n  my_robot_manager\n)"
+        }
+      ],
+      "build_commands": [
+        "cd ~/catkin_ws",
+        "catkin_make",
+        "source devel/setup.bash"
+      ],
+      "run_commands": [
+        "rosrun my_robot_manager robot_manager_node"
+      ],
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "[ INFO] [1675068280.781704658]: Robot Name: my_robot\n[ INFO] [1675068280.781789260]: Robot Model: TurtleBot3\n[ INFO] [1675068280.781824136]: Battery Capacity (kWh): 0.16\n[ INFO] [1675068280.781841635]: Total Operation Hours: 2560"
+        }
+      ],
+      "verification": null,
+      "key_concepts_demonstrated": [
+        "class with public members",
+        "header/implementation split",
+        "ROS_INFO with format specifiers",
+        "catkin_create_pkg",
+        "add_library in CMakeLists",
+        "target_link_libraries"
+      ]
+    },
+    {
+      "question_id": "niat-2",
+      "setup_commands": [],
+      "files": [
+        {
+          "path": "include/my_robot_manager/robot_manager.h",
+          "content": "#pragma once\n#include \"nav_msgs/Odometry.h\"\n#include <ros/ros.h>\n#include <std_srvs/Trigger.h>\n\nclass RobotManager {\npublic:\n  RobotManager(ros::NodeHandle *nh, std::string topic, std::string name, std::string model);\n  void odom_callback(const nav_msgs::Odometry::ConstPtr &msg);\n  void print_specifications();\n  bool trigger_srv_callback(std_srvs::Trigger::Request &req,\n                            std_srvs::Trigger::Response &res);\n  static int robot_count;\n\nprivate:\n  std::string robot_name, robot_model;\n  float battery_capacity_kwh = 0.16;\n  int total_operation_hours = 2560;\n  std::string odom_topic;\n  ros::Subscriber odom_subscriber;\n  float current_x_position = 0.0;\n  float current_y_position = 0.0;\n  ros::ServiceServer trigger_srv;\n};"
+        },
+        {
+          "path": "src/robot_manager.cpp",
+          "content": "#include \"my_robot_manager/robot_manager.h\"\n\nint RobotManager::robot_count = 0;\n\nRobotManager::RobotManager(ros::NodeHandle *nh, std::string topic,\n                           std::string name, std::string model) {\n  odom_topic = topic;\n  robot_name = name;\n  robot_model = model;\n  odom_subscriber = nh->subscribe(odom_topic, 1000,\n                                  &RobotManager::odom_callback, this);\n  robot_count++;\n  ROS_INFO(\"Robot %d created.\", robot_count);\n  trigger_srv = nh->advertiseService(robot_name + \"/log_current_position\",\n                                     &RobotManager::trigger_srv_callback, this);\n}\n\nvoid RobotManager::odom_callback(const nav_msgs::Odometry::ConstPtr &msg) {\n  this->current_x_position = msg->pose.pose.position.x;\n  this->current_y_position = msg->pose.pose.position.y;\n}\n\nvoid RobotManager::print_specifications() {\n  ROS_INFO(\"Robot Name: %s\", robot_name.c_str());\n  ROS_INFO(\"Robot Model: %s\", robot_model.c_str());\n  ROS_INFO(\"Battery Capacity (kWh): %.2f\", battery_capacity_kwh);\n  ROS_INFO(\"Total Operation Hours: %d\", total_operation_hours);\n}\n\nbool RobotManager::trigger_srv_callback(std_srvs::Trigger::Request &req,\n                                        std_srvs::Trigger::Response &res) {\n  ROS_INFO(\"%s position (x,y): %lf , %lf\", robot_name.c_str(),\n           this->current_x_position, this->current_y_position);\n  res.success = true;\n  res.message = \"Position logged\";\n  return true;\n}"
+        },
+        {
+          "path": "src/robot_manager_node.cpp",
+          "content": "#include \"my_robot_manager/robot_manager.h\"\n#include <ros/ros.h>\n\nint main(int argc, char **argv) {\n  ros::init(argc, argv, \"robot_manager\");\n  ros::NodeHandle nh;\n  RobotManager rm = RobotManager(&nh, \"/robot1/odom\", \"Turty1\", \"TurtleBot3\");\n  rm.print_specifications();\n  ros::spin();\n}"
+        },
+        {
+          "path": "package.xml (add dependency)",
+          "content": "<depend>std_srvs</depend>"
+        },
+        {
+          "path": "CMakeLists.txt (find_package addition)",
+          "content": "find_package(catkin REQUIRED COMPONENTS\n  roscpp\n  nav_msgs\n  std_srvs\n)\n\ncatkin_package(\n  INCLUDE_DIRS include/${PROJECT_NAME}/\n  LIBRARIES my_robot_manager\n  CATKIN_DEPENDS roscpp nav_msgs std_srvs\n)"
+        }
+      ],
+      "build_commands": [
+        "cd ~/catkin_ws",
+        "catkin_make",
+        "source devel/setup.bash"
+      ],
+      "run_commands": [
+        "rosrun my_robot_manager robot_manager_node",
+        "rosservice call /Turty1/log_current_position \"{}\""
+      ],
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "[ INFO] [timestamp]: Robot 1 created.\n[ INFO] [timestamp]: Robot Name: Turty1\n[ INFO] [timestamp]: Robot Model: TurtleBot3\n[ INFO] [timestamp]: Battery Capacity (kWh): 0.16\n[ INFO] [timestamp]: Total Operation Hours: 2560"
+        },
+        {
+          "shell": "Shell #2",
+          "output": "success: True\nmessage: \"Position logged\""
+        }
+      ],
+      "verification": [
+        {
+          "description": "Call the trigger service and verify position is logged in Shell #1",
+          "command": "rosservice call /Turty1/log_current_position \"{}\"",
+          "expected": "success: True\nmessage: \"Position logged\""
+        }
+      ],
+      "key_concepts_demonstrated": [
+        "this pointer for member access",
+        "private member variables",
+        "ros::ServiceServer with Trigger",
+        "advertiseService",
+        "static member variable robot_count",
+        "odom subscriber updating position"
+      ]
+    },
+    {
+      "question_id": "niat-3",
+      "setup_commands": [
+        "cd ~/catkin_ws/src",
+        "catkin_create_pkg robot_manager_composition roscpp std_srvs",
+        "touch ~/catkin_ws/src/robot_manager_composition/include/robot_manager_composition/system_information.h",
+        "touch ~/catkin_ws/src/robot_manager_composition/src/system_information.cpp",
+        "touch ~/catkin_ws/src/robot_manager_composition/src/system_information_test_executable.cpp"
+      ],
+      "files": [
+        {
+          "path": "include/robot_manager_composition/system_information.h",
+          "content": "#ifndef CPU_INFO_COMPUTERUNIT_H\n#define CPU_INFO_COMPUTERUNIT_H\n#include <cstdint>\n\nclass ISystemInformation {\npublic:\n  ISystemInformation() = default;\n  virtual ~ISystemInformation() = default;\n  virtual int64_t GetTotalMemory() = 0;\n  virtual int64_t GetTotalUsageMemory() = 0;\n  virtual double GetCpuTotalUsage() = 0;\n};\n\nclass SystemInformation : public ISystemInformation {\npublic:\n  SystemInformation();\n  virtual ~SystemInformation() override;\n  int64_t GetTotalMemory() override;\n  int64_t GetTotalUsageMemory() override;\n  double GetCpuTotalUsage() override;\nprivate:\n  struct PImpl;\n  PImpl *m_impl;\n};\n\nclass ComputerUnit {\nprivate:\n  long max_memory;\n  long mem_usage;\n  double cpu_sys_usage;\n  double mem_usage_percentage;\npublic:\n  ComputerUnit() {\n    SystemInformation sys_info;\n    max_memory = sys_info.GetTotalMemory();\n    mem_usage = sys_info.GetTotalUsageMemory();\n    cpu_sys_usage = sys_info.GetCpuTotalUsage();\n  }\n  void print_info();\n};\n\n#endif // CPU_INFO_COMPUTERUNIT_H"
+        },
+        {
+          "path": "src/system_information_test_executable.cpp",
+          "content": "#include \"robot_manager_composition/system_information.h\"\n\nint main() {\n  ComputerUnit computer_unit1;\n  computer_unit1.print_info();\n  return 0;\n}"
+        },
+        {
+          "path": "CMakeLists.txt (additions)",
+          "content": "cmake_minimum_required(VERSION 3.0.2)\nproject(robot_manager_composition)\n\nfind_package(catkin REQUIRED COMPONENTS roscpp std_srvs)\n\ncatkin_package()\n\ninclude_directories(\n  include\n  ${catkin_INCLUDE_DIRS}\n)\n\nadd_executable(system_information_test\n  src/system_information_test_executable.cpp\n)\ntarget_link_libraries(system_information_test ${catkin_LIBRARIES})"
+        }
+      ],
+      "build_commands": [
+        "cd ~/catkin_ws && catkin_make",
+        "source devel/setup.bash"
+      ],
+      "run_commands": [
+        "rosrun robot_manager_composition system_information_test"
+      ],
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "Total CPU usage: 40.44%\nTotal memory usage: 76.36%"
+        }
+      ],
+      "verification": null,
+      "key_concepts_demonstrated": [
+        "abstract interface (pure virtual)",
+        "PImpl idiom",
+        "composition setup",
+        "system resource reading via /proc/stat and sysinfo"
+      ]
+    },
+    {
+      "question_id": "niat-4",
+      "setup_commands": [
+        "touch ~/catkin_ws/src/robot_manager_composition/include/robot_manager_composition/robot_manager_composition.h",
+        "touch ~/catkin_ws/src/robot_manager_composition/src/robot_manager_composition.cpp",
+        "touch ~/catkin_ws/src/robot_manager_composition/src/robot_manager_composition_node.cpp"
+      ],
+      "files": [
+        {
+          "path": "include/robot_manager_composition/robot_manager_composition.h",
+          "content": "#pragma once\n#include <ros/ros.h>\n#include <std_srvs/SetBool.h>\n\nclass RobotManagerComposition {\npublic:\n  RobotManagerComposition(){};\n  RobotManagerComposition(ros::NodeHandle *node_handle);\nprotected:\n  ros::NodeHandle *nh;\n  void init_config_output_srv();\n  bool output_enabled = false;\nprivate:\n  ros::ServiceServer config_output_srv;\n  bool ConfigOutputCallback(std_srvs::SetBoolRequest &req,\n                            std_srvs::SetBoolResponse &response);\n};"
+        },
+        {
+          "path": "src/robot_manager_composition.cpp",
+          "content": "#include \"robot_manager_composition/robot_manager_composition.h\"\n#include <ros/ros.h>\n\nRobotManagerComposition::RobotManagerComposition(ros::NodeHandle *node_handle) {\n  nh = node_handle;\n  init_config_output_srv();\n}\n\nvoid RobotManagerComposition::init_config_output_srv() {\n  config_output_srv = nh->advertiseService(\n      \"robot_manager_output\",\n      &RobotManagerComposition::ConfigOutputCallback, this);\n  ROS_INFO(\"Enable output service created\");\n}\n\nbool RobotManagerComposition::ConfigOutputCallback(\n    std_srvs::SetBoolRequest &req, std_srvs::SetBoolResponse &response) {\n  bool request = req.data;\n  if (request == output_enabled) {\n    response.success = false;\n    response.message = \"Output configuration request is the same as current output configuration.\";\n    return true;\n  }\n  response.success = true;\n  output_enabled = request;\n  if (output_enabled == false) {\n    response.message = \"Console output disabled.\";\n    ROS_INFO(\"Robot Manager console output disabled.\");\n  } else {\n    response.message = \"Console output enabled.\";\n    ROS_INFO(\"Robot Manager console output enabled.\");\n  }\n  return true;\n}"
+        },
+        {
+          "path": "src/robot_manager_composition_node.cpp",
+          "content": "#include \"robot_manager_composition/robot_manager_composition.h\"\n#include <ros/ros.h>\n\nint main(int argc, char **argv) {\n  ros::init(argc, argv, \"robot_manager_using_composition\");\n  ros::NodeHandle nh;\n  RobotManagerComposition rm = RobotManagerComposition(&nh);\n  ros::spin();\n}"
+        },
+        {
+          "path": "CMakeLists.txt (append)",
+          "content": "add_executable(robot_manager_composition_node\n  src/robot_manager_composition_node.cpp\n  src/robot_manager_composition.cpp\n)\ntarget_link_libraries(robot_manager_composition_node ${catkin_LIBRARIES})"
+        }
+      ],
+      "build_commands": [
+        "cd ~/catkin_ws && catkin_make",
+        "source devel/setup.bash"
+      ],
+      "run_commands": [
+        "rosrun robot_manager_composition robot_manager_composition_node",
+        "rosservice call /robot_manager_output \"data: true\"",
+        "rosservice call /robot_manager_output \"data: false\""
+      ],
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "[ INFO] [1674214389.977317190]: Enable Output Service created"
+        },
+        {
+          "shell": "Shell #2 (data: true)",
+          "output": "success: True\nmessage: \"Console output enabled.\""
+        },
+        {
+          "shell": "Shell #2 (data: false)",
+          "output": "success: True\nmessage: \"Console output disabled.\""
+        }
+      ],
+      "verification": [
+        {
+          "description": "Verify service is registered",
+          "command": "rosservice list",
+          "expected": "/robot_manager_output appears in list"
+        },
+        {
+          "description": "Enable output via service",
+          "command": "rosservice call /robot_manager_output \"data: true\"",
+          "expected": "success: True\nmessage: \"Console output enabled.\""
+        }
+      ],
+      "key_concepts_demonstrated": [
+        "composition pattern",
+        "SetBool service",
+        "protected members",
+        "idempotent state check",
+        "ROS service advertise"
+      ]
+    },
+    {
+      "question_id": "niat-5",
+      "setup_commands": [
+        "cd ~/catkin_ws/src",
+        "catkin_create_pkg robot_manager_inheritance roscpp nav_msgs std_srvs",
+        "touch ~/catkin_ws/src/robot_manager_inheritance/include/robot_manager_inheritance/base_robot_manager.h",
+        "touch ~/catkin_ws/src/robot_manager_inheritance/src/base_robot_manager.cpp",
+        "touch ~/catkin_ws/src/robot_manager_inheritance/src/base_robot_manager_node.cpp"
+      ],
+      "files": [
+        {
+          "path": "include/robot_manager_inheritance/base_robot_manager.h",
+          "content": "#pragma once\n#include <ros/ros.h>\n#include <std_srvs/SetBool.h>\n\nclass RobotManagerBase {\npublic:\n  RobotManagerBase(){};\n  RobotManagerBase(ros::NodeHandle *node_handle);\nprotected:\n  ros::NodeHandle *nh;\n  void init_config_output_srv();\n  bool output_enabled = false;\nprivate:\n  ros::ServiceServer config_output_srv;\n  bool ConfigOutputCallback(std_srvs::SetBoolRequest &req,\n                            std_srvs::SetBoolResponse &response);\n};"
+        },
+        {
+          "path": "src/base_robot_manager.cpp",
+          "content": "#include \"robot_manager_inheritance/base_robot_manager.h\"\n\nRobotManagerBase::RobotManagerBase(ros::NodeHandle *node_handle) {\n  nh = node_handle;\n  init_config_output_srv();\n}\n\nvoid RobotManagerBase::init_config_output_srv() {\n  config_output_srv = nh->advertiseService(\n      \"robot_manager_output\",\n      &RobotManagerBase::ConfigOutputCallback, this);\n  ROS_INFO(\"Enable Output Service created\");\n}\n\nbool RobotManagerBase::ConfigOutputCallback(\n    std_srvs::SetBoolRequest &req, std_srvs::SetBoolResponse &response) {\n  bool request = req.data;\n  if (request == output_enabled) {\n    response.success = false;\n    response.message = \"Output configuration request is the same as current output configuration.\";\n    return true;\n  }\n  response.success = true;\n  output_enabled = request;\n  if (output_enabled == false) {\n    response.message = \"Console output disabled.\";\n    ROS_INFO(\"Robot Manager console output disabled.\");\n  } else {\n    response.message = \"Console output enabled.\";\n    ROS_INFO(\"Robot Manager console output enabled.\");\n  }\n  return true;\n}"
+        },
+        {
+          "path": "src/base_robot_manager_node.cpp",
+          "content": "#include \"robot_manager_inheritance/base_robot_manager.h\"\n#include <ros/ros.h>\n\nint main(int argc, char **argv) {\n  ros::init(argc, argv, \"robot_manager\");\n  ros::NodeHandle nh;\n  RobotManagerBase rm(&nh);\n  ros::spin();\n}"
+        }
+      ],
+      "build_commands": [
+        "cd ~/catkin_ws && catkin_make",
+        "source devel/setup.bash"
+      ],
+      "run_commands": [
+        "rosrun robot_manager_inheritance robot_manager_base_class_test_node",
+        "rosservice call /robot_manager_output \"data: true\""
+      ],
+      "expected_output": [
+        {
+          "shell": "Shell #2",
+          "output": "success: True\nmessage: \"Console output enabled.\""
+        }
+      ],
+      "verification": [
+        {
+          "description": "Test enable",
+          "command": "rosservice call /robot_manager_output \"data: true\"",
+          "expected": "success: True\nmessage: \"Console output enabled.\""
+        },
+        {
+          "description": "Test disable",
+          "command": "rosservice call /robot_manager_output \"data: false\"",
+          "expected": "success: True\nmessage: \"Console output disabled.\""
+        }
+      ],
+      "key_concepts_demonstrated": [
+        "base class design",
+        "protected NodeHandle for derived class access",
+        "SetBool service in base class",
+        "init method pattern"
+      ]
+    },
+    {
+      "question_id": "niat-6",
+      "setup_commands": [
+        "touch ~/catkin_ws/src/robot_manager_inheritance/include/robot_manager_inheritance/mobile_robot_robot_manager.h",
+        "touch ~/catkin_ws/src/robot_manager_inheritance/src/mobile_robot_robot_manager.cpp",
+        "touch ~/catkin_ws/src/robot_manager_inheritance/src/mobile_robot_robot_manager_node.cpp"
+      ],
+      "files": [
+        {
+          "path": "include/robot_manager_inheritance/mobile_robot_robot_manager.h",
+          "content": "#pragma once\n#include \"nav_msgs/Odometry.h\"\n#include \"robot_manager_inheritance/base_robot_manager.h\"\n#include <ros/ros.h>\n\nclass MobileRobotRobotManager : public RobotManagerBase {\npublic:\n  MobileRobotRobotManager(ros::NodeHandle *node_handle);\n};"
+        },
+        {
+          "path": "src/mobile_robot_robot_manager.cpp",
+          "content": "#include \"robot_manager_inheritance/mobile_robot_robot_manager.h\"\n#include \"robot_manager_inheritance/base_robot_manager.h\"\n#include <ros/ros.h>\n\nMobileRobotRobotManager::MobileRobotRobotManager(ros::NodeHandle *node_handle) {\n  // assign NodeHandle to nh variable from parent class\n  nh = node_handle;\n  init_config_output_srv();\n}"
+        },
+        {
+          "path": "src/mobile_robot_robot_manager_node.cpp",
+          "content": "#include \"robot_manager_inheritance/mobile_robot_robot_manager.h\"\n#include <ros/ros.h>\n\nint main(int argc, char **argv) {\n  ros::init(argc, argv, \"robot_manager\");\n  ros::NodeHandle nh;\n  MobileRobotRobotManager mrrm = MobileRobotRobotManager(&nh);\n  ros::spin();\n}"
+        },
+        {
+          "path": "CMakeLists.txt (append)",
+          "content": "# add new standalone executable file\nadd_executable(mobile_robot_robot_manager_node\n  src/mobile_robot_robot_manager_node.cpp\n  src/mobile_robot_robot_manager.cpp\n  src/base_robot_manager.cpp\n)\ntarget_link_libraries(mobile_robot_robot_manager_node ${catkin_LIBRARIES})"
+        }
+      ],
+      "build_commands": [
+        "cd ~/catkin_ws && catkin_make",
+        "source devel/setup.bash"
+      ],
+      "run_commands": [
+        "rosrun robot_manager_inheritance mobile_robot_robot_manager_node",
+        "rosservice call /robot_manager_output \"data: true\""
+      ],
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "[ INFO] [timestamp]: Enable Output Service created\n[ INFO] [timestamp]: Odometry subscriber created"
+        }
+      ],
+      "verification": [
+        {
+          "description": "Verify service from derived class works",
+          "command": "rosservice call /robot_manager_output \"data: true\"",
+          "expected": "success: True\nmessage: \"Console output enabled.\""
+        }
+      ],
+      "key_concepts_demonstrated": [
+        "public inheritance",
+        "derived constructor assigns nh to base protected member",
+        "calling parent init method",
+        "multi-source executable linking"
+      ]
+    },
+    {
+      "question_id": "niat-7",
+      "setup_commands": [],
+      "files": [
+        {
+          "path": "include/unit6_exercises/subscriber_basic.h",
+          "content": "#ifndef MAGIC_SUBSCRIBER_H\n#define MAGIC_SUBSCRIBER_H\n\n#include <ros/ros.h>\n#include <sensor_msgs/Image.h>\n\nusing namespace std;\n\nclass MagicSubscriber {\npublic:\n  MagicSubscriber(ros::NodeHandle &ros_node, const string subscriber_topic);\n  ~MagicSubscriber();\n  void CallbackToTopic(const sensor_msgs::ImageConstPtr &msg);\nprivate:\n  ros::NodeHandle *m_ros_node_object;\n  string m_subscriber_topic;\n  ros::Subscriber image_sub_;\n};\n\n#endif"
+        },
+        {
+          "path": "src/subscriber_basic.cpp",
+          "content": "#include \"unit6_exercises/subscriber_basic.h\"\n\nMagicSubscriber::MagicSubscriber(ros::NodeHandle &ros_node,\n                                 const string subscriber_topic) {\n  this->m_subscriber_topic = subscriber_topic;\n  this->m_ros_node_object = &ros_node;\n  image_sub_ = this->m_ros_node_object->subscribe(\n      this->m_subscriber_topic, 1, &MagicSubscriber::CallbackToTopic, this);\n}\n\nvoid MagicSubscriber::CallbackToTopic(\n    const sensor_msgs::ImageConstPtr &msg) {\n  ROS_INFO_STREAM(\"Call Back Topic Image Data[0]=\" << static_cast<int>(msg->data[0]));\n}\n\nMagicSubscriber::~MagicSubscriber() {\n  cout << \"MagicSubscriber Destructor is called\" << endl;\n}"
+        },
+        {
+          "path": "src/main_subscriber_basic.cpp",
+          "content": "#include \"unit6_exercises/subscriber_basic.h\"\n\nint main(int argc, char **argv) {\n  ros::init(argc, argv, \"magic_susbcriber_main_node\");\n  ros::NodeHandle _n(\"magic_susbcriber_main_ns\");\n  string topic_name = \"/camera/rgb/image_raw\";\n  MagicSubscriber magic_subscriber_object(_n, topic_name);\n  ros::spin();\n  return 0;\n}"
+        }
+      ],
+      "build_commands": [
+        "cd ~/catkin_ws; catkin_make; source devel/setup.bash"
+      ],
+      "run_commands": [
+        "rosrun unit6_exercises main_subscriber_basic_node"
+      ],
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "[ INFO] [timestamp]: Call Back Topic Image Data[0]=<value>"
+        }
+      ],
+      "verification": null,
+      "key_concepts_demonstrated": [
+        "class-based ROS subscriber",
+        "ROS_INFO_STREAM",
+        "subscriber callback binding with this",
+        "sensor_msgs::Image data access"
+      ]
+    },
+    {
+      "question_id": "niat-8",
+      "setup_commands": [],
+      "files": [
+        {
+          "path": "src/main_pcl_topic_subscriber.cpp",
+          "content": "#include \"unit6_exercises/magic_subscriber_function.h\"\n#include <sensor_msgs/PointCloud2.h>\n\nusing sensor_msgs::PointCloud2;\n\nint main(int argc, char **argv) {\n  ros::init(argc, argv, \"magic_pcl_susbcriber_main_node\");\n  ros::NodeHandle _n(\"magic_pcl_susbcriber_main_ns\");\n  string topic_name = \"/camera/depth_registered/points\";\n  MagicSubscriber magic_subscriber_object;\n  magic_subscriber_object.init<PointCloud2>(_n, topic_name);\n  ros::spin();\n  return 0;\n}"
+        },
+        {
+          "path": "CMakeLists.txt (append only these 2 lines)",
+          "content": "add_executable(main_pcl_topic_subscriber_node src/main_pcl_topic_subscriber.cpp)\ntarget_link_libraries(main_pcl_topic_subscriber_node\n  magic_subscriber_function_library\n  ${catkin_LIBRARIES}\n)"
+        }
+      ],
+      "build_commands": [
+        "cd ~/catkin_ws; catkin_make; source devel/setup.bash"
+      ],
+      "run_commands": [
+        "rosrun unit6_exercises main_pcl_topic_subscriber_node"
+      ],
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "[ INFO] [timestamp]: Call Back Topic Image Data[0]=<value>"
+        }
+      ],
+      "verification": null,
+      "key_concepts_demonstrated": [
+        "template instantiation with PointCloud2",
+        "reuse of existing template library",
+        "using namespace alias for cleaner code"
+      ]
+    },
+    {
+      "question_id": "niat-9",
+      "setup_commands": [],
+      "files": [
+        {
+          "path": "include/unit6_exercises/magic_subscriber_image_edgedetector.h",
+          "content": "#ifndef MAGIC_SUBSCRIBER_H\n#define MAGIC_SUBSCRIBER_H\n\n#include <cv_bridge/cv_bridge.h>\n#include <opencv2/highgui/highgui.hpp>\n#include <opencv2/imgproc/imgproc.hpp>\n#include <ros/ros.h>\n#include <sensor_msgs/Image.h>\n#include <sensor_msgs/image_encodings.h>\n\nstatic const std::string OPENCV_WINDOW = \"Image window\";\nusing namespace std;\nusing namespace cv;\n\nclass MagicSubscriber {\npublic:\n  MagicSubscriber() { cout << \"MagicSubscriber Constructor is called\" << endl; };\n  ~MagicSubscriber() { cout << \"MagicSubscriber Destructor is called\" << endl; };\n\n  template <typename ROSMessageType>\n  void init(ros::NodeHandle &ros_node, const string subscriber_topic) {\n    this->m_subscriber_topic = subscriber_topic;\n    this->m_ros_node_object = &ros_node;\n    image_sub_ = this->m_ros_node_object->subscribe(\n        this->m_subscriber_topic, 1,\n        &MagicSubscriber::CallbackToTopic<ROSMessageType>, this);\n    image_pub_ = this->m_ros_node_object->advertise<sensor_msgs::Image>(\n        \"/image_converter/output_video\", 1000);\n    namedWindow(OPENCV_WINDOW);\n  };\n\n  template <typename CallBackROSMessageType>\n  void CallbackToTopic(\n      const typename CallBackROSMessageType::ConstPtr &msg) {\n    ROS_INFO_STREAM(\"Call Back Topic Image Data[0]=\" << static_cast<int>(msg->data[0]));\n    cv_bridge::CvImagePtr cv_ptr;\n    try {\n      cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);\n    } catch (cv_bridge::Exception &e) {\n      ROS_ERROR(\"cv_bridge exception: %s\", e.what());\n      return;\n    }\n    cvtColor(cv_ptr->image, cv_ptr->image, COLOR_BGR2GRAY);\n    GaussianBlur(cv_ptr->image, cv_ptr->image, Size(3, 3), 0);\n    Canny(cv_ptr->image, cv_ptr->image, 100, 200, 3, false);\n    putText(cv_ptr->image, \"EDGE DETECTION CAM\", cvPoint(30, 30),\n            FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(200, 200, 250), CV_MSA);\n    imshow(OPENCV_WINDOW, cv_ptr->image);\n    waitKey(3);\n    cvtColor(cv_ptr->image, cv_ptr->image, COLOR_GRAY2BGR);\n    image_pub_.publish(cv_ptr->toImageMsg());\n  };\n\nprivate:\n  ros::NodeHandle *m_ros_node_object;\n  string m_subscriber_topic;\n  ros::Subscriber image_sub_;\n  ros::Publisher image_pub_;\n};\n\n#endif"
+        },
+        {
+          "path": "CMakeLists.txt (key additions)",
+          "content": "find_package(catkin REQUIRED COMPONENTS\n  roscpp\n  sensor_msgs\n  cv_bridge\n  pcl_conversions\n  std_msgs\n)\n\nadd_library(magic_subscriber_image_edgedetector_library\n  src/magic_subscriber_image_edgedetector.cpp\n)\nadd_executable(main_edge_detector_node src/main_edge_detector.cpp)\ntarget_link_libraries(main_edge_detector_node\n  magic_subscriber_image_edgedetector_library\n  ${catkin_LIBRARIES}\n)"
+        }
+      ],
+      "build_commands": [
+        "cd ~/catkin_ws; catkin_make; source devel/setup.bash"
+      ],
+      "run_commands": [
+        "rosrun unit6_exercises main_specialised_complete_node",
+        "rosrun rqt_image_view rqt_image_view"
+      ],
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "[ INFO] [timestamp]: Call Back Topic Image Data[0]=<value>"
+        }
+      ],
+      "verification": [
+        {
+          "description": "View edge detected output in rqt_image_view",
+          "command": "rosrun rqt_image_view rqt_image_view",
+          "expected": "Edge detected image visible on /out/edge_detection topic"
+        }
+      ],
+      "key_concepts_demonstrated": [
+        "template specialization",
+        "cv_bridge image conversion",
+        "Canny edge detection",
+        "GaussianBlur preprocessing",
+        "ROS publisher inside template class"
+      ]
+    },
+    {
+      "question_id": "niat-10",
+      "setup_commands": [
+        "mkdir -p ~/multithreading_exercises"
+      ],
+      "files": [
+        {
+          "path": "~/multithreading_exercises/exercise1.cpp",
+          "content": "#include <iostream>\n#include <thread>\n\n// The function you want to execute on the new thread.\nvoid task() {\n  std::cout << \"Executing work on a thread!\" << std::endl;\n}\n\nint main() {\n  // Constructs the new thread and runs it. Does not block execution.\n  std::thread t1(task);\n\n  // Do other things...\n\n  // Makes the main thread wait for the new thread to finish execution.\n  t1.join();\n}"
+        }
+      ],
+      "build_commands": [
+        "g++ exercise1.cpp -o exercise1 -std=c++11 -lpthread"
+      ],
+      "run_commands": [
+        "./exercise1"
+      ],
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "Executing work on a thread!"
+        }
+      ],
+      "verification": null,
+      "key_concepts_demonstrated": [
+        "std::thread construction",
+        "join() to block main until thread finishes",
+        "-lpthread linker flag",
+        "thread function as free function"
+      ]
+    },
+    {
+      "question_id": "niat-11",
+      "setup_commands": [],
+      "files": [
+        {
+          "path": "src/validate_user_input.cpp",
+          "content": "#include \"robot_commander/robot_commander.h\"\n#include <ros/ros.h>\n#include <iostream>\n#include <exception>\n\nint main(int argc, char **argv) {\n  ros::init(argc, argv, \"exercise_8_1\");\n  RobotCommander my_robot;\n  int n = 0;\n  while (n < 5) {\n    float turn_velocity;\n    std::cout << \"Enter turn velocity: \";\n\n    // INSERT YOUR CODE BELOW THIS LINE\n    try {\n      std::cin >> turn_velocity;\n      if (std::cin.fail())\n        throw 'x';\n      else if (turn_velocity >= -1.0 && turn_velocity <= 0.0)\n        my_robot.turn(turn_velocity, 5);\n      else if (turn_velocity > 0.0)\n        throw 1;\n      else if (turn_velocity < -1.0)\n        throw 1;\n      else\n        throw 'x';\n    } catch (int n) {\n      std::cout << \"Enter turn velocity between -1.0 and 0.0\" << std::endl;\n    } catch (...) {\n      std::cout << \"Please entry of a decimal number.\" << std::endl;\n      std::cin.clear();\n      std::cin.ignore(256, '\\n');\n    }\n    // INSERT YOUR CODE ABOVE THIS LINE\n    n++;\n  }\n  return 0;\n}"
+        }
+      ],
+      "build_commands": [
+        "cd ~/catkin_ws && catkin_make",
+        "source devel/setup.bash"
+      ],
+      "run_commands": [
+        "rosrun exercises_unit_8 validate_user_input"
+      ],
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "[ INFO] [timestamp]: Initializing node\nEnter turn velocity: 5\nEnter turn velocity between -1.0 and 0.0\nEnter turn velocity: -6\nEnter turn velocity between -1.0 and 0.0\nEnter turn velocity: -0.5\n[ INFO] [timestamp]: Turning clockwise\n[ INFO] [timestamp]: Stopping the robot\nEnter turn velocity: g\nPlease entry of a decimal number."
+        }
+      ],
+      "verification": null,
+      "key_concepts_demonstrated": [
+        "try/catch/throw",
+        "typed catch (int n)",
+        "generalized catch(...)",
+        "std::cin.fail() for type check",
+        "std::cin.clear() and std::cin.ignore() for buffer reset"
+      ]
+    },
+    {
+      "question_id": "niat-12",
+      "setup_commands": [],
+      "files": [
+        {
+          "path": "src/validate_user_input.cpp",
+          "content": "#include \"robot_commander/robot_commander.h\"\n#include <exception>\n#include <iostream>\n#include <ros/ros.h>\n\nusing namespace std;\n\nclass WrongTurnException : public exception {\npublic:\n  const char *what() const throw() {\n    return \"Allowed turn velocity only between -1.0 and 0.0\\n\";\n  }\n};\n\nint main(int argc, char **argv) {\n  ros::init(argc, argv, \"exercise_8_1\");\n  RobotCommander my_robot;\n  int n = 0;\n  while (n < 5) {\n    float turn_velocity;\n    std::cout << \"Enter turn velocity: \";\n    try {\n      std::cin >> turn_velocity;\n      if (std::cin.fail())\n        throw 'x';\n      else if (turn_velocity >= -1.0 && turn_velocity <= 0.0)\n        my_robot.turn(turn_velocity, 5);\n      else if (turn_velocity > 0.0)\n        throw WrongTurnException();\n      else if (turn_velocity < -1.0)\n        throw WrongTurnException();\n      else\n        throw 'x';\n    } catch (WrongTurnException e) {\n      std::cout << e.what();\n    } catch (...) {\n      std::cout << \"Please enter a decimal number.\" << std::endl;\n      std::cin.clear();\n      std::cin.ignore(256, '\\n');\n    }\n    n++;\n  }\n  return 0;\n}"
+        }
+      ],
+      "build_commands": [
+        "cd ~/catkin_ws && catkin_make",
+        "source devel/setup.bash"
+      ],
+      "run_commands": [
+        "rosrun exercises_unit_8 validate_user_input"
+      ],
+      "expected_output": [
+        {
+          "shell": "Shell #1",
+          "output": "[ INFO] [timestamp]: Initializing node\nEnter turn velocity: 5\nAllowed turn velocity only between -1.0 and 0.0\nEnter turn velocity: -6\nAllowed turn velocity only between -1.0 and 0.0\nEnter turn velocity: -0.5\n[ INFO] [timestamp]: Turning clockwise\n[ INFO] [timestamp]: Stopping the robot\nEnter turn velocity: g\nPlease enter a decimal number."
+        }
+      ],
+      "verification": null,
+      "key_concepts_demonstrated": [
+        "custom exception class inheriting std::exception",
+        "what() override returning const char*",
+        "throw() specifier",
+        "catch by value (WrongTurnException e)",
+        "user-defined exception message"
+      ]
+    },
+    {
+      "question_id": "niat-13",
+      "setup_commands": [],
+      "files": [],
+      "build_commands": [
+        "colcon build --packages-select my_robot_manager"
+      ],
+      "run_commands": [
+        "ros2 run my_robot_manager robot_manager_node"
+      ],
+      "expected_output": "[INFO] [robot_commander]: Robot executing for <duration> seconds",
+      "verification": [
+        "Service /move_custom is advertised",
+        "Robot executes commands with specified duration"
+      ],
+      "key_concepts_demonstrated": [
+        "Custom service messages",
+        "Service servers",
+        "Duration parameters",
+        "Python ROS2 classes"
+      ]
+    },
+    {
+      "question_id": "niat-14",
+      "setup_commands": [
+        "ros2 pkg create services_quiz --build-type ament_python"
+      ],
+      "files": [
+        "srv/BB8CustomServiceMessage.srv",
+        "services_quiz/bb8_square_service_server.py",
+        "services_quiz/bb8_square_service_client.py"
+      ],
+      "build_commands": [
+        "colcon build --packages-select services_quiz"
+      ],
+      "run_commands": [
+        "ros2 run services_quiz bb8_square_service_server",
+        "ros2 run services_quiz bb8_square_service_client"
+      ],
+      "expected_output": "Service /move_bb8_in_square_custom ready, Robot moves in square pattern",
+      "verification": [
+        "Service server responds to requests",
+        "BB-8 executes square movement",
+        "Robot repeats movement N times",
+        "/cmd_vel publishes movement commands"
+      ],
+      "key_concepts_demonstrated": [
+        "ROS Service servers",
+        "Custom service messages",
+        "Square movement logic",
+        "Service clients",
+        "Robot control"
+      ]
+    },
+    {
+      "question_id": "niat-15",
+      "setup_commands": [
+        "ros2 pkg create topics_quiz --build-type ament_python"
+      ],
+      "files": [
+        "topics_quiz/obstacle_avoidance_node.py"
+      ],
+      "build_commands": [
+        "colcon build --packages-select topics_quiz"
+      ],
+      "run_commands": [
+        "ros2 run topics_quiz obstacle_avoidance_node"
+      ],
+      "expected_output": "Obstacle detected, turning left / Path clear, moving forward",
+      "verification": [
+        "Subscribes to /kobuki/laser/scan",
+        "Publishes to /cmd_vel",
+        "Obstacle avoidance logic works",
+        "Node responds to laser scan data"
+      ],
+      "key_concepts_demonstrated": [
+        "ROS Subscribers",
+        "ROS Publishers",
+        "Laser scan processing",
+        "Obstacle detection",
+        "Conditional logic"
+      ]
+    },
+    {
+      "question_id": "niat-16",
+      "setup_commands": [
+        "ros2 pkg create actions_quiz --build-type ament_python"
+      ],
+      "files": [
+        "action/CustomActionMsg.action",
+        "actions_quiz/drone_action_server.py",
+        "actions_quiz/drone_action_client.py"
+      ],
+      "build_commands": [
+        "colcon build --packages-select actions_quiz"
+      ],
+      "run_commands": [
+        "ros2 run actions_quiz drone_action_server",
+        "ros2 run actions_quiz drone_action_client"
+      ],
+      "expected_output": "Action server started, Drone executing takeoff/land",
+      "verification": [
+        "Action server accepts TAKEOFF and LAND goals",
+        "Publishes feedback during execution",
+        "Returns success result",
+        "Handles multiple goal calls"
+      ],
+      "key_concepts_demonstrated": [
+        "ROS Action servers",
+        "Custom action messages",
+        "Goal handling",
+        "Feedback publishing",
+        "Result returns"
+      ]
+    },
+    {
+      "question_id": "niat-17",
+      "setup_commands": [],
+      "files": [
+        "unit4_exercise2.py"
+      ],
+      "build_commands": [],
+      "run_commands": [
+        "python unit4_exercise2.py"
+      ],
+      "expected_output": "Expected value, Variance, and Standard deviation calculated",
+      "verification": [
+        "Distribution is plotted",
+        "Expected value calculated correctly",
+        "Variance calculated correctly",
+        "Standard deviation calculated correctly"
+      ],
+      "key_concepts_demonstrated": [
+        "Probability distributions",
+        "Expected value",
+        "Variance",
+        "Standard deviation",
+        "Distribution visualization"
+      ]
+    },
+    {
+      "question_id": "niat-18",
+      "setup_commands": [],
+      "files": [
+        "move_velocity.py"
+      ],
+      "build_commands": [],
+      "run_commands": [
+        "python move_velocity.py"
+      ],
+      "expected_output": "Robot X position updates: 0.123456, 0.234567, 0.345678",
+      "verification": [
+        "Subscribes to /odom",
+        "Publishes to /cmd_vel",
+        "Position output shows integration",
+        "Velocity function applied correctly"
+      ],
+      "key_concepts_demonstrated": [
+        "Kinematics",
+        "Velocity functions",
+        "Position integration",
+        "Odometry processing",
+        "Robot motion"
+      ]
+    },
+    {
+      "question_id": "niat-19",
+      "setup_commands": [],
+      "files": [
+        "unit4_exercise3.py"
+      ],
+      "build_commands": [],
+      "run_commands": [
+        "python unit4_exercise3.py"
+      ],
+      "expected_output": "P(open|action) = 0.067, P(closed|action) = 0.933",
+      "verification": [
+        "Bayes rule applied correctly",
+        "Conditional probabilities calculated",
+        "Posterior beliefs sum to 1.0"
+      ],
+      "key_concepts_demonstrated": [
+        "Bayes theorem",
+        "Conditional probability",
+        "Belief updating",
+        "Robot state estimation"
+      ]
+    },
+    {
+      "question_id": "niat-20",
+      "setup_commands": [],
+      "files": [],
+      "build_commands": [],
+      "run_commands": [
+        "ros2 run actionlib_tutorials fibonacci_server",
+        "ros2 topic echo /fibonacci_as/result"
+      ],
+      "expected_output": "sequence: [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]",
+      "verification": [
+        "Fibonacci server is running",
+        "Action accepts order parameter",
+        "Result topic publishes complete sequence",
+        "Feedback shows sequence building"
+      ],
+      "key_concepts_demonstrated": [
+        "ROS Action servers",
+        "Goal execution",
+        "Fibonacci sequence",
+        "Result publishing",
+        "Action feedback"
+      ]
+    },
+    {
+      "question_id": "niat-21",
+      "setup_commands": [],
+      "files": [
+        "unit4_exercise1.py"
+      ],
+      "build_commands": [],
+      "run_commands": [
+        "python unit4_exercise1.py"
+      ],
+      "expected_output": "P(Door 5) = 0.25 (most likely exit)",
+      "verification": [
+        "All 8 door probabilities calculated",
+        "Probabilities sum to 1.0",
+        "Door 5 has highest probability",
+        "Conditional probability logic correct"
+      ],
+      "key_concepts_demonstrated": [
+        "Conditional probability",
+        "Maze navigation",
+        "Bayes theorem",
+        "Decision tree probability"
+      ]
+    },
+    {
+      "question_id": "niat-22",
+      "setup_commands": [],
+      "files": [],
+      "build_commands": [],
+      "run_commands": [
+        "ros2 run tf2_ros static_transform_publisher 1 0 0 0 0 0 map robot_base"
+      ],
+      "expected_output": "Transform frame published, tf2_echo shows transformation",
+      "verification": [
+        "Transform is published on /tf topic",
+        "Frame relationship is established",
+        "Child frame relative to parent"
+      ],
+      "key_concepts_demonstrated": [
+        "TF2 transforms",
+        "Coordinate frames",
+        "Static transforms",
+        "Frame relationships"
+      ]
+    },
+    {
+      "question_id": "niat-23",
+      "setup_commands": [],
+      "files": [
+        "urdf/box_bot_final.urdf",
+        "launch/spawn_robot_ros2_final.launch.xml",
+        "launch/urdf_visualize_final.launch.py"
+      ],
+      "build_commands": [
+        "colcon build --packages-select robot_manager_composition"
+      ],
+      "run_commands": [
+        "ros2 launch robot_manager_composition spawn_robot_ros2_final.launch.xml"
+      ],
+      "expected_output": "Gazebo launches with robot model and sensors",
+      "verification": [
+        "Robot spawns in Gazebo",
+        "Camera sensor publishes to /rgb_camera",
+        "LiDAR publishes to /pointcloud",
+        "Sensors have correct parameters"
+      ],
+      "key_concepts_demonstrated": [
+        "URDF sensor definitions",
+        "Camera configuration",
+        "LiDAR sensor setup",
+        "Gazebo simulation",
+        "Sensor integration"
+      ]
+    },
+    {
+      "question_id": "niat-24",
+      "setup_commands": [],
+      "files": [
+        "bayes_filter.py"
+      ],
+      "build_commands": [
+        "colcon build --packages-select bayes_tutorials"
+      ],
+      "run_commands": [
+        "ros2 launch bayes_tutorials bayes_filter.launch.py",
+        "ros2 service call /request_motion_update std_srvs/srv/Empty {}"
+      ],
+      "expected_output": "Belief distribution updated with movement noise via convolution",
+      "verification": [
+        "predict_step function implemented",
+        "Convolution applied correctly",
+        "Belief spreads due to motion noise",
+        "/belief topic publishes updated belief"
+      ],
+      "key_concepts_demonstrated": [
+        "Bayes filter",
+        "Predict step",
+        "Convolution",
+        "Motion noise",
+        "Belief distribution"
+      ]
+    },
+    {
+      "question_id": "niat-25",
+      "setup_commands": [],
+      "files": [],
+      "build_commands": [],
+      "run_commands": [
+        "ros2 topic pub -l /initialpose geometry_msgs/msg/PoseWithCovariance \"{header: {}, pose: {position: {x: 1.0, y: 2.0}}}\""
+      ],
+      "expected_output": "Initial pose published to /initialpose",
+      "verification": [
+        "Initial pose topic receives message",
+        "Localization system initializes",
+        "Robot position known at startup"
+      ],
+      "key_concepts_demonstrated": [
+        "Initial pose setup",
+        "AMCL initialization",
+        "Navigation setup",
+        "Localization"
+      ]
+    },
+    {
+      "question_id": "niat-26",
+      "setup_commands": [],
+      "files": [],
+      "build_commands": [],
+      "run_commands": [
+        "ros2 topic pub -l /goal_pose geometry_msgs/msg/PoseStamped \"{header: {frame_id: 'map'}, pose: {position: {x: 5.0, y: 3.0}}}\""
+      ],
+      "expected_output": "Robot receives goal and starts navigation",
+      "verification": [
+        "Goal topic receives pose message",
+        "Path planner computes trajectory",
+        "Robot moves toward goal"
+      ],
+      "key_concepts_demonstrated": [
+        "Navigation goals",
+        "Path planning",
+        "PoseStamped messages",
+        "Goal-based navigation"
+      ]
+    },
+    {
+      "question_id": "niat-27",
+      "setup_commands": [],
+      "files": [
+        "launch/navigation.launch.py"
+      ],
+      "build_commands": [],
+      "run_commands": [
+        "ros2 launch pathplanner_server navigation.launch.py"
+      ],
+      "expected_output": "All navigation nodes launched and managed by lifecycle_manager",
+      "verification": [
+        "Map server starts",
+        "AMCL starts",
+        "Controller starts",
+        "Planner starts",
+        "Lifecycle manager coordinates all nodes"
+      ],
+      "key_concepts_demonstrated": [
+        "Launch files",
+        "Lifecycle manager",
+        "Node composition",
+        "Navigation stack",
+        "Multi-node coordination"
+      ]
+    },
+    {
+      "question_id": "niat-28",
+      "setup_commands": [],
+      "files": [
+        "maze_robot/turtle_project.py"
+      ],
+      "build_commands": [
+        "colcon build --packages-select maze_robot"
+      ],
+      "run_commands": [
+        "ros2 run maze_robot turtle_project"
+      ],
+      "expected_output": "Robot navigates maze with random left/right decisions",
+      "verification": [
+        "decide_left_or_right() returns random boolean",
+        "Robot reaches exit",
+        "Different paths on each run",
+        "Probability-based decisions work"
+      ],
+      "key_concepts_demonstrated": [
+        "Random decision making",
+        "Probability",
+        "Maze navigation",
+        "Class design",
+        "TurtleBot simulation"
+      ]
+    },
+    {
+      "question_id": "niat-29",
+      "setup_commands": [],
+      "files": [
+        "ros2_intermediate_project/laser_data_processing.py",
+        "ros2_intermediate_project/circle_navigator_node.py"
+      ],
+      "build_commands": [
+        "colcon build --packages-select ros2_intermediate_project"
+      ],
+      "run_commands": [
+        "ros2 launch ros2_intermediate_project circle_detection.launch.py"
+      ],
+      "expected_output": "Detected circles with positions and radii, robot moves toward them",
+      "verification": [
+        "LaserScan subscriber active",
+        "Circle detection algorithm works",
+        "Clustering correctly groups points",
+        "Robot navigates to circle",
+        "/detected_circles publishes results"
+      ],
+      "key_concepts_demonstrated": [
+        "Laser data processing",
+        "Clustering algorithms",
+        "Circle detection",
+        "Robot navigation",
+        "Sensor integration"
+      ]
+    },
+    {
+      "question_id": "niat-30",
+      "setup_commands": [],
+      "files": [
+        "behavior_tree_robot/robot_behavior_tree.py",
+        "behavior_tree_robot/bt_executor_node.py"
+      ],
+      "build_commands": [
+        "colcon build --packages-select behavior_tree_robot"
+      ],
+      "run_commands": [
+        "ros2 launch behavior_tree_robot launch_world_project.launch.py"
+      ],
+      "expected_output": "Robot navigates through 3-cell world following behavior tree logic",
+      "verification": [
+        "Behavior tree structure implemented",
+        "Action and condition nodes work",
+        "Robot detects freeways",
+        "Robot waits for doors",
+        "Multi-cell navigation succeeds"
+      ],
+      "key_concepts_demonstrated": [
+        "Behavior trees",
+        "Action nodes",
+        "Condition nodes",
+        "Robot autonomy",
+        "Multi-cell navigation"
+      ]
+    }
+  ]
+}

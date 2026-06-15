@@ -1,0 +1,70 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+*.egg
+.venv/
+venv/
+env/
+
+# Secrets & Environment
+.env
+.env.local
+.env.*.local
+
+# Runtime artifacts (regenerated; keep directories via .gitkeep)
+logs/*.db
+logs/*.log
+memory/*.db
+memory/*.log
+vectorstore/*.json
+vectorstore/*.log
+outputs/*/
+reports/*/
+eval/
+calibration/*.jsonl
+calibration/*.json
+
+# Test / tooling caches
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.tox/
+
+# IDE / Editor
+.DS_Store
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.iml
+*.sublime-*
+
+# OS
+.AppleDouble
+.LSOverride
+.DS_Store
+
+# Package builds
+*.whl
+*.tar.gz
+dist/
+build/
+
+# Old logs (should be ignored)
+*.log
+run_all.log
+
+# Keep examples
+!.env.example
+!logs/.gitkeep
+!memory/.gitkeep
+!vectorstore/.gitkeep
+!outputs/.gitkeep
+!reports/.gitkeep
+!eval/.gitkeep

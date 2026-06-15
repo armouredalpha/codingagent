@@ -1,0 +1,211 @@
+# =============================================================================
+# QUALITY GUARDRAILS — the "excellence bar"
+# =============================================================================
+# These go beyond pass/fail validity. They define what makes a question GOOD,
+# not just acceptable. Each rule has a `severity` (REJECT | WARN | SCORE) and a
+# `rationale` so a human can understand WHY the rule exists.
+#
+# SCORE rules contribute to a 0-100 "craftsmanship score". A question can be
+# structurally valid yet score low here — that is the signal that separates a
+# Construct-grade question from a generic one.
+# =============================================================================
+
+craftsmanship_score:
+  min_to_approve: 80          # below this → regenerate, even if confidence passed
+  weights:                    # must sum to 100
+    solvability: 20
+    scaffolding_quality: 20
+    grading_fairness: 15
+    clarity: 15
+    code_runnability: 15
+    realistic_failure_framing: 15
+
+# -----------------------------------------------------------------------------
+# 1. SOLVABILITY — can a competent candidate actually solve it in the time?
+# -----------------------------------------------------------------------------
+solvability:
+  rules:
+    - id: todo_has_enough_context
+      severity: REJECT
+      rationale: >
+        Each TODO block must contain a comment that states (a) WHAT to build,
+        (b) the exact topic/service/frame names, and (c) the message type.
+        A student should never have to guess an interface name.
+      check: every_todo_block_has_descriptive_comment
+
+    - id: no_hidden_prerequisites
+      severity: REJECT
+      rationale: >
+        The solution must not require an API, message, or concept that is not
+        either in the syllabus or already imported/shown in the scaffold.
+      check: solution_uses_only_scoped_or_provided_symbols
+
+    - id: time_budget_matches_difficulty
+      severity: WARN
+      rationale: Solve time must be realistic for the difficulty band.
+      bounds:
+        easy:   { min_minutes: 10, max_minutes: 25 }
+        medium: { min_minutes: 25, max_minutes: 45 }
+        hard:   { min_minutes: 45, max_minutes: 90 }
+
+    - id: single_correct_interface
+      severity: WARN
+      rationale: >
+        There should be ONE canonical correct interface (topic/type/rate) so the
+        grader is deterministic. Ambiguity ("publish on any odom topic") is banned.
+      check: acceptance_criteria_are_specific
+
+# -----------------------------------------------------------------------------
+# 2. SCAFFOLDING QUALITY — is the boilerplate a real head-start, not a trap?
+# -----------------------------------------------------------------------------
+scaffolding_quality:
+  rules:
+    - id: scaffold_imports_complete
+      severity: REJECT
+      rationale: All imports the solution needs must already be in the starter.
+      check: starter_imports_superset_of_solution_imports
+
+    - id: scaffold_runs_before_edit
+      severity: REJECT
+      rationale: >
+        The starter must import and instantiate without raising (stubs return
+        None/pass). A student running it unedited should get a clean "does
+        nothing" node, never a crash or syntax error.
+      check: starter_is_importable_and_constructs
+
+    - id: todo_ratio_is_meaningful
+      severity: WARN
+      rationale: >
+        The editable region should be 15-60% of the file. Too little = trivial;
+        too much = "build from scratch", which this system explicitly forbids.
+      bounds: { min_editable_fraction: 0.15, max_editable_fraction: 0.60 }
+
+    - id: one_responsibility_per_todo
+      severity: WARN
+      rationale: >
+        Each TODO block should test ONE idea (create publisher | build message |
+        handle callback). Mega-TODOs that hide 5 concepts are unfair to grade.
+      check: each_todo_block_is_single_responsibility
+
+    - id: fixed_scaffold_is_untouchable
+      severity: REJECT
+      rationale: >
+        Code outside TODO blocks (main(), entry points, class skeleton) must be
+        identical between starter and solution. Students edit ONLY inside TODOs.
+      check: non_todo_regions_identical_starter_vs_solution
+
+# -----------------------------------------------------------------------------
+# 3. GRADING FAIRNESS — deterministic, partial-credit, no false negatives
+# -----------------------------------------------------------------------------
+grading_fairness:
+  rules:
+    - id: weights_sum_to_one
+      severity: REJECT
+      rationale: hidden_checks weights must sum to 1.0 (+/- 0.01).
+      check: sum_of_check_weights_is_one
+
+    - id: partial_credit_possible
+      severity: WARN
+      rationale: >
+        No single check should be worth >0.5. A small mistake should not zero a
+        candidate who got 80% right. Reward the journey, not just the endpoint.
+      max_single_check_weight: 0.5
+
+    - id: checks_are_observable
+      severity: REJECT
+      rationale: >
+        Every check must inspect an OBSERVABLE runtime fact — a topic exists, a
+        message field equals X, a rate is within tolerance. No check may read
+        the student's source code (style/AST checks are brittle and unfair).
+      check: all_checks_are_behavioural_not_source_inspection
+
+    - id: rate_checks_have_tolerance
+      severity: REJECT
+      rationale: A publish_rate check of exactly 10.0 is impossible to hit. Allow +/-10%.
+      required_tolerance_pct: 10
+
+    - id: negative_test_present
+      severity: REJECT
+      rationale: >
+        At least one test must verify the WRONG answer fails (e.g. publishing on
+        the wrong topic does NOT pass). Prevents "accidentally correct" grading.
+      check: has_at_least_one_negative_kind_test
+
+# -----------------------------------------------------------------------------
+# 4. CLARITY — unambiguous, single interpretation
+# -----------------------------------------------------------------------------
+clarity:
+  rules:
+    - id: acceptance_criteria_explicit
+      severity: REJECT
+      rationale: The scenario must state measurable, testable acceptance criteria.
+      check: scenario_contains_acceptance_criteria
+
+    - id: no_ambiguous_quantifiers
+      severity: WARN
+      rationale: Ban vague words that a grader cannot verify.
+      banned_words: ["fast", "smooth", "efficient", "properly", "correctly",
+                     "as needed", "appropriate", "reasonable", "good"]
+
+    - id: every_named_interface_is_used
+      severity: WARN
+      rationale: >
+        If the scenario mentions /cmd_vel, the solution and a check must both use
+        /cmd_vel. No dangling interface names that lead nowhere.
+      check: mentioned_interfaces_appear_in_solution_and_checks
+
+# -----------------------------------------------------------------------------
+# 5. CODE RUNNABILITY — the reference solution actually works
+# -----------------------------------------------------------------------------
+code_runnability:
+  rules:
+    - id: solution_has_no_todo
+      severity: REJECT
+      rationale: Reference solution must be 100% complete.
+      check: no_todo_markers_in_solution
+
+    - id: solution_syntactically_valid
+      severity: REJECT
+      rationale: Reference solution must parse as valid Python (ast.parse).
+      check: solution_passes_ast_parse
+
+    - id: solution_uses_real_message_fields
+      severity: REJECT
+      rationale: >
+        Message field access must be real (Twist.linear.x, not Twist.speed).
+        Hallucinated fields are the #1 LLM failure mode.
+      check: message_fields_exist_in_ros2_humble
+
+    - id: callbacks_are_wired
+      severity: WARN
+      rationale: >
+        If a subscriber/timer is created, its callback must be referenced and
+        defined. No dead callbacks, no orphan timers.
+      check: every_callback_is_registered_and_defined
+
+# -----------------------------------------------------------------------------
+# 6. REALISTIC FAILURE FRAMING — it reads like a real ticket, not a textbook
+# -----------------------------------------------------------------------------
+realistic_failure_framing:
+  rules:
+    - id: has_concrete_failure_or_feature
+      severity: SCORE
+      rationale: >
+        The best questions frame a REAL situation: "the robot drifts because the
+        odom frame is never published" beats "write a TF broadcaster". Reward a
+        concrete bug/feature framing.
+      reward_phrases: ["never moves", "drifts", "stops responding", "crashes into",
+                       "the operator reports", "QA found", "in production",
+                       "the previous engineer left", "intermittently fails"]
+
+    - id: names_a_robot_and_mission
+      severity: SCORE
+      rationale: A named robot on a named mission is more memorable and realistic.
+      check: scenario_names_robot_type_and_objective
+
+    - id: has_stakes
+      severity: SCORE
+      rationale: >
+        Great tickets imply consequences ("blocks the loading dock", "fails the
+        safety audit"). This grounds the task in why it matters.
+      reward_signal: scenario_mentions_consequence
