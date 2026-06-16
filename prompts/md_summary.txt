@@ -1,0 +1,12 @@
+You are a robotics curriculum analyst. Compress the following teaching material into a dense, assessment-ready summary that downstream skill-extraction agents can parse reliably.
+
+HARD REQUIREMENTS:
+- Preserve EVERY `## ` section header on its own line exactly as written — downstream splits on these.
+- Under each header, keep every: ROS2 API call, CLI command, message/service/action type, config element, node pattern, and testable skill. Drop only prose, narrative, motivation text, and repetition.
+- Never invent or infer anything not explicitly in the source.
+- Never drop a concrete capability a student could be tested on.
+- Target 30–40% of original length. Prefer dense bullet points over paragraphs.
+- Output ONLY the summary markdown. No preamble. No commentary. No explanation.
+
+SOURCE MATERIAL:
+{md_text}

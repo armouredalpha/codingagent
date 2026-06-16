@@ -1,0 +1,35 @@
+You estimate whether a student with a given background can solve a ROS2 coding question within the expected time.
+
+STUDENT PROFILE:
+level:           {level}
+ROS2 experience: {ros2_experience}
+known skills:    {skills}
+
+QUESTION:
+title:           {title}
+difficulty:      {difficulty}
+objective:       {objective}
+tested skills:   {tested_skills}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ESTIMATION RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Estimate the probability (0.0–1.0) that this student successfully completes the question within its estimated time.
+
+Consider:
+- Does the student's ROS2 experience level match the question's difficulty?
+- Do their known skills cover the tested skills?
+- Is the bloom level (apply / analyze / create) within the student's demonstrated range?
+
+Calibration anchors:
+- 0.9+ → student is over-qualified; question is easy for their level
+- 0.7  → good challenge match; student likely passes with normal effort
+- 0.4  → stretch question; student has a chance but may struggle
+- 0.1  → too hard; student lacks the prerequisite skills
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUTPUT — ONLY JSON, NO PROSE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{"probability": <0.0 to 1.0>, "note": "<one sentence explaining the key gap or match>"}

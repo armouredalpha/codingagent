@@ -1,0 +1,27 @@
+# Baseline student skill profiles used by the confidence scorer to judge whether
+# a candidate at each level could solve a generated question. Loaded automatically
+# by the v2 generate flow (no CLI flag).
+students:
+  - level: easy
+    skills:
+      - "Linux command line basics"
+      - "Python fundamentals"
+      - "ROS2 node creation"
+      - "Running ROS2 nodes with ros2 run"
+    ros2_experience: beginner
+  - level: medium
+    skills:
+      - "ROS2 publishers and subscribers"
+      - "ROS2 service clients and servers"
+      - "Launch files"
+      - "Custom message/service definitions"
+      - "Debugging ROS2 communication"
+    ros2_experience: intermediate
+  - level: hard
+    skills:
+      - "Nav2 navigation stack"
+      - "TF2 coordinate transformations"
+      - "URDF robot descriptions"
+      - "robot_state_publisher"
+      - "Multi-node system integration"
+    ros2_experience: advanced

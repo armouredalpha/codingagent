@@ -93,6 +93,13 @@ class Settings(BaseModel):
 
     similarity_reject_threshold: float = 0.75
     min_confidence: float = 85.0
+
+    # ---- v2 single-command flow ---------------------------------------------
+    # Live web duplicate-check for originality via an OpenRouter ":online" model.
+    # No-ops without an OpenRouter key; always falls back to the vectorstore check.
+    enable_web_originality: bool = True
+    students_path: str = "config/students.yaml"
+    max_question_retries: int = 3
     min_realism_score: int = 60
     enable_llm_judge: bool = False
     critic_batch_size: int = 10

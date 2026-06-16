@@ -109,6 +109,43 @@ class SkillSet(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# NEW: Single-command generate flow (v2)
+# ---------------------------------------------------------------------------
+class StudentProfile(BaseModel):
+    """A baseline student skill profile used by the confidence scorer to judge
+    whether a candidate at this level could solve a generated question."""
+    level: str                                  # easy | medium | hard
+    skills: list[str] = Field(default_factory=list)
+    ros2_experience: str = "beginner"           # beginner | intermediate | advanced
+
+
+class SkillSpec(BaseModel):
+    """The primary skill a question must assess, with target cognitive level and
+    difficulty (mirrors the `selected_skill` block of the input format)."""
+    skill: str
+    bloom_level: str = "apply"
+    difficulty: str = "easy"
+
+
+class QuestionScope(BaseModel):
+    """Supporting concepts a question may draw on. Excludes the selected skill."""
+    concepts_allowed: list[str] = Field(default_factory=list)
+
+
+class GenerateRequest(BaseModel):
+    """One question-generation request, matching the documented input format:
+
+        topic_name, selected_skill {skill, bloom_level, difficulty},
+        question_scope {concepts_allowed}, md_file, md_hash
+    """
+    topic_name: str
+    selected_skill: SkillSpec
+    question_scope: QuestionScope = Field(default_factory=QuestionScope)
+    md_file: str = ""
+    md_hash: str = ""
+
+
+# ---------------------------------------------------------------------------
 # NEW: Evaluation comparisons
 # ---------------------------------------------------------------------------
 class EvalReference(BaseModel):

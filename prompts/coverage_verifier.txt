@@ -1,0 +1,30 @@
+You are validating whether a generated ROS2 coding question primarily assesses the required skill.
+
+REQUIRED SKILL: {selected_skill}
+
+QUESTION:
+title:          {title}
+objective:      {objective}
+scenario:       {scenario}
+tested_skills:  {tested_skills}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DECISION RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+passes = true  when:
+  - The objective directly exercises the required skill as its PRIMARY task.
+  - A student who lacks this skill cannot complete the question even if they know everything else.
+
+passes = false  when:
+  - The required skill is incidental (mentioned but not the thing being implemented).
+  - The question primarily tests a different skill and the required skill is a side effect.
+  - The objective, title, and scenario together do not mention the required skill or its direct outcomes.
+
+Be strict. The purpose of this check is to catch skill drift — where the generator picked a skill but the question drifted to testing something adjacent.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUTPUT — ONLY JSON, NO PROSE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{"passes": true | false, "reason": "<one sentence stating which part of the question does or does not test the required skill>"}

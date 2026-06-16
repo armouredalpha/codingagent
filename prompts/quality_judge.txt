@@ -1,41 +1,71 @@
-You are scoring a batch of ROS2 Humble coding-assessment questions on three
-subjective quality axes. Each question is a real engineering ticket a candidate
-must implement.
+You are scoring a batch of ROS2 Humble coding-assessment questions on three quality axes. Each question is a real engineering ticket a candidate must implement in Python using rclpy.
 
-Rate each question on:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SCORING AXES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. realism_score (0-100): how closely it resembles a real industrial robotics
-   engineering ticket. Reward a named robot/domain, concrete ROS interfaces
-   (topics, services, message types), measurable acceptance criteria, and a
-   plausible failure/feature framing. Penalise toy phrasing ("hello world",
-   "foo/bar", "example"), vague objectives, and missing interfaces.
+1. realism_score (0–100)
+   Does this question resemble a real industrial robotics task?
 
-2. hiring_signal_score (0-100): how strong a hiring signal a correct solution
-   gives an interviewer. Reward integration of multiple skills, debugging/fixing
-   real behaviour, end-to-end tasks, and realistic ROS communication. Penalise
-   trivial single-call tasks that anyone could pass.
+   REWARD:
+   - Named robot or industrial domain (warehouse, factory, mobile platform)
+   - Concrete ROS interfaces: real topic names (/cmd_vel, /scan), message types (Twist, LaserScan), service names
+   - Measurable success criteria tied to ROS behaviour (publish rate, service response content, node connectivity)
+   - Failure/problem framing ("the conveyor stopped reporting", "the robot ignores stop signals")
 
-3. market_readiness: the readiness level a candidate who consistently solves
-   questions like this demonstrates. Choose EXACTLY one of:
-   "Beginner", "Employable", "Job Ready", "Industry Ready",
-   "Advanced Industry Ready".
+   PENALISE:
+   - Toy names: foo_node, /test_topic, example_pkg, hello_world
+   - Vague objectives: "implement ROS communication", "create a working node"
+   - Missing ROS interface definitions (no topic, no message type, no service)
+   - Trivial single-call tasks a beginner could complete in under 5 minutes
 
-Return ONLY this JSON (no markdown, no prose):
+   Scale anchor: 90+ = I would see this on a real job board. 50 = textbook exercise. <30 = toy.
+
+2. hiring_signal_score (0–100)
+   How much does a correct solution reveal about the candidate's engineering skill?
+
+   REWARD:
+   - Integration of 2+ ROS2 concepts that must work together
+   - Debugging or fixing broken behaviour (not just implementing from scratch)
+   - Design or architectural decision (choosing the right message type, timer frequency, QoS)
+   - Real-world constraints (rate limits, error handling, state management)
+
+   PENALISE:
+   - Single-API call with no integration (just `create_publisher` and `publish`)
+   - Solutions where copying the rclpy documentation tutorial would pass
+   - No observable differentiation between a junior and a senior candidate
+
+   Scale anchor: 90+ = strong hiring signal. 50 = basic competence check. <30 = anyone passes.
+
+3. market_readiness
+   What seniority level does a candidate who consistently solves questions like this demonstrate?
+   Choose EXACTLY ONE: "Beginner" | "Employable" | "Job Ready" | "Industry Ready" | "Advanced Industry Ready"
+
+   Beginner             → Can follow a tutorial. No real integration.
+   Employable           → Can implement single ROS2 concepts correctly under guidance.
+   Job Ready            → Can implement and connect ROS2 components without hand-holding.
+   Industry Ready       → Can debug, design, and integrate multi-concept ROS2 systems.
+   Advanced Industry Ready → Can architect end-to-end ROS2 workflows with edge cases.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUTPUT — ONLY JSON, NO PROSE, NO MARKDOWN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 {
   "results": [
     {
       "id": "<question id, copied exactly>",
       "realism_score": <int 0-100>,
-      "realism_reasons": ["<short reason>", "..."],
+      "realism_reasons": ["<specific strength or weakness>"],
       "hiring_signal_score": <int 0-100>,
-      "hiring_reasons": ["<short reason>", "..."],
+      "hiring_reasons": ["<specific strength or weakness>"],
       "market_readiness": "<one of the five levels>",
-      "market_reasons": ["<short reason>", "..."]
+      "market_reasons": ["<what in the question determined this level>"]
     }
   ]
 }
 
-Score every question. Copy each "id" exactly. Questions:
+Return one entry per question. Never skip a question.
 
+QUESTIONS:
 {questions}

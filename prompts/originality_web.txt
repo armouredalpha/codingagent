@@ -1,0 +1,25 @@
+Search the web for existing ROS2 coding exercises, tutorials, or assessments that closely match the following question. Your goal is to determine whether this question is original or whether a near-identical exercise already exists publicly.
+
+QUESTION TO CHECK:
+title:     {title}
+skill:     {skill}
+scenario:  {scenario}
+objective: {objective}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SCORING RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+originality = 1.0  →  No close match found. The scenario, framing, or context is distinct from anything in tutorials or public repos.
+
+originality = 0.5  →  The skill is commonly taught, but this specific scenario/framing is not a verbatim copy.
+
+originality = 0.0  →  A near-identical exercise exists (same skill, same framing, same or very similar scenario).
+
+Scoring is about scenario originality, not skill originality. "Implement a publisher" is always common — but a publisher embedded in a unique industrial scenario with a specific robot and constraint can still be original.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUTPUT — ONLY JSON, NO PROSE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{"originality": <0.0 to 1.0>, "note": "<closest match found, or 'no close match' if original>"}

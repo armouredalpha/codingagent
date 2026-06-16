@@ -1,20 +1,42 @@
-You extract testable skills from a teaching material section.
+You extract testable coding skills from a ROS2 teaching material section. Each skill you extract will be turned into a 30–45 minute coding question, so it must be implementable, not theoretical.
 
 SECTION:
 {section_text}
 
-Extract 3-7 skills. Each skill is:
-- A verb phrase: "create publisher", "write callback", "design launch file"
-- Directly testable in a 30-45 minute question
-- Tied to ROS2 APIs or robotics concepts
-- Distinct from other skills (no duplicates)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXTRACTION RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-For each skill, assign:
+EXTRACT 3–7 skills. Each skill must be:
+
+1. A concrete verb phrase describing code a student writes:
+   GOOD: "implement a timer-based publisher that sends Twist messages at 10 Hz"
+   BAD:  "understand publishers"  /  "ROS2 topics"
+
+2. Tied to a specific ROS2 API, message type, or node pattern from the section.
+
+3. Distinct — no two skills should require writing the same code.
+
+4. Testable in isolation — a student can demonstrate it without needing other skills from this list.
+
+ASSIGN for each skill:
 - bloom_level: understand | apply | analyze | evaluate | create
-- difficulty: easy | medium | hard
+  (most skills should be "apply" or "analyze")
+- difficulty:  easy | medium | hard
+  easy   = single API call, one file, <20 LOC
+  medium = 2–3 concepts, some integration, 20–60 LOC
+  hard   = multi-concept, design decisions, >60 LOC
 
-OUTPUT ONLY JSON (no markdown, no text):
+DO NOT extract:
+- Conceptual knowledge ("know what a topic is")
+- Installation or setup steps
+- Skills requiring Nav2, SLAM, MoveIt2, OpenCV, or machine learning unless explicitly in the section
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUTPUT — ONLY JSON, NO PROSE, NO MARKDOWN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 [
-  {"skill": "...", "bloom_level": "...", "difficulty": "..."},
-  {"skill": "...", "bloom_level": "...", "difficulty": "..."}
+  {"skill": "verb-phrase description", "bloom_level": "apply", "difficulty": "easy"},
+  {"skill": "verb-phrase description", "bloom_level": "analyze", "difficulty": "medium"}
 ]

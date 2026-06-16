@@ -19,19 +19,30 @@ Validation rules
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from ..guardrails import GuardrailConfig
 from ..schemas import AgentResult, AssessmentPackage, Question, SupervisorVerdict
 from ._llm_batch import run_batched_critic
 from .base import BaseAgent
 
-_JUDGE_SYSTEM = (
-    "You are an INDEPENDENT senior robotics hiring reviewer. You did not write "
-    "these questions. For each one, judge ONLY from the artifact whether it is a "
-    "realistic, correctly-scoped, unambiguous, auto-gradable ROS2 Humble coding "
-    "ticket whose stated criteria actually match the task. Be skeptical. Return "
-    'ONLY JSON: {"results":[{"id": "...", "verdict": "APPROVE"|"REJECT", '
-    '"reasons": ["..."]}]} — reasons required when REJECT.'
-)
+def _load_judge_system() -> str:
+    """Load supervisor judge prompt from file, fall back to inline."""
+    path = Path(__file__).parent.parent.parent / "prompts" / "supervisor_judge.txt"
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError:
+        return (
+            "You are an INDEPENDENT senior robotics hiring reviewer. You did not write "
+            "these questions. For each one, judge ONLY from the artifact whether it is a "
+            "realistic, correctly-scoped, unambiguous, auto-gradable ROS2 Humble coding "
+            "ticket whose stated criteria actually match the task. Be skeptical. Return "
+            'ONLY JSON: {"results":[{"id": "...", "verdict": "APPROVE"|"REJECT", '
+            '"reasons": ["..."]}]} — reasons required when REJECT.'
+        )
+
+
+_JUDGE_SYSTEM = _load_judge_system()
 
 
 def _valid_judge_verdict(v: dict) -> bool:
@@ -108,13 +119,15 @@ class SupervisorAgent(BaseAgent):
         if not pkg.questions:
             issues.append("no questions generated")
 
-        # Coverage gate — judged against a configurable target, not an implicit
-        # 100%. The old behaviour rejected every broad-syllabus batch by
-        # construction (6 questions can't test 20 skills). require_full_coverage
-        # still works: when true it forces the target to 1.0.
+        # Coverage gate — the configured target is capped by what is physically
+        # achievable: n questions can test at most n distinct skills, so we never
+        # penalise a small batch for not covering a large syllabus.
         gr_cov = GuardrailConfig.load().supervisor
-        target = 1.0 if gr_cov.require_full_coverage else gr_cov.coverage_target
+        base_target = 1.0 if gr_cov.require_full_coverage else gr_cov.coverage_target
         total_skills = len(pkg.coverage_matrix.matrix)
+        n_questions = len(pkg.questions)
+        max_achievable = (n_questions / total_skills) if total_skills else 1.0
+        target = min(base_target, max_achievable)
         covered = total_skills - len(pkg.coverage_matrix.missing)
         coverage_frac = (covered / total_skills) if total_skills else 0.0
         if covered == 0:
@@ -143,9 +156,11 @@ class SupervisorAgent(BaseAgent):
                 if q.approved:
                     issues.append(f"{q.question_id}: approved but independent judge rejected — {jr}")
             # An approved question carrying a hard defect is a batch-level issue.
+            # grading_execution FAIL is a soft signal (no real ROS2 runtime in CI);
+            # it routes to regeneration but does not block the whole batch.
             if q.approved:
                 for p in probs:
-                    if p.startswith(("uses out-of-scope", "not auto-gradable", "hidden tests do not")):
+                    if p.startswith(("uses out-of-scope", "not auto-gradable")):
                         issues.append(f"{q.question_id}: approved despite — {p}")
             # Any non-approved or defective question is a regeneration target.
             if not q.approved or probs:

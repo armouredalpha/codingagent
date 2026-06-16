@@ -109,6 +109,57 @@ class MdParserAgent(BaseAgent):
             return path.read_text(encoding="utf-8")
         return ""
 
+    def _split_sections_text(self, text: str) -> dict[str, str]:
+        """Split an in-memory markdown/summary string into ## sections.
+
+        Unlike ``_read_md`` this works on a string (the LLM summary), not a file,
+        and degrades to a single synthetic section when no ## headers are present
+        so skill extraction still runs.
+        """
+        sections: dict[str, str] = {}
+        parts = re.split(r'^## ', text, flags=re.MULTILINE)
+        for part in parts[1:]:
+            lines = part.split('\n', 1)
+            header = lines[0].strip()
+            content = lines[1].strip() if len(lines) > 1 else ""
+            sections[header] = content
+        if not sections:
+            sections["Curriculum"] = text.strip()
+        return sections
+
+    def extract_from_text(
+        self,
+        summary_text: str,
+        md_path: str | Path,
+        md_hash: str,
+    ) -> SkillSet:
+        """Extract skills from an already-produced summary string (v2 flow).
+
+        Reuses the per-section skill extraction used by ``run`` but sources the
+        sections from the summary instead of the raw markdown file. Does NOT write
+        to the global skills/ dir — the v2 flow writes skills.yaml into the run
+        folder via the workflow layer.
+        """
+        md_path = Path(md_path)
+        sections = self._split_sections_text(summary_text)
+
+        all_skills: list[SkillEntry] = []
+        sections_with_skills: list[str] = []
+        for header, text in sections.items():
+            skills = self._extract_skills(header, text)
+            if skills:
+                all_skills.extend(skills)
+                sections_with_skills.append(header)
+
+        return SkillSet(
+            md_file=str(md_path.name),
+            md_hash=md_hash,
+            skills=all_skills,
+            sections_covered=sections_with_skills,
+            total_sections=len(sections),
+            parsed_at=datetime.now(timezone.utc),
+        )
+
     def run(self, md_path: str | Path) -> AgentResult:
         """Parse markdown: read → summarise → extract → validate coverage."""
         md_path = Path(md_path)

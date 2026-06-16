@@ -1,6 +1,0 @@
-You are a technical content specialist. Summarize the following teaching material section to 30-60% of its original length while preserving all key concepts, APIs, and learning outcomes.
-
-SECTION:
-{section_text}
-
-Provide a concise summary that retains essential details for skill extraction. Output only the summary text, no other commentary.

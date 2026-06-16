@@ -14,8 +14,16 @@ there are no hard blockers (scope violation, not auto-gradable, duplicate).
 
 from __future__ import annotations
 
-# Calibration removed — using raw confidence scores
 from pathlib import Path
+
+_PROMPTS_DIR = Path(__file__).parent.parent.parent / "prompts"
+
+
+def _load_prompt(name: str) -> str:
+    try:
+        return (_PROMPTS_DIR / name).read_text(encoding="utf-8")
+    except OSError:
+        return ""
 from ..guardrails import GuardrailConfig
 from ..schemas import (
     AgentResult,
@@ -23,6 +31,7 @@ from ..schemas import (
     CoverageMatrix,
     Difficulty,
     Question,
+    StudentProfile,
 )
 from .base import BaseAgent
 
@@ -204,6 +213,70 @@ class ConfidenceScoringAgent(BaseAgent):
             calibrated=cal.is_calibrated,
             status=status,
         )
+
+    def score_with_students(
+        self, q: Question, students: list[StudentProfile]
+    ) -> dict:
+        """Explanatory confidence signal: for each baseline student profile, ask
+        the LLM whether a candidate at that level could solve this question.
+
+        Returns ``{"per_level": {level: 0-1}, "average": 0-1, "notes": {...}}``.
+        Best-effort: any LLM failure falls back to a difficulty-vs-experience
+        heuristic so the signal is always present without a network dependency.
+        This does NOT gate approval — the numeric gate stays with score()/the
+        ImprovedConfidenceScorer; this is logged into the confidence report.
+        """
+        per_level: dict[str, float] = {}
+        notes: dict[str, str] = {}
+        for s in students:
+            val: float | None = None
+            try:
+                template = _load_prompt("confidence_student.txt")
+                prompt = template.format(
+                    level=s.level,
+                    ros2_experience=s.ros2_experience,
+                    skills=", ".join(s.skills),
+                    title=q.title,
+                    difficulty=q.difficulty.value,
+                    objective=q.objective,
+                    tested_skills=", ".join(q.tested_skills),
+                ) if template else (
+                    "A student has this background:\n"
+                    f"- level: {s.level}\n"
+                    f"- ROS2 experience: {s.ros2_experience}\n"
+                    f"- skills: {', '.join(s.skills)}\n\n"
+                    "Could this student solve the following ROS2 coding question? "
+                    "Estimate probability of success 0.0-1.0.\n\n"
+                    f"Title: {q.title}\n"
+                    f"Difficulty: {q.difficulty.value}\n"
+                    f"Objective: {q.objective}\n"
+                    f"Tested skills: {', '.join(q.tested_skills)}\n\n"
+                    'Reply JSON only: {"probability": <0.0-1.0>, "note": "<short>"}'
+                )
+                result, _ = self.llm.complete_json(  # type: ignore[union-attr]
+                    system="You estimate whether a student can solve a ROS2 coding question.",
+                    user=prompt,
+                    temperature=0.0,
+                    max_tokens=120,
+                )
+                if isinstance(result, dict) and "probability" in result:
+                    val = max(0.0, min(1.0, float(result["probability"])))
+                    notes[s.level] = str(result.get("note", ""))
+            except Exception as exc:  # noqa: BLE001
+                self.log.debug("student_confidence_unavailable", error=str(exc))
+
+            if val is None:
+                # Heuristic fallback: higher experience vs question difficulty.
+                exp_rank = {"beginner": 0, "intermediate": 1, "advanced": 2}.get(
+                    s.ros2_experience, 0
+                )
+                diff_rank = self._DIFF_ORDER.get(q.difficulty, 1)
+                val = max(0.05, min(1.0, 0.6 + 0.25 * (exp_rank - diff_rank)))
+                notes.setdefault(s.level, "heuristic estimate")
+            per_level[s.level] = round(val, 3)
+
+        avg = round(sum(per_level.values()) / len(per_level), 3) if per_level else 0.0
+        return {"per_level": per_level, "average": avg, "notes": notes}
 
     def run(self, questions: list[Question], coverage: CoverageMatrix) -> AgentResult:
         gr = GuardrailConfig.load()

@@ -17,7 +17,13 @@ from pathlib import Path
 from ..config import Settings
 from ..llm_client import LLMClient
 from ..memory import Memory
-from ..schemas import SkillEntry, AgentResult
+from ..schemas import (
+    SkillEntry,
+    AgentResult,
+    GenerateRequest,
+    SkillSpec,
+    QuestionScope,
+)
 from .base import BaseAgent
 
 
@@ -198,6 +204,42 @@ class SkillPickerAgent(BaseAgent):
                 "mode": "auto",
             },
         ]
+
+    def to_generate_requests(
+        self,
+        auto_result: AgentResult,
+        topic_name: str,
+        all_skills: list[SkillEntry],
+        md_file: str = "",
+        md_hash: str = "",
+    ) -> list[GenerateRequest]:
+        """Turn a ``run_auto`` result into one GenerateRequest per selected skill.
+
+        ``question_scope.concepts_allowed`` is every extracted skill name MINUS
+        the selected skill (the documented input format excludes the selected
+        skill from the allowed-concepts list).
+        """
+        all_names = [s.skill for s in all_skills]
+        requests: list[GenerateRequest] = []
+        for entry in auto_result.payload.get("skills", []):
+            skill_dict = entry["skill"]
+            constraint = entry.get("constraint", {})
+            selected = skill_dict["skill"]
+            concepts_allowed = [n for n in all_names if n != selected]
+            requests.append(
+                GenerateRequest(
+                    topic_name=topic_name,
+                    selected_skill=SkillSpec(
+                        skill=selected,
+                        bloom_level=constraint.get("bloom_level", skill_dict.get("bloom_level", "apply")),
+                        difficulty=constraint.get("difficulty", skill_dict.get("difficulty_hint", "easy")),
+                    ),
+                    question_scope=QuestionScope(concepts_allowed=concepts_allowed),
+                    md_file=md_file,
+                    md_hash=md_hash,
+                )
+            )
+        return requests
 
     def run(
         self,

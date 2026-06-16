@@ -2,9 +2,9 @@
 robo_assess.cli
 ===============
 
-Two-command CLI:
-  robo-assess parse --md <teaching_material.md>
-  robo-assess generate --md <teaching_material.md> --num <N>
+Single-command CLI (supervisor-orchestrated v2 flow):
+  robo-assess generate --md <teaching_material.md>
+  robo-assess runs
 """
 
 from __future__ import annotations
@@ -15,36 +15,11 @@ from pathlib import Path
 
 from .config import Settings
 from .agents.orchestrator import Orchestrator
-from .workflows.assessment_workflow import export_package
-
-
-def parse_command(args) -> int:
-    """Parse a markdown file and extract skills to skills/skills.yaml."""
-    md_path = Path(args.md)
-
-    if not md_path.exists():
-        print(f"ERROR: Markdown file not found: {md_path}", file=sys.stderr)
-        return 1
-
-    print(f"Parsing {md_path}...")
-    settings = Settings.load(args.config)
-    orchestrator = Orchestrator(settings=settings)
-
-    try:
-        result = orchestrator.run_parse(md_path)
-        print(f"✓ Extracted {len(result.skills)} skills from {result.total_sections} sections")
-        print(f"  Coverage: {len(result.sections_covered)}/{result.total_sections} sections have skills")
-        print(f"  Written to: {settings.skills_dir}/skills.yaml")
-        return 0
-    except Exception as e:
-        import traceback
-        print(f"ERROR: {e}", file=sys.stderr)
-        traceback.print_exc(file=sys.stderr)
-        return 1
+from .workflows.assessment_workflow import export_run_v2
 
 
 def generate_command(args) -> int:
-    """Generate questions from a markdown file with optional constraints."""
+    """Summarise → extract skills → pick 3 → generate/validate/score → export YAML."""
     md_path = Path(args.md)
 
     if not md_path.exists():
@@ -52,79 +27,18 @@ def generate_command(args) -> int:
         return 1
 
     settings = Settings.load(args.config)
-
-    # Check that skills have been extracted from the same .md
-    skills_dir = Path(settings.skills_dir)
-    if not (skills_dir / "meta.yaml").exists():
-        print(
-            f"ERROR: Skills not extracted. Run:\n"
-            f"  robo-assess parse --md {md_path}",
-            file=sys.stderr
-        )
-        return 1
-
-    import yaml
-    meta = yaml.safe_load((skills_dir / "meta.yaml").read_text())
-    if meta.get("md_file") != md_path.name:
-        print(
-            f"ERROR: Skills were extracted from {meta.get('md_file')}, not {md_path.name}.\n"
-            f"Run: robo-assess parse --md {md_path}",
-            file=sys.stderr
-        )
-        return 1
-
-    # Determine generation mode
     orchestrator = Orchestrator(settings=settings)
 
-    if args.auto:
-        msg = "AUTO MODE: Generating 3 questions (easy, medium, hard)"
-        print(f"{msg} from {md_path}...")
-        try:
-            pkg = orchestrator.run_generate(
-                md_path,
-                auto=True,
-                domain=args.domain or ""
-            )
-        except Exception as e:
-            print(f"ERROR: {e}", file=sys.stderr)
-            import traceback
-            traceback.print_exc()
-            return 1
-
-    elif args.difficulty and args.bloom_level:
-        num = args.num or 1
-        constraints = [
-            {
-                "difficulty": args.difficulty,
-                "bloom_level": args.bloom_level,
-                "domain": args.domain or ""
-            }
-            for _ in range(num)
-        ]
-        msg = f"MANUAL MODE: Generating {num} {args.difficulty}/{args.bloom_level} questions"
-        print(f"{msg} from {md_path}...")
-        try:
-            pkg = orchestrator.run_generate(md_path, constraints=constraints)
-        except Exception as e:
-            print(f"ERROR: {e}", file=sys.stderr)
-            import traceback
-            traceback.print_exc()
-            return 1
-
-    else:
-        msg = f"RANDOM MODE: Generating {args.num} random questions"
-        print(f"{msg} from {md_path}...")
-        try:
-            pkg = orchestrator.run_generate(md_path, num_questions=args.num)
-        except Exception as e:
-            print(f"ERROR: {e}", file=sys.stderr)
-            import traceback
-            traceback.print_exc()
-            return 1
+    print(f"Generating assessment from {md_path} ...")
+    try:
+        pkg = orchestrator.run_generate_v2(md_path)
+    except Exception as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+        return 1
 
     try:
-
-        # Print summary
         approved = pkg.approved_questions
         print("\n" + "=" * 70)
         print(f"  ASSESSMENT GENERATED — run {pkg.run_id}")
@@ -140,11 +54,14 @@ def generate_command(args) -> int:
                 print(f"      - {issue}")
         print("=" * 70)
 
-        # Export
-        out_dir = export_package(pkg, settings.outputs_dir)
+        out_dir = export_run_v2(
+            pkg,
+            summary_text=getattr(pkg, "_summary_text", ""),
+            skillset=getattr(pkg, "_skillset", None),
+            out_root=settings.outputs_dir,
+        )
         print(f"  Output: {out_dir}")
 
-        # Exit code: 0 if approved, 2 if rejected
         return 0 if pkg.supervisor.supervisor_status == "APPROVED" else 2
 
     except Exception as e:
@@ -178,8 +95,7 @@ def main() -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  robo-assess parse --md teaching_material.md
-  robo-assess generate --md teaching_material.md --num 5
+  robo-assess generate --md teaching_material.md
   robo-assess runs
         """
     )
@@ -189,57 +105,21 @@ Examples:
 
     subparsers = parser.add_subparsers(dest="command", help="Command to run")
 
-    # Parse command
-    parse_parser = subparsers.add_parser("parse", help="Parse .md and extract skills")
-    parse_parser.add_argument("--md", required=True, help="Markdown file path")
-    parse_parser.set_defaults(func=parse_command)
-
-    # Generate command
+    # Generate command — single supervisor-orchestrated flow
     gen_parser = subparsers.add_parser(
         "generate",
-        help="Generate questions from .md",
+        help="Generate an assessment (3 questions: easy/medium/hard) from a .md",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-MODES:
-  Auto mode (simplest):
-    robo-assess generate --md file.md --auto
-    → Generates 3 questions: 1 easy, 1 medium, 1 hard
-
-  Manual mode (user-specified):
-    robo-assess generate --md file.md --difficulty easy --bloom-level apply --num 1
-    → Generates N questions matching your constraints
-
-  Random mode:
-    robo-assess generate --md file.md --num 5
-    → Generates 5 random-difficulty questions
+The generate command runs end-to-end:
+  summarise the markdown → extract skills from the summary →
+  pick 3 skills (easy/medium/hard) → generate + validate + score each
+  question (with reject/regenerate retries) → write YAML question.yaml +
+  solution.yaml per question into a date-stamped run folder with boilerplate
+  and grading artefacts.
         """
     )
     gen_parser.add_argument("--md", required=True, help="Markdown file path")
-    gen_parser.add_argument(
-        "--auto",
-        action="store_true",
-        help="AUTO MODE: Generate 3 questions (easy, medium, hard) automatically"
-    )
-    gen_parser.add_argument(
-        "--difficulty",
-        choices=["easy", "medium", "hard"],
-        help="MANUAL MODE: Target difficulty"
-    )
-    gen_parser.add_argument(
-        "--bloom-level",
-        choices=["understand", "apply", "analyze", "evaluate", "create"],
-        help="MANUAL MODE: Target Bloom level"
-    )
-    gen_parser.add_argument(
-        "--num",
-        type=int,
-        default=6,
-        help="RANDOM/MANUAL MODE: Number of questions"
-    )
-    gen_parser.add_argument(
-        "--domain",
-        help="Optional domain hint (warehouse, inspection, simulation, etc) for all modes"
-    )
     gen_parser.set_defaults(func=generate_command)
 
     # Runs command

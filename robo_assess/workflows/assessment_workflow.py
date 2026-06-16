@@ -26,7 +26,11 @@ delivery requirement packages up.
 from __future__ import annotations
 
 import json
+import re
+from datetime import datetime
 from pathlib import Path
+
+import yaml
 
 from ..evaluators.dataset_evaluator import evaluate_batch
 from ..schemas import AssessmentPackage, Question
@@ -384,5 +388,200 @@ def export_package(pkg: AssessmentPackage, out_root: str = "outputs") -> Path:
     counter = getattr(pkg, "_token_counter", None)
     if counter is not None:
         _write(root / "token_report.json", json.dumps(counter.report(), indent=2))
+
+    return root
+
+
+# ===========================================================================
+# v2 export — date-stamped run folder with YAML question/solution files
+# ===========================================================================
+
+def _slug(text: str, maxlen: int = 40) -> str:
+    s = re.sub(r"[^a-zA-Z0-9]+", "_", text.strip().lower()).strip("_")
+    return s[:maxlen] or "item"
+
+
+def _dump_yaml(path: Path, data: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        yaml.dump(data, sort_keys=False, default_flow_style=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+
+def _question_yaml_dict(q: Question) -> dict:
+    """Student-facing question, mirroring outputs/question.json as YAML.
+
+    Adds the primary_skill / secondary_concepts weighting from the requested
+    input/output format. starter_code is null — the solution lives in solution.yaml.
+    """
+    dec = q.detailed_evaluation_criteria
+    concepts = q.metadata.concepts if q.metadata else q.tested_skills
+    primary = q.generation_skill or (q.tested_skills[0] if q.tested_skills else "")
+    secondary = [c for c in concepts if c != primary]
+
+    metadata = (
+        q.metadata.model_dump()
+        if q.metadata
+        else {
+            "topic": q.title,
+            "difficulty_level": q.difficulty.value,
+            "estimated_time_minutes": q.estimated_solve_minutes,
+            "language": "Python",
+            "ros_version": "ROS2",
+            "concepts": concepts,
+        }
+    )
+
+    return {
+        "question_id": q.question_id,
+        "metadata": metadata,
+        "title": q.title,
+        "context": q.context or q.scenario,
+        "scenario": q.scenario,
+        "prerequisites": q.prerequisites,
+        "notes": q.notes,
+        "objective": q.objective,
+        "constraints": q.constraints,
+        "tested_skills": q.tested_skills,
+        "common_mistakes": q.common_mistakes,
+        "parts": [p.model_dump() for p in q.parts],
+        "tasks": q.tasks,
+        "file_structure": q.file_structure.model_dump() if q.file_structure else None,
+        "starter_code": None,
+        "expected_output": [eo.model_dump() for eo in q.expected_output],
+        "run_commands": q.run_commands,
+        "evaluation_criteria": {
+            "compiles_without_error": dec.compiles_without_error if dec else True,
+            "primary_skill": {"skill": primary, "weight": 70},
+            "secondary_concepts": {"weight": 30, "concepts": secondary},
+            "nodes": dec.nodes if dec else None,
+            "topics_subscribed": dec.topics_subscribed if dec else None,
+            "topics_published": dec.topics_published if dec else None,
+            "services": dec.services if dec else None,
+            "publish_rate": dec.publish_rate if dec else None,
+        },
+    }
+
+
+def _solution_yaml_dict(q: Question) -> dict:
+    """Reference solution, mirroring outputs/solution.json as YAML."""
+    files = []
+    for f in q.files_to_edit:
+        content = f.reference_solution or f.starter_code
+        if content:
+            files.append({"path": f.path, "content": content})
+    if not files and q.boilerplate_code:
+        files.append({"path": q.file_to_edit or "node.py", "content": q.boilerplate_code})
+
+    fs = q.file_structure
+    pkg_name = fs.ros_package if fs and fs.ros_package else "ros2_pkg"
+    deps = fs.dependencies if fs else ["rclpy"]
+    setup_commands = [
+        f"ros2 pkg create {pkg_name} --build-type ament_python --dependencies "
+        + " ".join(deps)
+    ]
+    build_commands = [
+        f"colcon build --packages-select {pkg_name}",
+        "source install/setup.bash",
+    ]
+    verification = []
+    for eo in q.expected_output:
+        verification.append({
+            "description": f"Verify: {eo.shell}",
+            "expected": eo.output,
+        })
+    return {
+        "question_id": q.question_id,
+        "setup_commands": setup_commands,
+        "files": files,
+        "build_commands": build_commands,
+        "run_commands": q.run_commands,
+        "expected_output": [eo.model_dump() for eo in q.expected_output],
+        "verification": verification,
+        "key_concepts_demonstrated": q.tested_skills,
+    }
+
+
+def export_run_v2(
+    pkg: AssessmentPackage,
+    summary_text: str = "",
+    skillset=None,
+    out_root: str = "outputs",
+) -> Path:
+    """Write the v2 run into a date-stamped folder with YAML artefacts.
+
+        outputs/<YYYY-MM-DD_HH-MM-SS>_<topic-slug>/
+            run_metadata.json, summary.md, skills.yaml
+            questions/Q00N_<slug>/{question.yaml, solution.yaml,
+                                   boilerplate/, evaluation/{test_*.py, grading.json}}
+            reports/{coverage_matrix.json, confidence_report.json, supervisor_verdict.json}
+    """
+    stamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    root = Path(out_root) / f"{stamp}_{_slug(pkg.topic)}"
+    root.mkdir(parents=True, exist_ok=True)
+
+    # Run-level artefacts
+    _write(root / "run_metadata.json", json.dumps({
+        "run_id": pkg.run_id,
+        "topic": pkg.topic,
+        "created_at": pkg.created_at.isoformat(),
+        "md_hash": getattr(skillset, "md_hash", ""),
+        "md_file": getattr(skillset, "md_file", ""),
+        "num_questions": len(pkg.questions),
+        "supervisor_status": pkg.supervisor.supervisor_status,
+    }, indent=2))
+
+    _write(root / "summary.md", summary_text or "")
+
+    if skillset is not None:
+        _dump_yaml(root / "skills.yaml", {
+            "md_file": skillset.md_file,
+            "md_hash": skillset.md_hash,
+            "skills": [s.model_dump() for s in skillset.skills],
+        })
+
+    # Per-question YAML + boilerplate + evaluation
+    for i, q in enumerate(pkg.questions, start=1):
+        skill_slug = _slug(q.generation_skill or (q.tested_skills[0] if q.tested_skills else q.title), 24)
+        qdir = root / "questions" / f"Q{i:03d}_{skill_slug}"
+        _dump_yaml(qdir / "question.yaml", _question_yaml_dict(q))
+        _dump_yaml(qdir / "solution.yaml", _solution_yaml_dict(q))
+
+        # boilerplate/ — starter files the student edits
+        boilerplate = q.boilerplate_code or (q.files_to_edit[0].starter_code if q.files_to_edit else "")
+        if boilerplate:
+            fname = Path(q.file_to_edit or (q.files_to_edit[0].path if q.files_to_edit else "node.py")).name
+            _write(qdir / "boilerplate" / fname, boilerplate)
+
+        # evaluation/ — runnable grading script + grading.json
+        _write(qdir / "evaluation" / f"test_{q.question_id}.py", _evaluate_script(q))
+        _write(qdir / "evaluation" / "grading.json", json.dumps(_grading_dict(q), indent=2))
+
+    # Reports
+    _write(root / "reports" / "coverage_matrix.json",
+           json.dumps(pkg.coverage_matrix.model_dump(), indent=2))
+
+    student_conf = getattr(pkg, "_student_confidence", {})
+    _write(root / "reports" / "confidence_report.json", json.dumps({
+        "run_id": pkg.run_id,
+        "topic": pkg.topic,
+        "questions": [
+            {
+                "question_id": q.question_id,
+                "difficulty": q.difficulty.value,
+                "confidence": q.confidence.confidence if q.confidence else 0,
+                "status": q.confidence.status if q.confidence else "PENDING",
+                "breakdown": q.confidence.model_dump() if q.confidence else {},
+                "student_confidence": student_conf.get(q.question_id, {}),
+            }
+            for q in pkg.questions
+        ],
+        "approved": len(pkg.approved_questions),
+        "total": len(pkg.questions),
+    }, indent=2))
+
+    _write(root / "reports" / "supervisor_verdict.json",
+           json.dumps(pkg.supervisor.model_dump(), indent=2))
 
     return root

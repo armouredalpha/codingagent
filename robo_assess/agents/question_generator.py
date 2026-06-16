@@ -248,7 +248,7 @@ def _parse_llm_question(raw: dict, boilerplate: str, reference: str, idx: int, s
         )
 
     file_to_edit = str(raw.get("file_to_edit", "pkg/node.py"))
-    slug = skill.replace(" ", "_").lower()[:20]
+    slug = re.sub(r"[^a-z0-9_]", "_", skill.replace(" ", "_").lower())[:20]
 
     # Parse new detailed fields
     metadata = _parse_metadata(raw.get("metadata"))

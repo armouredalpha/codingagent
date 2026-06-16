@@ -28,6 +28,7 @@ upward unchanged.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from ..schemas import (
     CoverageMatrix,
@@ -46,13 +47,22 @@ from .supervisor import _JUDGE_SYSTEM, _valid_judge_verdict
 
 _DIFF_ORDER = {Difficulty.EASY: 0, Difficulty.MEDIUM: 1, Difficulty.HARD: 2}
 
-_PLANNER_SYSTEM = (
-    "You are the PLANNER of a robotics-assessment generation system. You are "
-    "given the current state of a batch of ROS2 coding questions and the quality "
-    "bar they must meet. For each FAILING question, explain crisply what is wrong "
-    "and the single most important change that would make it pass. Return ONLY "
-    'JSON: {"results":[{"id":"...","fix":"one concrete instruction"}]}'
-)
+def _load_planner_system() -> str:
+    """Load planner reflect prompt from file, fall back to inline."""
+    path = Path(__file__).parent.parent.parent / "prompts" / "planner_reflect.txt"
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError:
+        return (
+            "You are the PLANNER of a robotics-assessment generation system. You are "
+            "given the current state of a batch of ROS2 coding questions and the quality "
+            "bar they must meet. For each FAILING question, explain crisply what is wrong "
+            "and the single most important change that would make it pass. Return ONLY "
+            'JSON: {"results":[{"id":"...","fix":"one concrete instruction"}]}'
+        )
+
+
+_PLANNER_SYSTEM = _load_planner_system()
 
 
 def _valid_fix(v: dict) -> bool:

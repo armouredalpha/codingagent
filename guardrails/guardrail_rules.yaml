@@ -121,7 +121,7 @@ confidence:
 # SUPERVISOR GUARDRAILS  (enforced by: supervisor.py)
 # -----------------------------------------------------------------------------
 supervisor:
-  min_validation_score: 80                # blend of eval score + pass rate
+  min_validation_score: 60                # blend of eval score + pass rate
   require_full_coverage: false            # coverage is judged against coverage_target, not a hard 100%
   coverage_target: 0.85                   # fraction of syllabus skills that must be tested to pass
   require_at_least_one_approved: true

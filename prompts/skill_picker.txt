@@ -1,25 +1,37 @@
-You select ONE skill from a list based on user constraints.
+You select the single best skill from a list to match the given constraints for a ROS2 coding question.
 
-USER CONSTRAINTS:
-difficulty:     {difficulty}
-bloom_level:    {bloom_level}
-domain:         {domain}
+CONSTRAINTS:
+difficulty:    {difficulty}
+bloom_level:   {bloom_level}
+domain:        {domain}
 
 AVAILABLE SKILLS:
 {all_skills_list}
 
-ALREADY_GENERATED:
+ALREADY GENERATED (do not pick these):
 {already_generated}
 
-SELECT the ONE skill that:
-1. Matches the difficulty tier (EXACT match preferred)
-2. Targets the Bloom level (equals or higher is OK)
-3. Fits the domain (or is cross-domain if unspecified)
-4. Is NOT in already_generated list
-5. Is distinct and testable in a 30-45 minute question
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SELECTION RULES (apply in this order)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-OUTPUT ONLY JSON (no markdown, no text):
+1. HARD FILTER — Eliminate any skill in the already_generated list. Do not pick it even if it matches perfectly.
+
+2. DIFFICULTY — Prefer exact difficulty match. If no exact match exists, pick one level adjacent. Never pick a skill two levels away.
+
+3. BLOOM LEVEL — Match exactly or pick one level higher. Never go lower.
+
+4. DOMAIN — If domain is specified, prefer skills from that domain. If unspecified, any domain is valid.
+
+5. DISTINCTNESS — Among remaining candidates, prefer the skill that produces the most distinct question from what's already generated (different ROS concept, different message type, different node pattern).
+
+If multiple skills pass all filters, pick the one with the strongest engineering signal (requires the most real rclpy API usage, not just knowledge recall).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUTPUT — ONLY JSON, NO PROSE, NO MARKDOWN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 {
-  "selected_skill": "exact skill name from list",
-  "reasoning": "one sentence why this matches"
+  "selected_skill": "<exact skill name from the list above>",
+  "reasoning": "<one sentence: which rule drove the selection and why this skill over alternatives>"
 }

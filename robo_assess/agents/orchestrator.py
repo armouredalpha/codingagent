@@ -43,6 +43,7 @@ from ..learned_confidence_improved import (
 from ..skill_taxonomy import SkillGraph
 from .boilerplate_generator import BoilerplateGeneratorAgent
 from .confidence_agent import ConfidenceScoringAgent
+from .md_summary import MdSummaryAgent
 from .coverage_matrix import CoverageMatrixAgent
 from .difficulty_agent import DifficultyCalibrationAgent
 from .executable_grading import ExecutableGradingAgent
@@ -57,7 +58,7 @@ from .skill_picker import SkillPickerAgent
 from .supervisor import SupervisorAgent
 from .syllabus_parser import SyllabusParserAgent
 from .planner_multi_loop import MultiLoopPlanner, LoopType, ParserAction, GenerationAction, FeedbackAction
-from ..schemas import PlanAction, SkillSet
+from ..schemas import PlanAction, SkillSet, GenerateRequest, StudentProfile
 from pathlib import Path
 
 
@@ -95,6 +96,7 @@ class Orchestrator:
         self.confidence = ConfidenceScoringAgent(**kw)
         self.supervisor = SupervisorAgent(**kw)
         self.planner = PlannerAgent(**kw)
+        self.md_summary = MdSummaryAgent(settings=self.settings, llm=self.llm, memory=self.memory)
 
     # ------------------------------------------------------------------ #
     def _stage(self, run_id: str, result) -> None:
@@ -668,6 +670,232 @@ class Orchestrator:
     # ================================================================== #
     # NEW: Parse and Generate entry points
     # ================================================================== #
+
+    def _load_students(self) -> list[StudentProfile]:
+        """Load the baseline student profiles from config/students.yaml. Returns
+        an empty list (student signal skipped) if the file is absent/unreadable."""
+        import yaml
+        path = Path(getattr(self.settings, "students_path", "config/students.yaml"))
+        if not path.exists():
+            self.log.warning("students_yaml_missing", path=str(path))
+            return []
+        try:
+            data = yaml.safe_load(path.read_text()) or {}
+            return [StudentProfile(**s) for s in data.get("students", [])]
+        except Exception as exc:  # noqa: BLE001
+            self.log.warning("students_yaml_load_failed", error=str(exc))
+            return []
+
+    def run_generate_v2(self, md_path: str | Path) -> AssessmentPackage:
+        """Single-command supervisor-orchestrated flow.
+
+        summarise md → extract skills from the summary → pick 3 skills
+        (easy/medium/hard) → per skill: generate → validate (coverage, difficulty,
+        originality, scope, quality, grading, executable, confidence) +
+        verify-skill + student-confidence → Supervisor PASS/REJECT with
+        reject/regenerate retries → assemble + final Supervisor verdict.
+
+        The returned package carries ``_summary_text`` and ``_skillset`` (for the
+        YAML export) and ``_student_confidence`` / ``_token_counter`` attributes.
+        """
+        md_path = Path(md_path)
+        run_id = uuid.uuid4().hex[:12]
+        topic_name = md_path.stem
+        self.run_logger.start_run(run_id, topic_name)
+        self.log.info("generate_v2_start", run_id=run_id, md_file=md_path.name)
+
+        state_manager = StateManager(str(Path(self.settings.log_dir) / "state.db"))
+        state_manager.start_run(run_id, str(md_path), "generate_v2", 3)
+
+        try:
+            # 1 — summary -------------------------------------------------------
+            # Compute hash first so we can check the cache without reading the file twice.
+            import hashlib as _hashlib
+            _raw = md_path.read_text(encoding="utf-8")
+            md_hash = _hashlib.md5(_raw.encode()).hexdigest()
+
+            from .md_summary import MdSummaryAgent
+            cached = MdSummaryAgent.load_cached(self.settings.skills_dir, md_hash)
+            if cached:
+                self.log.info("summary_cache_hit", md_hash=md_hash)
+                summary_text = cached
+            else:
+                sres = self.md_summary.run(md_path); self._stage(run_id, sres)
+                summary_text = sres.payload["summary"]
+                md_hash = sres.payload["md_hash"]
+
+            # 2 — extract skills FROM the summary ------------------------------
+            skillset = self.md_parser.extract_from_text(summary_text, md_path, md_hash)
+            if not skillset.skills:
+                raise ValueError("No skills extracted from the summary")
+            skill_entries = skillset.skills
+            self.log.info("skills_extracted", count=len(skill_entries))
+
+            # 3 — pick 3 skills (easy/medium/hard) → GenerateRequest specs ------
+            auto = self.skill_picker.run_auto(skill_entries); self._stage(run_id, auto)
+            requests = self.skill_picker.to_generate_requests(
+                auto, topic_name, skill_entries, md_path.name, md_hash
+            )
+            if not requests:
+                raise ValueError("Skill picker returned no generate requests")
+
+            # Synthetic analysis + request for the validation chain.
+            syllabus = [s.skill for s in skill_entries]
+            analysis = SyllabusAnalysis(
+                skills=syllabus, concepts=[], apis=[], config_elements=[],
+                ros_components=[], difficulty_range="easy-hard",
+            )
+            request = AssessmentRequest(
+                topic=topic_name, syllabus=syllabus, sources=[],
+                existing_questions=[], num_questions=len(requests),
+            )
+            coverage = CoverageMatrix()
+            for s in syllabus:
+                coverage.matrix[s] = False
+
+            # Improved confidence scorer (eval-set calibration) + students.
+            evaluations_dir = Path(getattr(self.settings, "evaluations_dir", "evaluations"))
+            reference_scores = load_improved_reference_scores_from_json(str(evaluations_dir))
+            confidence_scorer = ImprovedConfidenceScorer(reference_scores)
+            students = self._load_students()
+
+            max_retries = int(getattr(self.settings, "max_question_retries", 3))
+            allowed_all = ", ".join(syllabus)
+
+            questions: list[Question] = []
+            student_conf_report: dict[str, dict] = {}
+
+            # 4 — per-skill generate + validate + supervisor reject/regenerate --
+            for slot, req in enumerate(requests, start=1):
+                selected = req.selected_skill
+                allowed_scope = ", ".join(req.question_scope.concepts_allowed) or allowed_all
+                feedback = ""
+                accepted: Question | None = None
+
+                for attempt in range(1, max_retries + 1):
+                    q = self.generator._llm_question(
+                        skill=selected.skill,
+                        difficulty=selected.difficulty,
+                        domain="",
+                        bloom_level=selected.bloom_level,
+                        allowed_scope=allowed_scope,
+                        forbidden_scope="Nav2, SLAM, MoveIt, OpenCV",
+                        existing_titles=[x.title for x in questions],
+                        idx=slot,
+                        feedback=feedback,
+                    )
+                    if q is None:
+                        feedback = "Generation produced no parseable question; try again."
+                        continue
+                    q.generation_skill = selected.skill
+
+                    # Validate this single question through the full chain.
+                    self._validate(run_id, [q], coverage, analysis, request)
+
+                    # Improved confidence score (eval-set calibrated).
+                    validators = {
+                        "auto_grading": getattr(q, "auto_grading_score", 0),
+                        "originality": getattr(q, "originality_score", 0),
+                        "format_compliance": getattr(q, "format_quality_score", 0),
+                    }
+                    confidence, breakdown = confidence_scorer.score(
+                        q, validators, difficulty_hint=q.difficulty.value.lower()
+                    )
+
+                    # Coverage-matrix skill verification.
+                    skill_ok, skill_reason = self.coverage.verifies_skill(q, selected.skill)
+
+                    # Student-profile confidence (explanatory signal).
+                    if students:
+                        student_conf_report[q.question_id] = self.confidence.score_with_students(q, students)
+
+                    conf_ok = bool(q.confidence and q.confidence.status == "APPROVED")
+                    self.log.info(
+                        "v2_question_attempt", slot=slot, attempt=attempt,
+                        skill=selected.skill, conf_ok=conf_ok, skill_ok=skill_ok,
+                        skill_reason=skill_reason, confidence=confidence,
+                    )
+
+                    # conf_ok is the primary gate (full validation chain).
+                    # skill_ok is a soft signal — log a warning when it fails but
+                    # don't block an otherwise approved question: the verifier prompt
+                    # checks for exact wording which long skill phrases often miss.
+                    if conf_ok:
+                        if not skill_ok:
+                            self.log.warning(
+                                "skill_verify_soft_fail", slot=slot, attempt=attempt,
+                                skill=selected.skill, reason=skill_reason,
+                            )
+                        accepted = q
+                        break
+
+                    # Build regeneration feedback from the failing signals.
+                    reasons = []
+                    if not skill_ok:
+                        reasons.append(f"Question does not primarily test '{selected.skill}' ({skill_reason}).")
+                    if q.scope_violations:
+                        reasons.append(f"Scope violations: {', '.join(q.scope_violations)}.")
+                    if q.similarity_score > self.settings.similarity_reject_threshold:
+                        reasons.append("Too similar to an existing question; make it more original.")
+                    reasons.append("Confidence below bar; sharpen objective, constraints, and gradable criteria.")
+                    feedback = " ".join(reasons)
+                    accepted = q  # keep latest even if not approved
+
+                if accepted is not None:
+                    questions.append(accepted)
+                    self.coverage.mark(coverage, accepted.tested_skills)
+                    state_manager.save_state(
+                        run_id, f"slot_{slot}",
+                        {"question": accepted.model_dump(), "skill": selected.skill},
+                    )
+
+            if not questions:
+                raise RuntimeError("generate_v2 produced no questions")
+
+            # 5 — assemble + final supervisor verdict --------------------------
+            quality = self.planner.evaluate_quality(questions, coverage)
+            pkg = AssessmentPackage(
+                run_id=run_id,
+                topic=topic_name,
+                syllabus=syllabus,
+                syllabus_analysis=analysis,
+                source_research=SourceResearch(),
+                coverage_matrix=coverage,
+                questions=questions,
+                portfolio_coverage_score=100,
+                portfolio_missing_areas=[],
+                plan_trace=[],
+                quality=quality,
+            )
+            fsres = self.supervisor.run(pkg, 85.0); self._stage(run_id, fsres)
+            pkg.supervisor = pkg.supervisor.model_validate(fsres.payload["verdict"])
+
+            self._attach_costs(pkg)
+            pkg._token_counter = self.token_counter            # type: ignore[attr-defined]
+            pkg._summary_text = summary_text                   # type: ignore[attr-defined]
+            pkg._skillset = skillset                           # type: ignore[attr-defined]
+            pkg._student_confidence = student_conf_report      # type: ignore[attr-defined]
+
+            state_manager.complete_run(run_id, "completed")
+            self.run_logger.finish_run(
+                run_id,
+                n_questions=len(questions),
+                n_approved=len(pkg.approved_questions),
+                supervisor=pkg.supervisor.supervisor_status,
+                score=pkg.supervisor.validation_score,
+            )
+            self.log.info(
+                "generate_v2_done", run_id=run_id, questions=len(questions),
+                status=pkg.supervisor.supervisor_status,
+            )
+            return pkg
+
+        except Exception as e:
+            state_manager.fail_run(run_id, str(e))
+            self.log.error("generate_v2_failed", run_id=run_id, error=str(e))
+            raise
+        finally:
+            state_manager.close()
 
     def run_parse(self, md_path: str | Path) -> SkillSet:
         """Parse a markdown file and extract skills to skills/skills.yaml.
