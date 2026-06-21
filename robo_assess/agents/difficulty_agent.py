@@ -66,9 +66,13 @@ class DifficultyCalibrationAgent(BaseAgent):
         )
         multifile = len(q.files_to_edit) > 1
 
-        if n_skills <= 1 and loc < 35 and not multifile:
+        # CLI-only tasks (no files to edit) are always easy
+        no_files = len(q.files_to_edit) == 0
+        if no_files:
             d = Difficulty.EASY
-        elif n_skills <= 3 and loc < 90 and not multifile:
+        elif n_skills <= 1 and loc < 35 and not multifile:
+            d = Difficulty.EASY
+        elif n_skills <= 4 and loc < 80:
             d = Difficulty.MEDIUM
         else:
             d = Difficulty.HARD

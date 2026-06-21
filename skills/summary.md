@@ -1,101 +1,130 @@
-<!-- md_hash:34f7df27f20ca8f1a57c7bd9b3f8d2ab -->
+<!-- md_hash:346bbc12fa5bffbfb1b73d133081dfa8 -->
 ```markdown
 ## 1.  TOPIC ANALYSIS
 
-- Platform: ROS2 Humble, Ubuntu 22.04, Python 3.10, Nav2, Gazebo Classic, RViz2
-- Skills: Configure Nav2 costmap layers, planner parameters, send navigation goals via Simple Commander API and NavigateToPose action, execute waypoint missions, read Nav2 feedback, observe BT recovery behaviour.
+SLAM Toolbox | ROS2 Humble | Ubuntu 22.04 | Python 3.10 | Gazebo Classic | RViz2
 
 ## 2.  SKILLS BEING TESTED
 
-- S1: Configure global costmap layers (static, obstacle, inflation)
-- S2: Configure local costmap layers (obstacle, inflation) and footprint
-- S3: Parametrise NavFn global planner
-- S4: Parametrise DWB local planner (critics, velocities)
-- S5: Send navigation goal via Simple Commander API
-- S6: Send navigation goal via NavigateToPose action interface
-- S7: Monitor navigation feedback and result
-- S8: Enable waypoint following for multi-goal mission
-- S9: Understand Nav2 BT — read recovery behaviour
-- S10: Write Nav2 launch file for full navigation stack
+- S1: Running slam_toolbox to generate an occupancy grid map
+- S2: Configuring slam_toolbox YAML parameters
+- S3: Saving and serialising a completed map
+- S4: Loading a saved map and launching AMCL-style localisation
+- S5: Interpreting /map topic (OccupancyGrid)
+- S6: Interpreting /scan topic (LaserScan)
+- S7: Diagnosing mapping quality from /map and /scan topic data
+- S8: Writing a ROS2 launch file that starts the full SLAM stack
+- S9: Visualising SLAM output in RViz2
+- S10: Using map_saver_cli to save .pgm and .yaml map files
 
 ## 3.  SIX CODING QUESTIONS
 
 ### QUESTION 1
 
-- Skills: S5, S10
-- Files: launch/nav2_bringup.launch.py, scripts/goto_goal.py
-- Tasks: Write Nav2 bringup launch file, implement GoToGoal node using BasicNavigator, set use_sim_time=True.
+- Skills: S1, S5, S6, S9
+- Launch slam_toolbox node (async_slam_toolbox_node) with use_sim_time=true
+- Launch rviz2 with slam_view.rviz
+- Subscribe: /map (nav_msgs/OccupancyGrid)
+- Compute: width, height, resolution, known_cells, free_cells, occupied_cells
+- Publish /map_stats (std_msgs/String)
 
 ### QUESTION 2
 
-- Skills: S1, S2, S10
-- Files: config/hospital_nav2_params.yaml, launch/hospital_nav2.launch.py
-- Tasks: Configure costmap layers, write launch file for Nav2 stack, ensure inflation_radius=0.30.
+- Skills: S1, S2, S8
+- Write slam_toolbox parameter YAML matching site spec
+- Launch full SLAM stack: gazebo_ros, robot_state_publisher, spawn_entity, async_slam_toolbox_node
 
 ### QUESTION 3
 
-- Skills: S3, S4
-- Files: config/planner_params.yaml
-- Tasks: Parametrise NavFn and DWB planners, ensure use_astar=false, max_vel_x=0.3.
+- Skills: S3, S10
+- Implement MapSaverNode ROS2 node
+- Subscribe: /save_map (std_msgs/String)
+- Execute subprocess calls: map_saver_cli, /slam_toolbox/serialize_map
+- Publish /save_map_status (std_msgs/String)
 
 ### QUESTION 4
 
-- Skills: S6, S7
-- Files: scripts/action_nav_client.py
-- Tasks: Implement ActionNavClient node, use NavigateToPose action interface, publish feedback on /nav_distance_remaining.
+- Skills: S4, S8, S9
+- Write slam_toolbox parameter file for localisation mode
+- Launch nodes: map_server, lifecycle_manager, robot_state_publisher, slam_toolbox, rviz2
+- Configure rviz/localise_view.rviz
 
 ### QUESTION 5
 
-- Skills: S8, S7, S9
-- Files: scripts/waypoint_mission.py
-- Tasks: Implement waypoint mission using followWaypoints, subscribe to /bt_navigator/transition_event.
+- Skills: S5, S6, S7
+- Implement MapDiagnostics ROS2 node
+- Subscription A: /map (nav_msgs/OccupancyGrid)
+- Subscription B: /scan (sensor_msgs/LaserScan)
+- Timer at 0.5 Hz: compute and publish quality report
+- Publish /map_quality_report (std_msgs/String)
 
 ### QUESTION 6
 
-- Skills: S1, S2, S3, S4, S5, S6, S7, S8, S9, S10
-- Files: config/patrol_nav2_params.yaml, launch/patrol_nav2.launch.py, scripts/patrol_node.py
-- Tasks: Configure full Nav2 stack, implement patrol node with stuck detection, use ActionClient.
+- Skills: S1/S2, S3/S10, S4, S5/S6/S7, S8/S9
+- Write hospital_slam.yaml with 10 parameters
+- Launch full mapping stack: robot_state_publisher, async_slam_toolbox_node, auto_map_saver, rviz2
+- Implement AutoMapSaver ROS2 node
+- Subscribe /map, /scan
+- Timer at 1 Hz: check stability condition
+- Publish /auto_save_status (std_msgs/String)
+- Configure rviz/hospital_view.rviz
 
 ## 4.  ROS PACKAGE STRUCTURES
 
-- nav2_starter_pkg: launch/nav2_bringup.launch.py, scripts/goto_goal.py
-- hospital_nav_pkg: config/hospital_nav2_params.yaml, launch/hospital_nav2.launch.py
-- planner_cfg_pkg: config/planner_params.yaml
-- action_nav_pkg: scripts/action_nav_client.py
-- waypoint_mission_pkg: scripts/waypoint_mission.py
-- patrol_nav_pkg: config/patrol_nav2_params.yaml, launch/patrol_nav2.launch.py, scripts/patrol_node.py
+- slam_starter_pkg: start_slam.launch.py, slam_params.yaml, map_monitor.py, slam_view.rviz
+- factory_slam_pkg: factory_slam.launch.py, factory_slam.yaml, factory_bot.urdf, factory_corridor.world
+- map_save_pkg: save_map.launch.py, map_saver_node.py
+- localisation_pkg: localise.launch.py, localise_params.yaml, warehouse_map files, localise_view.rviz, warehouse_bot.urdf
+- map_diagnostics_pkg: diagnostics.launch.py, map_diagnostics.py
+- hospital_slam_pkg: hospital_slam.launch.py, hospital_slam.yaml, auto_map_saver.py, hospital_view.rviz
 
 ## 5.  REFERENCE SOLUTIONS
 
-- Q1: Launch Nav2 stack, send goal via Simple Commander.
-- Q2: Configure costmaps for narrow corridor.
-- Q3: Parametrise NavFn and DWB planners.
-- Q4: Use NavigateToPose action interface with feedback.
-- Q5: Execute waypoint mission, monitor BT transitions.
-- Q6: Build complete navigation system, implement patrol node.
+### Solution — Q1: launch/start_slam.launch.py
 
-## 6.  EVALUATION SCRIPTS
+- Node: slam_toolbox, rviz2
 
-- YAML validation, source scans, live ROS2 topic/action checks.
-- Test functions for each question, e.g., test_global_inflation_radius, test_navfn_plugin.
+### Solution — Q1: scripts/map_monitor.py
 
-## 7.  judge_runner.py
+- Subscribe: /map
+- Publish: /map_stats
 
-- Automates build, launch, and test execution.
-- Configures environment, runs tests, captures results.
+### Solution — Q2: config/factory_slam.yaml
 
-## 8.  EVALUATION SCENARIOS
+- Parameters: mode, resolution, minimum_travel_distance, minimum_travel_heading, map_update_interval, max_laser_range, use_sim_time, scan_topic, odom_frame, base_frame, map_frame
 
-- ES-01 to ES-15: Cover common errors, e.g., missing waitUntilNav2Active, incorrect inflation_radius, wrong planner settings.
+### Solution — Q2: launch/factory_slam.launch.py
 
-## 9.  COMMON MISTAKES & DEBUGGING NOTES
+- IncludeLaunchDescription: gazebo
+- Node: robot_state_publisher, spawn_entity, slam_toolbox
 
-- Q1: Ensure waitUntilNav2Active is called, use_sim_time set.
-- Q2: Correct YAML structure, avoid static_layer in local costmap.
-- Q3: Use YAML list for DWB critics, correct plugin keys.
-- Q4: Include feedback_callback, correct message types.
-- Q5: Use followWaypoints, correct message subscriptions.
-- Q6: Ensure use_astar=true, use ROS2 clock for timing, patrol cycles correctly.
+### Solution — Q3: scripts/map_saver_node.py
 
-✓ All 10 syllabus skills covered | ✓ All 6 questions auto-gradable | ✓ ROS2 Humble / Nav2 Humble compatible
+- Subscribe: /save_map
+- Publish: /save_map_status
+- Client: /slam_toolbox/serialize_map
+
+### Solution — Q4: config/localise_params.yaml
+
+- Parameters: mode, map_file_name, map_start_at_dock, use_sim_time, odom_frame, map_frame, base_frame, scan_topic, resolution
+
+### Solution — Q4: launch/localise.launch.py
+
+- LifecycleNode: map_server
+- Node: lifecycle_manager, robot_state_publisher, slam_toolbox, rviz2
+
+### Solution — Q5: scripts/map_diagnostics.py
+
+- Subscribe: /map, /scan
+- Publish: /map_quality_report
+
+### Solution — Q6: scripts/auto_map_saver.py
+
+- Subscribe: /map, /scan
+- Publish: /auto_save_status
+- Client: /slam_toolbox/serialize_map
+
+### Solution — Q6: config/hospital_slam.yaml
+
+- Parameters: mode, resolution, max_laser_range, minimum_travel_distance, minimum_travel_heading, map_update_interval, use_sim_time, scan_topic, odom_frame, base_frame, map_frame
 ```

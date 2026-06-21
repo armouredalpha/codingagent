@@ -6,24 +6,37 @@ Your job is to independently verify the TRUE difficulty of each question in a ba
 DIFFICULTY DEFINITIONS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-EASY — Robotics Intern level. 5–20 min solve time.
-  - Single ROS2 concept (one API call group: publisher OR subscriber OR service)
-  - One file, one TODO block, <20 lines to write
-  - Bloom: apply — the student copies a known pattern into the gap
-  - No integration, no debugging, no design decisions
+EASY — Robotics Intern level. 15–25 min solve time.
+  Examples: running existing ROS2 nodes, creating a new package, sending a
+  navigation goal via ros2 action CLI, building and saving a SLAM map using
+  ros2 launch / ros2 run / map_saver_cli — no Python code written.
+  - Pure CLI / configuration tasks OR a single node with one small TODO block
+  - Zero or one file modified, <20 lines to write
+  - Bloom: remember/apply — student executes a known procedure
+  - No integration between nodes, no debugging, no design decisions
 
-MEDIUM — Junior Robotics Engineer level. 20–45 min solve time.
-  - 2–3 related ROS2 concepts that must work together
-  - 1–2 files, 20–60 lines to write
-  - Bloom: apply-to-analyze — student must understand how parts interact
-  - Some integration (e.g. subscriber feeds a service, timer drives a publisher)
-  - Light debugging (fix a broken connection, correct a message type)
+MEDIUM — Junior Robotics Engineer level. 25–40 min solve time.
+  Examples: creating a publisher + subscriber pair that talk to each other,
+  completing a Twist publisher so a robot traces a square, fixing a broken
+  subscriber (wrong topic name, wrong QoS type), writing an OccupancyGrid
+  percentage calculation — 2–3 bugs or TODOs across 1–2 files.
+  - 2–3 related ROS2 concepts that must work together (pub/sub wiring,
+    message field access, timer-based motion control)
+  - 1–2 files, 20–50 lines to write or fix
+  - Bloom: apply-to-analyze — student must understand how parts connect
+  - Light debugging (fix a broken topic, correct a type mismatch)
 
-HARD — Robotics Engineer level. 45–90 min solve time.
-  - Multiple ROS2 concepts with cross-cutting concerns (TF + launch + params, or multi-node workflow)
-  - Multiple files, >60 lines to write
-  - Bloom: analyze-to-create — student must make architecture or design decisions
-  - Non-trivial integration; system-level behaviour must be reasoned about
+HARD — Robotics Engineer level. 40–60 min solve time.
+  Examples: fixing AMCL parameters (particle count, laser topic) + fixing a
+  waypoint orientation field + adding a missing launch file node entry;
+  fixing SLAM Toolbox resolution/range params + adding lifecycle event
+  handlers for map_server configure and activate transitions.
+  - Multi-file debugging across config, Python nodes, and launch files
+  - Requires understanding of system-level behaviour (AMCL convergence,
+    lifecycle state machine, multi-node startup order)
+  - 3–6 targeted line changes across 2–3 files
+  - Bloom: analyze — student must diagnose cross-cutting failures
+  - No from-scratch rewrite; changes are surgical but require deep understanding
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 SCORING (internal — do not include in output)
@@ -43,6 +56,8 @@ OVERRIDE RULES (these beat the score):
   - Bloom = Evaluate or Create  → cannot be easy
   - Requires architecture decision  → must be hard
   - Single TODO block in one file  → cannot be hard
+  - Pure CLI / no-code task (ros2 launch, ros2 action, map_saver_cli only) → easy regardless of concept count
+  - Bugs span 3+ files with system-level reasoning required → hard regardless of LOC
   - Bloom weight always outranks LOC count alone
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

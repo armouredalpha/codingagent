@@ -2080,6 +2080,494 @@
         "services": null,
         "publish_rate": null
       }
+    },
+    {
+      "question_id": "Q_NAV_EASY_send_goal",
+      "metadata": {
+        "topic": "Navigation",
+        "difficulty_level": "easy",
+        "estimated_time_minutes": 20,
+        "language": "Python",
+        "ros_version": "ROS2 Humble",
+        "concepts": [
+          "Nav2 bringup",
+          "Navigation goals",
+          "ros2 action CLI"
+        ]
+      },
+      "title": "Get the warehouse runner moving to its first checkpoint",
+      "context": "A warehouse AMR's Nav2 stack (map server, AMCL, planner, controller) is already installed and configured on the robot. The candidate's job is simply to bring the navigation stack up, confirm it is active, and send it to a single checkpoint using the existing ros2 action command line tool \u2014 no new code is required.",
+      "prerequisites": [
+        "Familiarity with ros2 launch and ros2 action CLI commands",
+        "A pre-built Nav2-enabled workspace (e.g. turtlebot3_navigation2)"
+      ],
+      "notes": "This is a pure command/configuration task. No file should need to be created or edited.",
+      "parts": [],
+      "tasks": [
+        "Task 1: Launch the existing Nav2 navigation stack for the TurtleBot3 (map + AMCL + planner + controller already configured)",
+        "Task 2: Confirm the /navigate_to_pose action server is up using ros2 action list",
+        "Task 3: Send a single navigation goal to (x=1.0, y=0.5, yaw=0.0) using ros2 action send_goal on /navigate_to_pose"
+      ],
+      "file_structure": {
+        "ros_package": "turtlebot3_navigation2",
+        "dependencies": [],
+        "files_to_create": []
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1 (launch nav stack)",
+          "output": "[INFO] [amcl]: Creating"
+        },
+        {
+          "shell": "Shell #2 (send goal)",
+          "output": "Goal accepted with ID:"
+        }
+      ],
+      "run_commands": [
+        "ros2 launch turtlebot3_navigation2 navigation2.launch.py map:=/home/niat/claude_Ws/Nxtwave/simulation_ws/install/turtlebot3_navigation2/share/turtlebot3_navigation2/map/map.yaml use_sim_time:=True",
+        "ros2 action list",
+        "ros2 action send_goal /navigate_to_pose nav2_msgs/action/NavigateToPose \"{pose: {header: {frame_id: 'map'}, pose: {position: {x: 1.0, y: 0.5, z: 0.0}, orientation: {w: 1.0}}}}\""
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "primary_skill": {
+          "skill": "launch an existing Nav2 stack and send a navigation goal using the ros2 action CLI",
+          "weight": 70
+        },
+        "secondary_concepts": {
+          "weight": 30,
+          "concepts": [
+            "Nav2 bringup",
+            "Navigation goals",
+            "ros2 action CLI"
+          ]
+        },
+        "nodes": null,
+        "topics_subscribed": null,
+        "topics_published": null,
+        "services": null,
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "Q_NAV_MEDIUM_square_drive",
+      "metadata": {
+        "topic": "Navigation",
+        "difficulty_level": "medium",
+        "estimated_time_minutes": 30,
+        "language": "Python",
+        "ros_version": "ROS2 Humble",
+        "concepts": [
+          "Publisher node",
+          "Twist messages",
+          "Timer-based motion control"
+        ]
+      },
+      "title": "Get the patrol bot tracing a square patrol loop",
+      "context": "A small AMR needs to trace a square patrol loop using simple timed velocity commands (no SLAM or Nav2 required). A teammate started the publisher node but left two blanks where the velocity command should be filled in, and also mis-wired the timer period and the topic name on the existing subscriber. Finish the publisher and fix the subscriber so the full square-drive node works end to end.",
+      "prerequisites": [
+        "Basic ROS2 publisher/subscriber concepts",
+        "geometry_msgs/Twist message structure"
+      ],
+      "notes": "The candidate is not writing the node from scratch. Most of the code is given. They must fill in 2 blank lines in the publisher and correct 2 small bugs in the subscriber (wrong topic name, wrong timer period type).",
+      "parts": [],
+      "tasks": [
+        "Task 1: Fill in the two TODO lines in square_driver.py so the robot alternates between driving straight and turning 90 degrees, completing one square per 4 forward + 4 turn phases",
+        "Task 2: Fix the subscriber's topic name (currently subscribed to the wrong topic) so it correctly listens to /cmd_vel",
+        "Task 3: Fix the timer_period bug in the subscriber node (currently passed as an int instead of a float, which causes a startup error)"
+      ],
+      "file_structure": {
+        "ros_package": "square_patrol",
+        "dependencies": [
+          "rclpy",
+          "geometry_msgs"
+        ],
+        "files_to_create": [
+          {
+            "path": "square_patrol/square_driver.py",
+            "role": "Publisher node driving the robot in a square (has 2 TODO blanks)"
+          },
+          {
+            "path": "square_patrol/cmd_logger.py",
+            "role": "Subscriber node logging commands (has 2 small bugs to fix)"
+          }
+        ]
+      },
+      "starter_code": "# --- square_driver.py (publisher, has TODOs) ---\nimport rclpy\nfrom rclpy.node import Node\nfrom geometry_msgs.msg import Twist\n\nclass SquareDriver(Node):\n    def __init__(self):\n        super().__init__('square_driver')\n        self.publisher_ = self.create_publisher(Twist, '/cmd_vel', 10)\n        self.timer = self.create_timer(0.5, self.timer_callback)\n        self.phase = 0  # 0..7, even = drive straight, odd = turn\n\n    def timer_callback(self):\n        msg = Twist()\n        if self.phase % 2 == 0:\n            # TODO 1: set msg.linear.x so the robot drives straight forward\n            # (use 0.2 m/s) and msg.angular.z to 0.0\n            pass\n        else:\n            # TODO 2: set msg.angular.z so the robot turns in place\n            # (use 0.5 rad/s) and msg.linear.x to 0.0\n            pass\n        self.publisher_.publish(msg)\n        self.phase = (self.phase + 1) % 8\n",
+      "expected_output": [
+        {
+          "shell": "Shell #1 (run square_driver)",
+          "output": "[INFO] [square_driver]: publishing cmd_vel"
+        },
+        {
+          "shell": "Shell #2 (run cmd_logger)",
+          "output": "cmd_vel -> linear.x=0.2, angular.z=0.0"
+        }
+      ],
+      "run_commands": [
+        "ros2 run square_patrol square_driver",
+        "ros2 run square_patrol cmd_logger"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "primary_skill": {
+          "skill": "complete a Twist publisher and fix small wiring errors in a companion subscriber so a robot traces a square path",
+          "weight": 70
+        },
+        "secondary_concepts": {
+          "weight": 30,
+          "concepts": [
+            "Publisher node",
+            "Twist messages",
+            "Timer-based motion control"
+          ]
+        },
+        "nodes": null,
+        "topics_subscribed": [
+          "/cmd_vel"
+        ],
+        "topics_published": [
+          "/cmd_vel"
+        ],
+        "services": null,
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "Q_NAV_HARD_fix_amcl_waypoints",
+      "metadata": {
+        "topic": "Navigation",
+        "difficulty_level": "hard",
+        "estimated_time_minutes": 45,
+        "language": "Python",
+        "ros_version": "ROS2 Humble",
+        "concepts": [
+          "AMCL particle filter localisation",
+          "Launch files",
+          "FollowWaypoints action",
+          "Map loading"
+        ]
+      },
+      "title": "The patrol bot localises badly and skips waypoints \u2014 find and fix the bugs",
+      "context": "A warehouse AMR uses a saved map with AMCL for localisation and a FollowWaypoints action client for its patrol route. After a recent config change, two things broke: AMCL's particle filter is barely converging (too few particles, mismatched laser topic), and the waypoint script sends waypoints with rotations from the wrong field. A launch file is also missing one node entry. Find and correct the specific broken lines; do not rewrite the files from scratch.",
+      "prerequisites": [
+        "Understanding of AMCL parameters (particle counts, laser topic)",
+        "Understanding of PoseStamped orientation fields",
+        "Basic ROS2 launch file structure"
+      ],
+      "notes": "This is a debugging task, not a from-scratch coding task. The candidate should change at most 5-6 lines total across the three files.",
+      "parts": [],
+      "tasks": [
+        "Task 1: In amcl_params.yaml, fix the laser scan topic so it matches the robot's actual /scan topic, and raise min_particles/max_particles to reasonable values for reliable convergence",
+        "Task 2: In send_waypoints.py, fix the line that sets orientation (currently written to the wrong field) so each waypoint keeps the robot facing forward",
+        "Task 3: In patrol_bringup.launch.py, add the missing map_server Node entry (with the correct map.yaml parameter) before AMCL is started"
+      ],
+      "file_structure": {
+        "ros_package": "patrol_bot",
+        "dependencies": [
+          "rclpy",
+          "nav2_msgs",
+          "nav2_amcl",
+          "nav2_map_server"
+        ],
+        "files_to_create": [
+          {
+            "path": "patrol_bot/config/amcl_params.yaml",
+            "role": "AMCL particle filter parameters (contains 2 bugs)"
+          },
+          {
+            "path": "patrol_bot/patrol_bot/send_waypoints.py",
+            "role": "FollowWaypoints client (contains 1 bug)"
+          },
+          {
+            "path": "patrol_bot/launch/patrol_bringup.launch.py",
+            "role": "Launch file bringing up map_server, AMCL, and waypoint node (missing 1 node entry)"
+          }
+        ]
+      },
+      "starter_code": "# amcl_params.yaml bugs:\n# scan_topic: '/laser_scan'  (wrong, should be /scan)\n# min_particles: 10, max_particles: 50  (too low)\n\n# send_waypoints.py bug:\n# pose.pose.orientation.z = 1.0  (should be orientation.w)\n\n# patrol_bringup.launch.py bug:\n# map_server Node entry is missing entirely",
+      "expected_output": [
+        {
+          "shell": "Shell #1 (launch bringup)",
+          "output": "[INFO] [map_server]: Creating"
+        },
+        {
+          "shell": "Shell #2 (check AMCL convergence)",
+          "output": "[INFO] [amcl]: Particle filter converged"
+        },
+        {
+          "shell": "Shell #3 (run waypoint sender)",
+          "output": "Goal accepted, robot moves to waypoints without spinning"
+        }
+      ],
+      "run_commands": [
+        "ros2 launch patrol_bot patrol_bringup.launch.py"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "primary_skill": {
+          "skill": "diagnose and correct AMCL parameter values, a wrong waypoint orientation field, and a missing launch file node entry",
+          "weight": 70
+        },
+        "secondary_concepts": {
+          "weight": 30,
+          "concepts": [
+            "AMCL particle filter localisation",
+            "Launch files",
+            "FollowWaypoints action",
+            "Map loading"
+          ]
+        },
+        "nodes": [
+          "map_server",
+          "amcl",
+          "waypoint_sender"
+        ],
+        "topics_subscribed": [
+          "/scan"
+        ],
+        "topics_published": null,
+        "services": null,
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "Q_SLAM_EASY_build_and_save_map",
+      "metadata": {
+        "topic": "SLAM",
+        "difficulty_level": "easy",
+        "estimated_time_minutes": 20,
+        "language": "Python",
+        "ros_version": "ROS2 Humble",
+        "concepts": [
+          "SLAM Toolbox",
+          "Map saving"
+        ]
+      },
+      "title": "Map the storage room and save it for later use",
+      "context": "A warehouse AMR needs an occupancy grid map of a newly added storage room before it can be deployed there. SLAM Toolbox is already installed and configured on the robot. The candidate's job is simply to launch SLAM Toolbox, drive the robot around (or let it sit in a pre-recorded bag/sim), and save the resulting map using the existing ROS2 CLI tools \u2014 no new code is required.",
+      "prerequisites": [
+        "Familiarity with ros2 launch and ros2 run commands",
+        "A working robot (real or simulated) publishing /scan and odometry"
+      ],
+      "notes": "This is a pure command/configuration task. No file should need to be written or edited by the candidate.",
+      "parts": [],
+      "tasks": [
+        "Task 1: Launch SLAM Toolbox in online async mode for the robot",
+        "Task 2: Confirm the /map topic is being published using ros2 topic list and ros2 topic hz /map",
+        "Task 3: Save the completed map to disk as storage_room_map using the map_saver_cli tool"
+      ],
+      "file_structure": {
+        "ros_package": "slam_toolbox",
+        "dependencies": [],
+        "files_to_create": []
+      },
+      "starter_code": null,
+      "expected_output": [
+        {
+          "shell": "Shell #1 (launch SLAM Toolbox)",
+          "output": "[INFO] [slam_toolbox]: Node using stack size"
+        },
+        {
+          "shell": "Shell #2 (confirm /map)",
+          "output": "/map"
+        },
+        {
+          "shell": "Shell #3 (save map)",
+          "output": "Map saved as storage_room_map.pgm and storage_room_map.yaml"
+        }
+      ],
+      "run_commands": [
+        "ros2 launch slam_toolbox online_async_launch.py",
+        "ros2 topic list",
+        "ros2 topic hz /map",
+        "ros2 run nav2_map_server map_saver_cli -f storage_room_map"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "primary_skill": {
+          "skill": "launch SLAM Toolbox, build an occupancy grid map, and save it to disk using the existing map saver tool",
+          "weight": 70
+        },
+        "secondary_concepts": {
+          "weight": 30,
+          "concepts": [
+            "SLAM Toolbox",
+            "Map saving"
+          ]
+        },
+        "nodes": null,
+        "topics_subscribed": null,
+        "topics_published": [
+          "/map"
+        ],
+        "services": null,
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "Q_SLAM_MEDIUM_map_quality_monitor",
+      "metadata": {
+        "topic": "SLAM",
+        "difficulty_level": "medium",
+        "estimated_time_minutes": 30,
+        "language": "Python",
+        "ros_version": "ROS2 Humble",
+        "concepts": [
+          "OccupancyGrid messages",
+          "Map quality inspection",
+          "Subscriber node"
+        ]
+      },
+      "title": "Check how much of the warehouse map is still unexplored",
+      "context": "While running SLAM Toolbox to map a new warehouse zone, the team wants a quick way to tell how much of the map is still unexplored. A teammate started a small subscriber node that listens to /map and reports the percentage of unknown cells, but left two blanks where the percentage calculation should go, and also mis-wired the topic name and the QoS depth on the subscription. Finish the calculation and fix the two subscription bugs.",
+      "prerequisites": [
+        "Basic ROS2 subscriber concepts",
+        "nav_msgs/OccupancyGrid message structure (data values -1=unknown, 0=free, 100=occupied)"
+      ],
+      "notes": "The candidate is not writing the node from scratch. Most of the code is given. They must fill in 2 blank lines for the percentage calculation and correct 2 small bugs in the subscription setup.",
+      "parts": [],
+      "tasks": [
+        "Task 1: Fill in the two TODO lines in map_quality_monitor.py so the node counts how many cells in msg.data equal -1 (unknown) and computes the percentage of unknown cells relative to the total number of cells",
+        "Task 2: Fix the subscriber's topic name (currently subscribed to the wrong topic) so it correctly listens to /map",
+        "Task 3: Fix the QoS depth bug in the subscription (currently passed as a string instead of an integer)"
+      ],
+      "file_structure": {
+        "ros_package": "map_tools",
+        "dependencies": [
+          "rclpy",
+          "nav_msgs"
+        ],
+        "files_to_create": [
+          {
+            "path": "map_tools/map_quality_monitor.py",
+            "role": "Subscriber node reporting percentage of unexplored map cells (has 2 TODOs + 2 bugs)"
+          }
+        ]
+      },
+      "starter_code": "import rclpy\nfrom rclpy.node import Node\nfrom nav_msgs.msg import OccupancyGrid\n\nclass MapQualityMonitor(Node):\n    def __init__(self):\n        super().__init__('map_quality_monitor')\n        # BUG: wrong topic name + string QoS depth\n        self.subscription = self.create_subscription(\n            OccupancyGrid, '/map_grid', self.map_callback, \"10\"\n        )\n\n    def map_callback(self, msg: OccupancyGrid):\n        total_cells = msg.info.width * msg.info.height\n        # TODO 1: count how many values in msg.data are equal to -1 (unknown)\n        unknown_count = None\n        # TODO 2: compute the percentage of unknown cells out of total_cells\n        unknown_percent = None\n        self.get_logger().info(f'Unknown cells: {unknown_percent:.1f}% of map')\n",
+      "expected_output": [
+        {
+          "shell": "Shell #1 (run monitor while SLAM Toolbox is mapping)",
+          "output": "[INFO] [map_quality_monitor]: Unknown cells: 62.3% of map"
+        }
+      ],
+      "run_commands": [
+        "ros2 launch slam_toolbox online_async_launch.py",
+        "ros2 run map_tools map_quality_monitor"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "primary_skill": {
+          "skill": "complete a percentage-unknown calculation over OccupancyGrid data and fix small subscription wiring errors",
+          "weight": 70
+        },
+        "secondary_concepts": {
+          "weight": 30,
+          "concepts": [
+            "OccupancyGrid messages",
+            "Map quality inspection",
+            "Subscriber node"
+          ]
+        },
+        "nodes": null,
+        "topics_subscribed": [
+          "/map"
+        ],
+        "topics_published": null,
+        "services": null,
+        "publish_rate": null
+      }
+    },
+    {
+      "question_id": "Q_SLAM_HARD_fix_mapping_and_localization",
+      "metadata": {
+        "topic": "SLAM",
+        "difficulty_level": "hard",
+        "estimated_time_minutes": 45,
+        "language": "Python",
+        "ros_version": "ROS2 Humble",
+        "concepts": [
+          "SLAM Toolbox parameters",
+          "Map saving and loading",
+          "Lifecycle nodes",
+          "Launch files"
+        ]
+      },
+      "title": "The mapping run is noisy and the saved map won't load \u2014 find and fix the bugs",
+      "context": "A team mapped a new warehouse aisle using SLAM Toolbox, but the resulting map is noisy and drifts because the mapper's parameters were copy-pasted from a much larger robot. Separately, when they try to reload the saved map for localisation, the map server's lifecycle node never reaches the active state and a launch file event handler is missing. Find and correct the specific broken lines; do not rewrite the files from scratch.",
+      "prerequisites": [
+        "Understanding of SLAM Toolbox key parameters (resolution, max_laser_range)",
+        "Understanding of map_server lifecycle node states",
+        "Basic ROS2 launch file event handler structure"
+      ],
+      "notes": "This is a debugging task. The candidate should change at most 5-6 lines total across the two files.",
+      "parts": [],
+      "tasks": [
+        "Task 1: In mapper_params.yaml, fix the resolution (currently far too coarse for an indoor aisle) and the max_laser_range (currently shorter than the robot's actual LiDAR range, causing dropped scans)",
+        "Task 2: In map_lifecycle.launch.py, add the missing event handler that triggers the map_server's configure transition, and add the second missing event handler that triggers the activate transition once configure succeeds"
+      ],
+      "file_structure": {
+        "ros_package": "patrol_bot",
+        "dependencies": [
+          "slam_toolbox",
+          "nav2_map_server"
+        ],
+        "files_to_create": [
+          {
+            "path": "patrol_bot/config/mapper_params.yaml",
+            "role": "SLAM Toolbox mapping parameters (contains 2 bugs)"
+          },
+          {
+            "path": "patrol_bot/launch/map_lifecycle.launch.py",
+            "role": "Launch file bringing up map_server and driving its lifecycle transitions (missing 2 event handlers)"
+          }
+        ]
+      },
+      "starter_code": "# mapper_params.yaml bugs:\n# resolution: 0.5  (too coarse, should be 0.05)\n# max_laser_range: 3.5  (too short, should be 12.0)\n\n# map_lifecycle.launch.py bug:\n# no configure event handler\n# no activate event handler",
+      "expected_output": [
+        {
+          "shell": "Shell #1 (launch SLAM Toolbox with fixed mapper_params)",
+          "output": "[INFO] [slam_toolbox]: Registering sensor"
+        },
+        {
+          "shell": "Shell #2 (launch map_lifecycle with fixed event handlers)",
+          "output": "[INFO] [map_server]: Configuring\n[INFO] [map_server]: Activating"
+        }
+      ],
+      "run_commands": [
+        "ros2 launch patrol_bot map_lifecycle.launch.py",
+        "ros2 lifecycle get /map_server"
+      ],
+      "evaluation_criteria": {
+        "compiles_without_error": true,
+        "primary_skill": {
+          "skill": "diagnose and correct mismatched SLAM Toolbox mapping parameters and a missing lifecycle activation event handler for the map server",
+          "weight": 70
+        },
+        "secondary_concepts": {
+          "weight": 30,
+          "concepts": [
+            "SLAM Toolbox parameters",
+            "Map saving and loading",
+            "Lifecycle nodes",
+            "Launch files"
+          ]
+        },
+        "nodes": [
+          "slam_toolbox",
+          "map_server"
+        ],
+        "topics_subscribed": [
+          "/scan"
+        ],
+        "topics_published": [
+          "/map"
+        ],
+        "services": null,
+        "publish_rate": null
+      }
     }
   ]
 }

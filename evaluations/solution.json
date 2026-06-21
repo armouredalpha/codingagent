@@ -998,6 +998,298 @@
         "Robot autonomy",
         "Multi-cell navigation"
       ]
+    },
+    {
+      "question_id": "Q_NAV_EASY_send_goal",
+      "setup_commands": [
+        "echo \"Assumes turtlebot3_navigation2 package and a saved map.yaml already exist on the workspace\""
+      ],
+      "files": [],
+      "build_commands": [],
+      "run_commands": [
+        "ros2 launch turtlebot3_navigation2 navigation2.launch.py map:=/home/niat/claude_Ws/Nxtwave/simulation_ws/install/turtlebot3_navigation2/share/turtlebot3_navigation2/map/map.yaml use_sim_time:=True",
+        "ros2 action list",
+        "ros2 action send_goal /navigate_to_pose nav2_msgs/action/NavigateToPose \"{pose: {header: {frame_id: 'map'}, pose: {position: {x: 1.0, y: 0.5, z: 0.0}, orientation: {w: 1.0}}}}\""
+      ],
+      "expected_output": [
+        {
+          "shell": "Shell #1 (launch nav stack)",
+          "output": "[INFO] [amcl]: Creating"
+        },
+        {
+          "shell": "Shell #2 (action list)",
+          "output": "/navigate_to_pose"
+        },
+        {
+          "shell": "Shell #3 (send goal)",
+          "output": "Goal accepted with ID:"
+        }
+      ],
+      "verification": [
+        {
+          "description": "Verify: Shell #1 (launch nav stack)",
+          "expected": "AMCL, planner_server, controller_server, bt_navigator all report active state"
+        },
+        {
+          "description": "Verify: Shell #2 (action list)",
+          "expected": "/navigate_to_pose appears in the action list output"
+        },
+        {
+          "description": "Verify: Shell #3 (send goal)",
+          "expected": "CLI prints 'Goal accepted with ID:' followed eventually by 'Goal succeeded' or result feedback"
+        }
+      ],
+      "key_concepts_demonstrated": [
+        "bring up an already-configured Nav2 stack and drive a robot to a single checkpoint purely through ROS2 CLI tools, no code written"
+      ]
+    },
+    {
+      "question_id": "Q_NAV_MEDIUM_square_drive",
+      "setup_commands": [
+        "ros2 pkg create square_patrol --build-type ament_python --dependencies rclpy geometry_msgs"
+      ],
+      "files": [
+        {
+          "path": "square_patrol/square_patrol/square_driver.py",
+          "content": "import rclpy\nfrom rclpy.node import Node\nfrom geometry_msgs.msg import Twist\n\n\nclass SquareDriver(Node):\n    def __init__(self):\n        super().__init__('square_driver')\n        self.publisher_ = self.create_publisher(Twist, '/cmd_vel', 10)\n        self.timer = self.create_timer(0.5, self.timer_callback)\n        self.phase = 0\n\n    def timer_callback(self):\n        msg = Twist()\n        if self.phase % 2 == 0:\n            msg.linear.x = 0.2\n            msg.angular.z = 0.0\n        else:\n            msg.linear.x = 0.0\n            msg.angular.z = 0.5\n        self.publisher_.publish(msg)\n        self.get_logger().info('publishing cmd_vel')\n        self.phase = (self.phase + 1) % 8\n\n\ndef main(args=None):\n    rclpy.init(args=args)\n    node = SquareDriver()\n    rclpy.spin(node)\n    node.destroy_node()\n    rclpy.shutdown()\n\n\nif __name__ == '__main__':\n    main()\n"
+        },
+        {
+          "path": "square_patrol/square_patrol/cmd_logger.py",
+          "content": "import rclpy\nfrom rclpy.node import Node\nfrom geometry_msgs.msg import Twist\n\n\nclass CmdLogger(Node):\n    def __init__(self):\n        super().__init__('cmd_logger')\n        self.subscription = self.create_subscription(\n            Twist, '/cmd_vel', self.listener_callback, 10\n        )\n        self.timer_period = 0.5\n\n    def listener_callback(self, msg):\n        self.get_logger().info(\n            f'cmd_vel -> linear.x={msg.linear.x}, angular.z={msg.angular.z}'\n        )\n\n\ndef main(args=None):\n    rclpy.init(args=args)\n    node = CmdLogger()\n    rclpy.spin(node)\n    node.destroy_node()\n    rclpy.shutdown()\n\n\nif __name__ == '__main__':\n    main()\n"
+        },
+        {
+          "path": "square_patrol/setup.py",
+          "content": "from setuptools import find_packages, setup\n\npackage_name = 'square_patrol'\n\nsetup(\n    name=package_name,\n    version='0.0.1',\n    packages=find_packages(exclude=['test']),\n    data_files=[\n        ('share/ament_index/resource_index/packages', ['resource/' + package_name]),\n        ('share/' + package_name, ['package.xml']),\n    ],\n    install_requires=['setuptools'],\n    zip_safe=True,\n    maintainer='candidate',\n    maintainer_email='candidate@example.com',\n    description='Square-drive publisher and cmd_vel logger subscriber',\n    license='Apache-2.0',\n    tests_require=['pytest'],\n    entry_points={\n        'console_scripts': [\n            'square_driver = square_patrol.square_driver:main',\n            'cmd_logger = square_patrol.cmd_logger:main',\n        ],\n    },\n)\n"
+        }
+      ],
+      "build_commands": [
+        "colcon build --packages-select square_patrol",
+        "source install/setup.bash"
+      ],
+      "run_commands": [
+        "ros2 run square_patrol square_driver",
+        "ros2 run square_patrol cmd_logger"
+      ],
+      "expected_output": [
+        {
+          "shell": "Shell #1 (run square_driver)",
+          "output": "[INFO] [square_driver]: publishing cmd_vel"
+        },
+        {
+          "shell": "Shell #2 (run cmd_logger)",
+          "output": "cmd_vel -> linear.x=0.2, angular.z=0.0"
+        }
+      ],
+      "verification": [
+        {
+          "description": "Verify: Shell #1",
+          "expected": "[INFO] [square_driver]: publishing cmd_vel"
+        },
+        {
+          "description": "Verify: Shell #2",
+          "expected": "cmd_vel -> linear.x=0.2, angular.z=0.0 alternating with linear.x=0.0, angular.z=0.5"
+        }
+      ],
+      "key_concepts_demonstrated": [
+        "complete two missing Twist assignment blocks to make a robot alternate between driving straight and turning, and fix a wrong topic name plus a wrong parameter type in a companion subscriber node"
+      ]
+    },
+    {
+      "question_id": "Q_NAV_HARD_fix_amcl_waypoints",
+      "setup_commands": [
+        "ros2 pkg create patrol_bot --build-type ament_python --dependencies rclpy nav2_msgs nav2_amcl nav2_map_server"
+      ],
+      "files": [
+        {
+          "path": "patrol_bot/config/amcl_params.yaml",
+          "content": "amcl:\n  ros__parameters:\n    use_sim_time: True\n    scan_topic: \"/scan\"\n    min_particles: 500\n    max_particles: 2000\n    laser_max_range: 12.0\n    odom_frame_id: \"odom\"\n    base_frame_id: \"base_footprint\"\n    global_frame_id: \"map\"\n"
+        },
+        {
+          "path": "patrol_bot/patrol_bot/send_waypoints.py",
+          "content": "import rclpy\nfrom rclpy.node import Node\nfrom rclpy.action import ActionClient\nfrom nav2_msgs.action import FollowWaypoints\nfrom geometry_msgs.msg import PoseStamped\n\n\nclass WaypointSender(Node):\n    def __init__(self):\n        super().__init__('waypoint_sender')\n        self.client = ActionClient(self, FollowWaypoints, '/follow_waypoints')\n\n    def build_pose(self, x, y):\n        pose = PoseStamped()\n        pose.header.frame_id = 'map'\n        pose.header.stamp = self.get_clock().now().to_msg()\n        pose.pose.position.x = x\n        pose.pose.position.y = y\n        pose.pose.orientation.w = 1.0\n        return pose\n\n    def send_all(self):\n        self.client.wait_for_server()\n        goal = FollowWaypoints.Goal()\n        goal.poses = [self.build_pose(1.0, 0.0), self.build_pose(1.0, 2.0)]\n        self.client.send_goal_async(goal)\n\n\ndef main(args=None):\n    rclpy.init(args=args)\n    node = WaypointSender()\n    node.send_all()\n    rclpy.spin(node)\n    node.destroy_node()\n    rclpy.shutdown()\n\n\nif __name__ == '__main__':\n    main()\n"
+        },
+        {
+          "path": "patrol_bot/launch/patrol_bringup.launch.py",
+          "content": "from launch import LaunchDescription\nfrom launch_ros.actions import Node\n\n\ndef generate_launch_description():\n    map_server_node = Node(\n        package='nav2_map_server',\n        executable='map_server',\n        name='map_server',\n        output='screen',\n        parameters=[{'yaml_filename': 'config/map.yaml'}],\n    )\n\n    amcl_node = Node(\n        package='nav2_amcl',\n        executable='amcl',\n        name='amcl',\n        output='screen',\n        parameters=['config/amcl_params.yaml'],\n    )\n\n    waypoint_node = Node(\n        package='patrol_bot',\n        executable='send_waypoints',\n        name='waypoint_sender',\n        output='screen',\n    )\n\n    return LaunchDescription([map_server_node, amcl_node, waypoint_node])\n"
+        }
+      ],
+      "build_commands": [
+        "colcon build --packages-select patrol_bot",
+        "source install/setup.bash"
+      ],
+      "run_commands": [
+        "ros2 launch patrol_bot patrol_bringup.launch.py"
+      ],
+      "expected_output": [
+        {
+          "shell": "Shell #1 (launch bringup)",
+          "output": "[INFO] [map_server]: Creating"
+        },
+        {
+          "shell": "Shell #2 (AMCL convergence)",
+          "output": "[INFO] [amcl]: Particle filter converged"
+        },
+        {
+          "shell": "Shell #3 (waypoint sender)",
+          "output": "Goal accepted, robot moves to waypoints without spinning"
+        }
+      ],
+      "verification": [
+        {
+          "description": "Verify: map_server + amcl + waypoint_sender all active",
+          "expected": "ros2 node list shows all three nodes"
+        },
+        {
+          "description": "Verify: AMCL uses /scan and 500-2000 particles",
+          "expected": "AMCL log shows particle filter converging"
+        },
+        {
+          "description": "Verify: robot reaches waypoints with orientation.w=1.0",
+          "expected": "Goal accepted by /follow_waypoints with no spin"
+        }
+      ],
+      "key_concepts_demonstrated": [
+        "correct a wrong AMCL laser topic and too-low particle counts, fix an invalid orientation quaternion field in a waypoint sender, and add a missing map_server node to a launch file"
+      ]
+    },
+    {
+      "question_id": "Q_SLAM_EASY_build_and_save_map",
+      "setup_commands": [
+        "echo \"Assumes slam_toolbox is installed and the robot is already publishing /scan and odometry\""
+      ],
+      "files": [],
+      "build_commands": [],
+      "run_commands": [
+        "ros2 launch slam_toolbox online_async_launch.py",
+        "ros2 topic list",
+        "ros2 topic hz /map",
+        "ros2 run nav2_map_server map_saver_cli -f storage_room_map"
+      ],
+      "expected_output": [
+        {
+          "shell": "Shell #1 (launch SLAM Toolbox)",
+          "output": "[INFO] [slam_toolbox]: Node using stack size"
+        },
+        {
+          "shell": "Shell #2 (topic list)",
+          "output": "/map"
+        },
+        {
+          "shell": "Shell #3 (topic hz)",
+          "output": "average rate:"
+        },
+        {
+          "shell": "Shell #4 (save map)",
+          "output": "Map saved as storage_room_map.pgm and storage_room_map.yaml"
+        }
+      ],
+      "verification": [
+        {
+          "description": "Verify: slam_toolbox starts and reports active state",
+          "expected": "slam_toolbox node active"
+        },
+        {
+          "description": "Verify: /map appears in topic list",
+          "expected": "/map in ros2 topic list output"
+        },
+        {
+          "description": "Verify: /map publishing at non-zero rate",
+          "expected": "average rate > 0"
+        },
+        {
+          "description": "Verify: map files created on disk",
+          "expected": "storage_room_map.pgm and storage_room_map.yaml exist"
+        }
+      ],
+      "key_concepts_demonstrated": [
+        "bring up SLAM Toolbox, confirm the occupancy grid is being published, and save the finished map to disk purely through ROS2 CLI tools, no code written"
+      ]
+    },
+    {
+      "question_id": "Q_SLAM_MEDIUM_map_quality_monitor",
+      "setup_commands": [
+        "ros2 pkg create map_tools --build-type ament_python --dependencies rclpy nav_msgs"
+      ],
+      "files": [
+        {
+          "path": "map_tools/map_tools/map_quality_monitor.py",
+          "content": "import rclpy\nfrom rclpy.node import Node\nfrom nav_msgs.msg import OccupancyGrid\n\n\nclass MapQualityMonitor(Node):\n    def __init__(self):\n        super().__init__('map_quality_monitor')\n        self.subscription = self.create_subscription(\n            OccupancyGrid, '/map', self.map_callback, 10\n        )\n\n    def map_callback(self, msg: OccupancyGrid):\n        total_cells = msg.info.width * msg.info.height\n        unknown_count = sum(1 for cell in msg.data if cell == -1)\n        unknown_percent = (\n            (unknown_count / total_cells) * 100 if total_cells > 0 else 0.0\n        )\n        self.get_logger().info(\n            f'Unknown cells: {unknown_percent:.1f}% of map'\n        )\n\n\ndef main(args=None):\n    rclpy.init(args=args)\n    node = MapQualityMonitor()\n    rclpy.spin(node)\n    node.destroy_node()\n    rclpy.shutdown()\n\n\nif __name__ == '__main__':\n    main()\n"
+        },
+        {
+          "path": "map_tools/setup.py",
+          "content": "from setuptools import find_packages, setup\n\npackage_name = 'map_tools'\n\nsetup(\n    name=package_name,\n    version='0.0.1',\n    packages=find_packages(exclude=['test']),\n    data_files=[\n        ('share/ament_index/resource_index/packages', ['resource/' + package_name]),\n        ('share/' + package_name, ['package.xml']),\n    ],\n    install_requires=['setuptools'],\n    zip_safe=True,\n    maintainer='candidate',\n    maintainer_email='candidate@example.com',\n    description='Map quality monitoring subscriber',\n    license='Apache-2.0',\n    tests_require=['pytest'],\n    entry_points={\n        'console_scripts': [\n            'map_quality_monitor = map_tools.map_quality_monitor:main',\n        ],\n    },\n)\n"
+        }
+      ],
+      "build_commands": [
+        "colcon build --packages-select map_tools",
+        "source install/setup.bash"
+      ],
+      "run_commands": [
+        "ros2 launch slam_toolbox online_async_launch.py",
+        "ros2 run map_tools map_quality_monitor"
+      ],
+      "expected_output": [
+        {
+          "shell": "Shell #1 (run monitor)",
+          "output": "[INFO] [map_quality_monitor]: Unknown cells: 62.3% of map"
+        }
+      ],
+      "verification": [
+        {
+          "description": "Verify: monitor subscribes to /map and prints % unknown",
+          "expected": "Unknown cells: XX.X% of map appears at each map update"
+        }
+      ],
+      "key_concepts_demonstrated": [
+        "complete a missing OccupancyGrid unknown-cell percentage calculation and fix a wrong topic name and a wrong QoS depth type in a subscriber node"
+      ]
+    },
+    {
+      "question_id": "Q_SLAM_HARD_fix_mapping_and_localization",
+      "setup_commands": [
+        "echo \"Assumes patrol_bot package, slam_toolbox, and nav2_map_server are already installed; map.yaml from a prior mapping run already exists\""
+      ],
+      "files": [
+        {
+          "path": "patrol_bot/config/mapper_params.yaml",
+          "content": "slam_toolbox:\n  ros__parameters:\n    solver_plugin: solver_plugins::CeresSolver\n    odom_frame: odom\n    map_frame: map\n    base_frame: base_footprint\n    scan_topic: /scan\n    mode: mapping\n    resolution: 0.05\n    max_laser_range: 12.0\n    minimum_travel_distance: 0.2\n    minimum_travel_heading: 0.17\n"
+        },
+        {
+          "path": "patrol_bot/launch/map_lifecycle.launch.py",
+          "content": "import launch\nfrom launch import LaunchDescription\nfrom launch.actions import EmitEvent, RegisterEventHandler\nfrom launch_ros.actions import LifecycleNode\nfrom launch_ros.event_handlers import OnStateTransition\nfrom launch_ros.events.lifecycle import ChangeState\nimport lifecycle_msgs.msg\n\n\ndef generate_launch_description():\n    map_server_node = LifecycleNode(\n        package='nav2_map_server',\n        executable='map_server',\n        name='map_server',\n        namespace='',\n        output='screen',\n        parameters=[{'yaml_filename': 'config/map.yaml'}],\n    )\n\n    configure_event = RegisterEventHandler(\n        OnStateTransition(\n            target_lifecycle_node=map_server_node,\n            start_state='unconfigured',\n            goal_state='inactive',\n            entities=[\n                EmitEvent(event=ChangeState(\n                    lifecycle_node_matcher=launch.events.matches_action(map_server_node),\n                    transition_id=lifecycle_msgs.msg.Transition.TRANSITION_CONFIGURE,\n                )),\n            ],\n        )\n    )\n\n    activate_event = RegisterEventHandler(\n        OnStateTransition(\n            target_lifecycle_node=map_server_node,\n            start_state='inactive',\n            goal_state='active',\n            entities=[\n                EmitEvent(event=ChangeState(\n                    lifecycle_node_matcher=launch.events.matches_action(map_server_node),\n                    transition_id=lifecycle_msgs.msg.Transition.TRANSITION_ACTIVATE,\n                )),\n            ],\n        )\n    )\n\n    return LaunchDescription([map_server_node, configure_event, activate_event])\n"
+        }
+      ],
+      "build_commands": [
+        "colcon build --packages-select patrol_bot",
+        "source install/setup.bash"
+      ],
+      "run_commands": [
+        "ros2 launch patrol_bot map_lifecycle.launch.py",
+        "ros2 lifecycle get /map_server"
+      ],
+      "expected_output": [
+        {
+          "shell": "Shell #1 (launch map_lifecycle)",
+          "output": "[INFO] [map_server]: Configuring\n[INFO] [map_server]: Activating"
+        },
+        {
+          "shell": "Shell #2 (lifecycle get)",
+          "output": "active"
+        }
+      ],
+      "verification": [
+        {
+          "description": "Verify: mapper_params.yaml has resolution=0.05 and max_laser_range=12.0",
+          "expected": "SLAM Toolbox logs show sensor registration with corrected parameters"
+        },
+        {
+          "description": "Verify: map_server reaches active state",
+          "expected": "ros2 lifecycle get /map_server returns 'active'"
+        }
+      ],
+      "key_concepts_demonstrated": [
+        "correct mismatched SLAM Toolbox resolution and laser range parameters, and add missing lifecycle configure and activate event handlers so map_server reaches active state"
+      ]
     }
   ]
 }

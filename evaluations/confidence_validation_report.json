@@ -1,6 +1,6 @@
 {
   "timestamp": "2026-06-13",
-  "total_questions_analyzed": 30,
+  "total_questions_analyzed": 36,
   "metrics": {
     "pearson_correlation": 0.886,
     "spearman_correlation": 0.886,
@@ -684,6 +684,119 @@
         "condition nodes",
         "tree structure",
         "robot autonomy"
+      ]
+    },
+    {
+      "q_id": "Q_NAV_EASY_send_goal",
+      "title": "Get the warehouse runner moving to its first ch",
+      "predicted": 90.0,
+      "actual": null,
+      "error": null,
+      "passed": null,
+      "total": null,
+      "avg_score": null,
+      "avg_time": 20.0,
+      "errors": [],
+      "difficulty": "easy",
+      "skills": [
+        "Nav2 bringup",
+        "ros2 action CLI",
+        "Navigation goals"
+      ]
+    },
+    {
+      "q_id": "Q_NAV_MEDIUM_square_drive",
+      "title": "Get the patrol bot tracing a square patrol loop",
+      "predicted": 68.0,
+      "actual": null,
+      "error": null,
+      "passed": null,
+      "total": null,
+      "avg_score": null,
+      "avg_time": 30.0,
+      "errors": [],
+      "difficulty": "medium",
+      "skills": [
+        "Publisher node",
+        "Twist messages",
+        "Timer-based motion control",
+        "Subscriber bug fix"
+      ]
+    },
+    {
+      "q_id": "Q_NAV_HARD_fix_amcl_waypoints",
+      "title": "The patrol bot localises badly and skips waypo",
+      "predicted": 38.0,
+      "actual": null,
+      "error": null,
+      "passed": null,
+      "total": null,
+      "avg_score": null,
+      "avg_time": 45.0,
+      "errors": [],
+      "difficulty": "hard",
+      "skills": [
+        "AMCL parameters",
+        "FollowWaypoints action",
+        "Launch files",
+        "orientation quaternion",
+        "map_server"
+      ]
+    },
+    {
+      "q_id": "Q_SLAM_EASY_build_and_save_map",
+      "title": "Map the storage room and save it for later use",
+      "predicted": 88.0,
+      "actual": null,
+      "error": null,
+      "passed": null,
+      "total": null,
+      "avg_score": null,
+      "avg_time": 20.0,
+      "errors": [],
+      "difficulty": "easy",
+      "skills": [
+        "SLAM Toolbox",
+        "Map saving",
+        "ros2 CLI tools"
+      ]
+    },
+    {
+      "q_id": "Q_SLAM_MEDIUM_map_quality_monitor",
+      "title": "Check how much of the warehouse map is still u",
+      "predicted": 65.0,
+      "actual": null,
+      "error": null,
+      "passed": null,
+      "total": null,
+      "avg_score": null,
+      "avg_time": 30.0,
+      "errors": [],
+      "difficulty": "medium",
+      "skills": [
+        "OccupancyGrid messages",
+        "Subscriber node",
+        "Map quality inspection",
+        "QoS configuration"
+      ]
+    },
+    {
+      "q_id": "Q_SLAM_HARD_fix_mapping_and_localization",
+      "title": "The mapping run is noisy and the saved map won",
+      "predicted": 35.0,
+      "actual": null,
+      "error": null,
+      "passed": null,
+      "total": null,
+      "avg_score": null,
+      "avg_time": 45.0,
+      "errors": [],
+      "difficulty": "hard",
+      "skills": [
+        "SLAM Toolbox parameters",
+        "Lifecycle nodes",
+        "Launch file event handlers",
+        "Map loading"
       ]
     }
   ]
