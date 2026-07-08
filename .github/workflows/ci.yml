@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  test:
+    name: Test (Python 3.11)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install --no-build-isolation -e ".[dev]"
+
+      - name: Import check
+        run: |
+          python -c "import robo_assess"
+          python -c "from robo_assess.agents.orchestrator import Orchestrator"
+          python -c "from robo_assess.learned_confidence_improved import ImprovedConfidenceScorer"
+          python -c "from robo_assess.tools.registry import ToolRegistry"
+          python -c "from robo_assess.cli import main"
+
+      - name: Run tests
+        env:
+          # Satisfies Settings.load() provider-key validation without live API calls.
+          # No test makes a real LLM request — all orchestrator tests mock or use
+          # tmp_settings which bypasses Settings.load() entirely.
+          OPENROUTER_API_KEY: test-key-ci
+        run: pytest -q tests/
+
+  docker-build:
+    name: Build Docker images
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build generator image
+        run: docker build -t robo-assess:ci .
+
+      - name: Build grader image
+        run: docker build -f Dockerfile.grading -t robo-grader:ci .
+
+      - name: Smoke-test grader image
+        run: |
+          docker run --rm robo-grader:ci python3 -c "
+          import rclpy, sensor_msgs, geometry_msgs, nav_msgs
+          print('rclpy and message packages importable')
+          "

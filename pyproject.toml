@@ -6,7 +6,6 @@ build-backend = "setuptools.build_meta"
 name = "robo_assess"
 version = "1.0.0"
 description = "Multi-agent generator for production-grade ROS2 coding assessments"
-readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Assessment Author", email = "assessments@example.com" }]
@@ -19,7 +18,7 @@ dependencies = [
 [project.optional-dependencies]
 log = ["structlog>=24.1.0"]
 llm = ["openai>=1.30.0", "anthropic>=0.34.0", "instructor>=1.3.0", "tenacity>=8.3.0"]
-dev = ["pytest>=8.0"]
+dev = ["pytest>=8.0", "numpy>=1.26", "scipy>=1.11"]
 
 [project.scripts]
 robo-assess = "robo_assess.cli:main"
@@ -30,4 +29,8 @@ exclude = ["tests*", "examples*", "outputs*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q"
+# -p no:launch_testing* suppresses ROS2 pytest plugins that are globally
+# installed on developer machines with ROS2 Humble. They register hooks that
+# are incompatible with the pytest version used here.  Safe to include on
+# machines without ROS2 — pytest ignores unknown -p no: flags.
+addopts = "-q -p no:launch_testing -p no:launch_ros"

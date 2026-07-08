@@ -80,6 +80,15 @@ class AssessmentRequest(BaseModel):
     sources: list[str] = Field(default_factory=list)
     existing_questions: list[str] = Field(default_factory=list)
     num_questions: int = Field(default=6, ge=1, le=60)
+    # When set, the orchestrator extracts skills from this MD file instead of
+    # treating `syllabus` as the definitive skill list.
+    md_path: Optional[str] = Field(default=None)
+
+    # Budget constraints — both are optional; whichever is set acts as a hard gate.
+    # budget_tokens: max input+output tokens to spend across the whole run.
+    # budget_calls:  max LLM calls (rounds) to spend across the whole run.
+    budget_tokens: Optional[int] = Field(default=None, ge=1000)
+    budget_calls: Optional[int] = Field(default=None, ge=1)
 
     @field_validator("syllabus")
     @classmethod
@@ -90,6 +99,23 @@ class AssessmentRequest(BaseModel):
 # ---------------------------------------------------------------------------
 # NEW: Markdown parsing & skills extraction
 # ---------------------------------------------------------------------------
+class ContextPack(BaseModel):
+    """RAG output — grounding material for one generation run."""
+    exemplars: list[dict] = Field(default_factory=list)       # past questions {id, title, skill, difficulty}
+    concept_refs: list[str] = Field(default_factory=list)     # syllabus concept strings
+    known_question_hashes: list[str] = Field(default_factory=list)  # structural hashes of past questions
+
+
+class TriageResult(BaseModel):
+    """Output of ComplexityTriageAgent."""
+    depth_score: int = Field(default=5, ge=1, le=10)          # 1=trivial, 10=deep
+    viable_archetypes: list[str] = Field(default_factory=lambda: ["TYPE_A", "TYPE_B", "TYPE_C"])
+    type_a_count: int = 0   # recommended pure-math questions
+    type_b_count: int = 0   # recommended ROS2-node questions
+    type_c_count: int = 0   # recommended mixed questions
+    notes: str = ""
+
+
 class SkillEntry(BaseModel):
     """A single extracted skill from the .md teaching material."""
     skill: str
@@ -164,16 +190,6 @@ class EvalComparison(BaseModel):
     closest_refs: list[str] = Field(default_factory=list)
     difficulty_verdict: str = "medium"
     style_notes: str = ""
-
-
-# ---------------------------------------------------------------------------
-# NEW: LLM Critic feedback
-# ---------------------------------------------------------------------------
-class CriticFeedback(BaseModel):
-    """Detailed feedback from the LLM Critic for question regeneration."""
-    issues: list[str] = Field(default_factory=list)
-    fix_directives: list[str] = Field(default_factory=list)
-    severity: str = "minor"  # minor/major/reject
 
 
 # ---------------------------------------------------------------------------
@@ -348,6 +364,7 @@ class ConfidenceBreakdown(BaseModel):
     scope: float = 0.0
     auto_grading: float = 0.0
     format_quality: float = 0.0
+    eval_calibration: float = 0.0     # difficulty match against reference eval set
     confidence: float = 0.0           # calibrated value used for the APPROVED gate
     raw_confidence: float = 0.0       # pre-calibration weighted heuristic score
     calibrated: bool = False          # True when a fitted calibrator was applied
@@ -407,6 +424,9 @@ class Question(BaseModel):
     run_commands: list[str] = Field(default_factory=list)
     detailed_evaluation_criteria: Optional[EvaluationCriteria] = None
 
+    # Question archetype (TYPE_A / TYPE_B / TYPE_C) — set by generator, preserved on regen
+    question_type: str = ""
+
     # Legacy fields kept for pipeline compatibility
     evaluation_criteria: list[EvaluationCriterion] = Field(default_factory=list)
     files_to_edit: list[EditableFile] = Field(default_factory=list)
@@ -421,16 +441,19 @@ class Question(BaseModel):
     scope_violations: list[str] = Field(default_factory=list)
     realism_score: int = 0
     auto_gradable: bool = True
+    grading_issues: list[str] = Field(default_factory=list)
     role_alignment: Optional[RoleAlignment] = None
     hiring_signal: Optional[HiringSignal] = None
     market_readiness: Optional[MarketReadiness] = None
     confidence: Optional[ConfidenceBreakdown] = None
     grading_execution: Optional[GradingExecution] = None
 
-    # NEW: Eval comparator & LLM critic
     eval_comparison: Optional[EvalComparison] = None
-    critic_feedback_history: list[CriticFeedback] = Field(default_factory=list)
     generation_skill: str = ""  # which skill from skills.yaml was used to generate this
+    human_decision: str = ""   # "approve" | "reject" | "" — set by HumanReviewAgent on resume
+
+    # Set by ScopeQualityAgent's skill-drift check
+    skill_drift: bool = False
 
     # Cost accounting
     tokens_used: int = 0

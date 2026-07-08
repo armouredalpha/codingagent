@@ -1,0 +1,140 @@
+{
+  "run": {
+    "run_id": "5927953c6c1f",
+    "topic": "Computer_Vision_Assessment.docx",
+    "started_at": "2026-07-07T08:13:23.877402+00:00",
+    "ended_at": "2026-07-07T08:15:51.921324+00:00",
+    "total_elapsed_ms": 0.0
+  },
+  "questions": {
+    "generated": 3,
+    "passed_bar": 1,
+    "pass_rate_pct": 33.3
+  },
+  "tokens": {
+    "total": 39469,
+    "cost_usd": 0.005961
+  },
+  "agents": {
+    "md_summary": {
+      "calls": 1,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0.0,
+      "max_elapsed_ms": 0.0
+    },
+    "context_retrieval": {
+      "calls": 1,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0.0,
+      "max_elapsed_ms": 0.0
+    },
+    "skill_triage": {
+      "calls": 1,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0.0,
+      "max_elapsed_ms": 0.0
+    },
+    "question_generator": {
+      "calls": 3,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0.0,
+      "max_elapsed_ms": 0.0
+    },
+    "scope_quality": {
+      "calls": 3,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 16.0,
+      "min_elapsed_ms": 2,
+      "max_elapsed_ms": 29
+    },
+    "boilerplate_generator": {
+      "calls": 3,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 20.0,
+      "min_elapsed_ms": 10,
+      "max_elapsed_ms": 31
+    },
+    "grading_agent": {
+      "calls": 3,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 19.0,
+      "min_elapsed_ms": 8,
+      "max_elapsed_ms": 27
+    },
+    "difficulty_agent": {
+      "calls": 3,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 2265.3,
+      "min_elapsed_ms": 1675,
+      "max_elapsed_ms": 2561
+    },
+    "originality_agent": {
+      "calls": 3,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 4161.0,
+      "min_elapsed_ms": 3144,
+      "max_elapsed_ms": 5563
+    },
+    "coverage_verifier": {
+      "calls": 3,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 2653.7,
+      "min_elapsed_ms": 2365,
+      "max_elapsed_ms": 3009
+    },
+    "executable_grading": {
+      "calls": 3,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 4167.0,
+      "min_elapsed_ms": 2459,
+      "max_elapsed_ms": 7240
+    },
+    "eval_comparator": {
+      "calls": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0,
+      "max_elapsed_ms": 0.0
+    },
+    "confidence_agent": {
+      "calls": 3,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 23.0,
+      "min_elapsed_ms": 21,
+      "max_elapsed_ms": 26
+    },
+    "human_review": {
+      "calls": 3,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0,
+      "max_elapsed_ms": 0.0
+    },
+    "supervisor": {
+      "calls": 1,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 17.0,
+      "min_elapsed_ms": 17,
+      "max_elapsed_ms": 17
+    }
+  }
+}

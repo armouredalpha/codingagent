@@ -43,24 +43,23 @@ class ImprovedConfidenceScorer:
             "hard_hard": 0.93,  # Overconfident
         }
 
-        # Skill difficulty multipliers (harder skills = lower pass rate)
+        # Skill difficulty multipliers (harder skills = lower pass rate).
+        # Only skills that can appear in generated questions are listed —
+        # scope-gated technologies (opencv/cv_bridge, rclpy.action, Nav2, BT)
+        # are rejected by ScopeComplianceAgent before reaching confidence scoring
+        # so entries for them would never fire.
         self.skill_difficulty_factors = {
             "class definition": 1.0,
             "instance attributes": 1.0,
             "rclpy basics": 1.0,
             "self reference": 0.98,
-            "private attributes": 0.95,      # Tricky for students
+            "private attributes": 0.95,
             "ROS2 services": 0.92,
             "odometry subscriber": 0.90,
             "composition": 0.88,
-            "abstract base class": 0.85,     # Hard topic
-            "TypeVar": 0.80,                 # Very hard
+            "abstract base class": 0.85,
+            "TypeVar": 0.80,
             "Generic class syntax": 0.80,
-            "OpenCV integration": 0.75,      # Very hard
-            "cv_bridge": 0.75,
-            "ROS2 Actions": 0.82,
-            "Behavior trees": 0.70,          # Hardest
-            "Maze navigation": 0.72,
             "Laser scan processing": 0.73,
         }
 
@@ -261,6 +260,50 @@ class ImprovedConfidenceScorer:
                 else "Retrain scorer with more data"
             ),
         }
+
+
+    def recalibrate_from_memory(
+        self,
+        memory,
+        min_attempts: int = 5,
+    ) -> dict[str, Any]:
+        """Refit difficulty_multipliers using real student pass/fail data from memory.
+
+        Only updates a difficulty bucket when it has ≥ min_attempts records so
+        sparse data doesn't destabilize the multipliers.
+
+        Returns a summary dict: {difficulty: {attempts, pass_rate, old_mult, new_mult}}.
+        """
+        # Baseline pass rates the fixed multipliers were originally calibrated against.
+        # A multiplier of 1.0 is correct when actual_rate == baseline_rate.
+        _BASELINE = {"easy": 0.80, "medium": 0.65, "hard": 0.45}
+
+        tallies = memory.get_difficulty_pass_rates()
+        summary: dict[str, Any] = {}
+
+        for diff, baseline_rate in _BASELINE.items():
+            bucket = tallies.get(diff)
+            if bucket is None or bucket["total"] < min_attempts:
+                summary[diff] = {"skipped": True, "reason": "insufficient_data",
+                                  "attempts": (bucket or {}).get("total", 0)}
+                continue
+
+            actual_rate = bucket["passed"] / bucket["total"]
+            # Scale existing multiplier so it targets the observed rate
+            old_mult = self.difficulty_multipliers.get(diff, 1.0)
+            new_mult = round(old_mult * (actual_rate / baseline_rate), 3)
+            new_mult = max(0.5, min(2.0, new_mult))  # clamp to sane range
+
+            self.difficulty_multipliers[diff] = new_mult
+            summary[diff] = {
+                "attempts": bucket["total"],
+                "pass_rate": round(actual_rate, 3),
+                "baseline_rate": baseline_rate,
+                "old_multiplier": old_mult,
+                "new_multiplier": new_mult,
+            }
+
+        return summary
 
 
 def load_improved_reference_scores_from_json(

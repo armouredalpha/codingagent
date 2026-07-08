@@ -28,7 +28,7 @@ def _call(llm, system: str, template: str, payload: list[dict], settings,
     raw, usage = llm.complete_json(
         system=system,
         user=user,
-        temperature=settings.temperature,
+        temperature=getattr(settings, "critic_temperature", 0.0),
         max_tokens=settings.max_tokens,
     )
     if token_counter:

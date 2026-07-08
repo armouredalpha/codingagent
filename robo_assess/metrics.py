@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field, asdict
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
 from typing import Optional
@@ -67,7 +67,7 @@ class MetricsCollector:
             self.runs[run_id] = RunMetrics(
                 run_id=run_id,
                 topic=topic,
-                started_at=datetime.utcnow().isoformat(),
+                started_at=datetime.now(timezone.utc).isoformat(),
             )
 
     def record_agent_call(
@@ -105,7 +105,7 @@ class MetricsCollector:
             if run_id not in self.runs:
                 return
             run = self.runs[run_id]
-            run.ended_at = datetime.utcnow().isoformat()
+            run.ended_at = datetime.now(timezone.utc).isoformat()
             run.total_tokens_used = total_tokens
             run.total_cost_usd = cost_usd
             run.total_questions_generated = questions_generated

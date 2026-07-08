@@ -81,10 +81,18 @@ def text_similarity(a_text: str, b_text: str) -> float:
     )
 
 
+_DEFAULT_MAX_ENTRIES = 500
+
+
 class VectorStore:
-    def __init__(self, path: str = "vectorstore/index.json") -> None:
+    def __init__(
+        self,
+        path: str = "vectorstore/index.json",
+        max_entries: int = _DEFAULT_MAX_ENTRIES,
+    ) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.max_entries = max_entries
         self._items: list[dict] = []
         if self.path.is_file():
             try:
@@ -92,32 +100,65 @@ class VectorStore:
             except Exception:
                 self._items = []
 
-    def add(self, qid: str, text: str) -> None:
+    @classmethod
+    def from_settings(cls, settings) -> "VectorStore":
+        return cls(
+            path=getattr(settings, "vectorstore_path", "vectorstore/index.json"),
+            max_entries=getattr(settings, "vectorstore_max_entries", _DEFAULT_MAX_ENTRIES),
+        )
+
+    def add(self, qid: str, text: str, topic: str = "") -> None:
         # Upsert by id: a regenerated question reuses its slot's id, so it must
         # REPLACE the prior version rather than accumulate a stale vector that
         # would later read as a near-duplicate of itself.
         for item in self._items:
             if item["id"] == qid:
                 item["text"] = text
+                if topic:
+                    item["topic"] = topic
                 return
-        self._items.append({"id": qid, "text": text})
+        self._items.append({"id": qid, "text": text, "topic": topic})
+        # Evict oldest entries when cap is exceeded so originality scores
+        # don't degrade as the store grows across hundreds of runs.
+        if len(self._items) > self.max_entries:
+            self._items = self._items[-self.max_entries:]
 
     def max_similarity(
-        self, text: str, exclude_id: str | None = None
+        self, text: str, exclude_id: str | None = None, topic: str | None = None,
     ) -> tuple[float, str | None]:
         """Return (best_similarity, matching_id) against the stored corpus.
 
-        ``exclude_id`` skips a question's own prior version — a regenerated
-        question keeps its slot id, and it is not a duplicate of the earlier
-        attempt it replaces."""
+        ``exclude_id`` skips a question's own prior version.
+        ``topic`` restricts comparison to entries with a matching topic tag,
+        which avoids cross-topic false positives as the store grows large.
+        """
         best, best_id = 0.0, None
         for item in self._items:
             if exclude_id is not None and item["id"] == exclude_id:
+                continue
+            if topic and item.get("topic") and item["topic"] != topic:
                 continue
             s = text_similarity(text, item["text"])
             if s > best:
                 best, best_id = s, item["id"]
         return round(best, 3), best_id
+
+    def search(self, query: str, top_k: int = 5, topic: str | None = None) -> list[dict]:
+        """Return top-k items by similarity to query, each as {id, text, topic, score}."""
+        qvec = _vector(query)
+        scored = []
+        for item in self._items:
+            if topic and item.get("topic") and item["topic"] != topic:
+                continue
+            s = cosine(qvec, _vector(item["text"]))
+            scored.append((s, item))
+        scored.sort(key=lambda x: x[0], reverse=True)
+        return [{"id": it["id"], "text": it["text"], "topic": it.get("topic", ""), "score": s}
+                for s, it in scored[:top_k]]
+
+    def all_items(self) -> list[dict]:
+        """Return all stored items."""
+        return list(self._items)
 
     def save(self) -> None:
         self.path.write_text(json.dumps(self._items, indent=2), encoding="utf-8")

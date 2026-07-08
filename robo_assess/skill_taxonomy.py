@@ -207,59 +207,89 @@ class SkillGraph:
         self._infer_prerequisites()
 
     def _infer_prerequisites(self):
-        """Use heuristic rules to infer prerequisite relationships.
+        """Infer prerequisite edges from ROS2 concept-keyword dependencies.
 
-        Rules:
-        - "implement X" requires "create X"
-        - "design launch file" requires "create publisher" and "create subscriber"
-        - "handle errors in X" requires "implement X"
+        Each rule is a (dependent_keywords, requires_keywords) pair: if a skill
+        name contains ALL words in dependent_keywords, it requires any skill whose
+        name contains ALL words in requires_keywords.  Rules are grounded in the
+        actual ROS2 API dependency chain rather than English verb patterns
+        ("implement" → "create") which break when skill names don't follow that
+        exact phrasing.
+
+        Ordering matters — simpler concepts must appear before advanced ones so
+        the prerequisite graph reflects the curriculum sequence a student would
+        actually follow.
         """
+        # (dependent_signal, prerequisite_signal)
+        # signal = tuple of lowercase substrings ALL of which must appear in the skill name
+        _CONCEPT_RULES: list[tuple[tuple[str, ...], tuple[str, ...]]] = [
+            # Subscriber presupposes understanding topics via publisher
+            (("subscriber",),          ("publisher",)),
+            (("subscription",),        ("publisher",)),
+            # Service client presupposes knowing there is a server to call
+            (("service", "client"),    ("service", "server")),
+            (("call", "service"),      ("service", "server")),
+            # Service server presupposes pub/sub for context
+            (("service", "server"),    ("publisher",)),
+            # Action client presupposes action server; action server presupposes services
+            (("action", "client"),     ("action", "server")),
+            (("action", "server"),     ("service", "server")),
+            # TF2 listener needs broadcaster to exist first
+            (("tf2", "listener"),      ("tf2", "broadcaster")),
+            (("lookup", "transform"),  ("tf2", "broadcaster")),
+            (("tf2", "buffer"),        ("tf2", "broadcaster")),
+            # Parameter callbacks/events require knowing how to declare parameters
+            (("parameter", "callback"), ("parameter", "declare")),
+            (("parameter", "event"),    ("parameter", "declare")),
+            (("on_set_parameters",),    ("parameter", "declare")),
+            # QoS tuning requires knowing the transport it is applied to
+            (("qos", "subscriber"),    ("subscriber",)),
+            (("qos", "publisher"),     ("publisher",)),
+            (("reliability", "policy"), ("publisher",)),
+            # Lifecycle nodes build on plain nodes
+            (("lifecycle",),           ("publisher",)),
+            (("managed", "node"),      ("publisher",)),
+            # Composable / component nodes assume pub/sub
+            (("component",),           ("publisher",)),
+            (("composition",),         ("publisher",)),
+            # Launch files orchestrate nodes that already exist
+            (("launch", "file"),       ("publisher",)),
+            (("launch", "file"),       ("subscriber",)),
+            (("launch", "node"),       ("publisher",)),
+            # Error handling / retry logic sits on top of the base pattern
+            (("error", "publisher"),   ("publisher",)),
+            (("error", "subscriber"),  ("subscriber",)),
+            (("error", "service"),     ("service", "server")),
+            (("retry",),               ("publisher",)),
+            # Timer-based publishing requires a publisher to exist
+            (("timer", "publish"),     ("publisher",)),
+            (("periodic", "publish"),  ("publisher",)),
+            # Odometry / sensor fusion chains
+            (("odometry", "publish"),  ("publisher",)),
+            (("sensor", "fusion"),     ("subscriber",)),
+            (("imu", "publish"),       ("publisher",)),
+        ]
+
         skill_names = list(self.skills.keys())
+        skill_lowers = {s: s.lower() for s in skill_names}
 
-        for skill_name in skill_names:
-            skill_lower = skill_name.lower()
+        def _matches(skill_lower: str, signal: tuple[str, ...]) -> bool:
+            return all(kw in skill_lower for kw in signal)
 
-            # Rule 1: "implement X" requires "create X"
-            if "implement" in skill_lower:
-                for other in skill_names:
-                    other_lower = other.lower()
-                    # Extract what's being implemented
-                    impl_what = skill_lower.replace("implement ", "").strip()
-                    if (
-                        "create" in other_lower
-                        and impl_what in other_lower
-                        and other != skill_name
-                    ):
-                        try:
-                            self.add_prerequisite(skill_name, other)
-                        except ValueError:
-                            pass  # Skip if it would create cycle
+        for dep_signal, req_signal in _CONCEPT_RULES:
+            # Find all skills that are dependents (match dep_signal)
+            dependents = [s for s in skill_names if _matches(skill_lowers[s], dep_signal)]
+            # Find all skills that are prerequisites (match req_signal)
+            prereqs = [s for s in skill_names if _matches(skill_lowers[s], req_signal)]
 
-            # Rule 2: "design launch file" requires "create publisher"/"create subscriber"
-            if "design launch" in skill_lower or "launch file" in skill_lower:
-                for other in skill_names:
-                    other_lower = other.lower()
-                    if ("create" in other_lower and "publisher" in other_lower) or (
-                        "create" in other_lower and "subscriber" in other_lower
-                    ):
-                        try:
-                            self.add_prerequisite(skill_name, other)
-                        except ValueError:
-                            pass
-
-            # Rule 3: "handle errors" requires the base skill
-            if "error" in skill_lower or "exception" in skill_lower:
-                for other in skill_names:
-                    other_lower = other.lower()
-                    # Find base skill (e.g., "implement" version)
-                    if other != skill_name and "implement" in other_lower:
-                        # Check if they're related
-                        base_noun = other_lower.replace("implement ", "").strip()
-                        if base_noun in skill_lower:
-                            try:
-                                self.add_prerequisite(skill_name, other)
-                            except ValueError:
-                                pass
+            for dep in dependents:
+                for pre in prereqs:
+                    if dep == pre:
+                        continue
+                    try:
+                        self.add_prerequisite(dep, pre)
+                    except ValueError:
+                        pass  # cycle would form — skip
 
     def get_curriculum_path(self, skills_to_learn: list[str]) -> list[str]:
         """Get optimal order to learn a set of skills (respecting prerequisites).

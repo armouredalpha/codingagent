@@ -1,0 +1,30 @@
+# ---------------------------------------------------------------------------
+# robo-grader — minimal ROS2 Humble sandbox for executable grading tests.
+#
+# Build once:
+#   docker build -f Dockerfile.grading -t robo-grader .
+#
+# The image is intentionally small: rclpy + common ROS2 message packages +
+# pytest only. It is never used to run the generator itself.
+# ---------------------------------------------------------------------------
+FROM ros:humble-ros-base
+
+RUN apt-get update -q && \
+    apt-get install -y -q --no-install-recommends \
+        python3-pytest \
+        ros-humble-rclpy \
+        ros-humble-std-msgs \
+        ros-humble-geometry-msgs \
+        ros-humble-sensor-msgs \
+        ros-humble-nav-msgs \
+        ros-humble-tf2-ros \
+        ros-humble-tf2-geometry-msgs \
+    && rm -rf /var/lib/apt/lists/* \
+    && printf '#!/bin/bash\nsource /opt/ros/humble/setup.bash\nexec "$@"\n' \
+           > /entrypoint.sh \
+    && chmod +x /entrypoint.sh
+
+WORKDIR /grade
+ENV PYTHONUNBUFFERED=1
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["python3", "-m", "pytest", "--help"]

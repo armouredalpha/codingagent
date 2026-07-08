@@ -109,9 +109,11 @@ class SyllabusParserAgent(BaseAgent):
     def _llm_enrich(self, request: AssessmentRequest) -> SyllabusAnalysis | None:
         """Return an LLM-derived analysis, or None on any failure."""
         if self.llm is None:
+            self.log.info("syllabus_llm_skip", reason="no LLM configured")
             return None
         template = _load_prompt(self.settings.prompts_dir)
         if not template:
+            self.log.info("syllabus_llm_skip", reason="prompt template missing")
             return None
         try:
             user = template.replace("{topic}", request.topic).replace(
@@ -143,23 +145,12 @@ class SyllabusParserAgent(BaseAgent):
 
     # ------------------------------------------------------------------ #
     def run(self, request: AssessmentRequest) -> AgentResult:
-        key = syllabus_key(request.topic, request.syllabus)
-        if self.memory:
-            cached = self.memory.get_analysis(key)
-            if cached:
-                self.log.info("syllabus_cache_hit", key=key)
-                res = self._result(analysis=cached)
-                res.messages.append("cache hit")
-                return res.finish()
-
+        # Always re-parse — no cache, every run must produce fresh analysis.
         analysis = self._llm_enrich(request)
         source = "llm"
         if analysis is None:
             analysis = self._rule_based(request)
             source = "rule-based"
-
-        if self.memory:
-            self.memory.put_analysis(key, analysis.model_dump())
 
         res = self._result(analysis=analysis.model_dump())
         res.messages.append(f"parsed {len(analysis.skills)} skills ({source})")

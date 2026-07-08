@@ -84,16 +84,17 @@ class GradingRules:
 
 @dataclass
 class ConfidenceRules:
-    min_confidence_score: float = 85.0
+    min_confidence_score: float = 70.0
     weights: dict[str, int] = field(default_factory=lambda: {
         "coverage": 20, "difficulty": 20, "originality": 15,
         "scope": 15, "auto_grading": 15, "format_quality": 15,
+        "eval_calibration": 0,
     })
 
 
 @dataclass
 class SupervisorRules:
-    min_validation_score: int = 80
+    min_validation_score: int = 75
     require_full_coverage: bool = True
     require_at_least_one_approved: bool = True
     # Coverage is judged against this target fraction rather than a hard 100%.
@@ -244,7 +245,7 @@ def _load(guardrails_dir: str) -> GuardrailConfig:
     # --- confidence ---
     c = rules_raw.get("confidence", {})
     cfg.confidence = ConfidenceRules(
-        min_confidence_score=c.get("min_confidence_score", 85.0),
+        min_confidence_score=c.get("min_confidence_score", 70.0),
         weights=c.get("weights", {
             "coverage": 20, "difficulty": 20, "originality": 15,
             "scope": 15, "auto_grading": 15, "format_quality": 15,

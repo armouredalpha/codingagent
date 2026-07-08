@@ -55,7 +55,12 @@ class SupervisorAgent(BaseAgent):
     def _llm_judge(self, pkg: AssessmentPackage) -> dict[str, dict]:
         """Independent per-question LLM verdicts, keyed by question_id. Empty when
         the judge is disabled, unavailable, or fails — the rule-based supervisor
-        remains authoritative and the judge can only ADD rejections."""
+        remains authoritative and the judge can only ADD rejections.
+
+        This is the POST-LOOP supervisor judge, controlled by ``enable_llm_judge``
+        in config (default: False). It is separate from the IN-LOOP PlannerAgent
+        judge which is controlled by ``quality_bar.require_judge_approve``.
+        """
         if not getattr(self.settings, "enable_llm_judge", False) or self.llm is None:
             return {}
         payload = [
@@ -87,13 +92,25 @@ class SupervisorAgent(BaseAgent):
                 f"uses out-of-scope tech ({', '.join(q.scope_violations)}); "
                 f"stay within the approved syllabus"
             )
-        if not q.auto_gradable:
-            probs.append("not auto-gradable; add concrete machine-checkable criteria")
+        if not q.evaluation_criteria:
+            probs.append(
+                "not auto-gradable; evaluation_criteria list is empty — generate "
+                "one criterion per task as a JSON array with id/check/target/points/description "
+                "fields, 10 points per task (e.g. 3 tasks -> 3 criteria totaling 30 points)"
+            )
         if q.realism_score and q.realism_score < self.settings.min_realism_score:
             probs.append(
                 f"realism {q.realism_score} below {self.settings.min_realism_score}; "
                 f"frame it as a concrete engineering ticket with named robot + ROS interfaces"
             )
+        # Eval-comparator difficulty mismatch — soft signal, not a hard block.
+        ec = q.eval_comparison
+        if ec and ec.difficulty_verdict == "mismatch":
+            probs.append(
+                f"difficulty label likely wrong (eval match {ec.eval_match_score}/100 against "
+                f"reference set); reconsider whether this is '{q.difficulty.value}' or an adjacent tier"
+            )
+
         # Executable-grading signal — soft gate: a genuine FAIL is a hard defect;
         # NO_ARTIFACTS / SKIPPED is recorded but does not block (per design).
         ge = q.grading_execution
@@ -132,10 +149,23 @@ class SupervisorAgent(BaseAgent):
         coverage_frac = (covered / total_skills) if total_skills else 0.0
         if covered == 0:
             issues.append("no syllabus skills covered at all")
-        elif coverage_frac < target:
+        elif coverage_frac < target * 0.5:
+            # Only hard-block when coverage is critically low (< half of target).
+            # Moderate shortfalls (e.g. 60% vs 85% target) are reported in the
+            # portfolio_missing_areas field but do not reject the whole batch —
+            # confidence scoring already penalises per-question coverage gaps,
+            # and a few approved questions are more valuable than zero.
             issues.append(
-                f"coverage {coverage_frac:.0%} below target {target:.0%} "
-                f"({covered}/{total_skills} skills tested)"
+                f"coverage critically low: {coverage_frac:.0%} "
+                f"(target {target:.0%}, {covered}/{total_skills} skills tested)"
+            )
+        elif coverage_frac < target:
+            self.log.info(
+                "coverage_below_target",
+                coverage_pct=round(coverage_frac * 100),
+                target_pct=round(target * 100),
+                covered=covered,
+                total=total_skills,
             )
 
         approved = pkg.approved_questions

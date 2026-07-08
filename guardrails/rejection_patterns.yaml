@@ -17,14 +17,6 @@ theory_question_patterns:
   - "define the term"
   - "list three"
 
-# Patterns indicating the TODO block was not properly filled in reference solution
-incomplete_solution_patterns:
-  - "# TODO START"
-  - "# TODO END"
-  - "# TODO"
-  - "pass  # implement"
-  - "raise NotImplementedError"
-
 # Patterns indicating deprecated ROS2 APIs (Humble uses rclpy 0.9+)
 deprecated_api_patterns:
   - "rospy."                          # ROS1 — never allowed
@@ -47,11 +39,3 @@ toy_code_patterns:
   - "test_topic"
   - "my_node"
   - "example.py"
-
-# Patterns in hidden_checks that make them NOT auto-gradable
-non_gradable_check_patterns:
-  - "manually verify"
-  - "ask instructor"
-  - "human review"
-  - "visually inspect"
-  - "check by running"

@@ -1,0 +1,62 @@
+You are parsing a ROS2 syllabus to extract a structured skill inventory for an assessment pipeline.
+Each skill you identify will be turned into a 30–45 minute coding question, so focus on concrete,
+implementable skills — not theory or conceptual knowledge.
+
+TOPIC: {topic}
+
+SYLLABUS ITEMS:
+{syllabus}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXTRACTION RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SKILLS — extract 4–10 concrete, testable skills.
+Each skill must:
+1. Be a verb phrase describing code a student writes:
+   GOOD: "implement a subscriber that reads LaserScan and logs min_range"
+   BAD:  "understand topics"  /  "ROS2 communication"
+2. Reference a specific ROS2 API, message type, or node pattern.
+3. Be completable in one Python file with rclpy.
+4. Be testable in isolation — no dependency on other skills in the list.
+
+CONCEPTS — higher-level ideas the skills are instances of (e.g. "pub-sub pattern", "service call").
+  Keep to 3–8 concepts. Do not repeat skill phrases verbatim.
+
+APIS — specific rclpy calls or ROS2 message types implicated by the skills:
+  Examples: create_publisher, create_subscription, geometry_msgs/Twist, std_srvs/SetBool
+
+CONFIG ELEMENTS — any config/launch artifacts the skills require:
+  Examples: parameter yaml, launch file, xacro, urdf
+
+ROS COMPONENTS — node-level building blocks touched by the skills:
+  Examples: topic_publisher, topic_subscriber, service_server, service_client,
+            tf_broadcaster, timer_callback, parameter_server, launch_file
+
+DIFFICULTY RANGE — overall span of the skill set:
+  "easy" | "easy-medium" | "medium" | "medium-hard" | "easy-hard"
+
+DO NOT extract:
+- Installation or environment setup steps
+- Theoretical knowledge ("know what DDS means")
+- Skills requiring Nav2, SLAM, MoveIt2, OpenCV, or ML unless explicitly listed
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUTPUT — ONLY JSON, NO PROSE, NO MARKDOWN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{
+  "skills": [
+    "implement a timer-based publisher that sends geometry_msgs/Twist at 10 Hz",
+    "fix a subscriber node that uses the wrong field name in a sensor_msgs/LaserScan callback"
+  ],
+  "concepts": ["pub-sub pattern", "timer-driven publishing", "message field access"],
+  "apis": ["create_publisher", "create_subscription", "create_timer", "geometry_msgs/Twist", "sensor_msgs/LaserScan"],
+  "config_elements": [],
+  "ros_components": {
+    "publishers": ["topic_publisher"],
+    "subscribers": ["topic_subscriber"],
+    "timers": ["timer_callback"]
+  },
+  "difficulty_range": "easy-medium"
+}

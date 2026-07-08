@@ -85,6 +85,17 @@ class RunLogger:
                     ts      TEXT,
                     detail  TEXT
                 );
+                CREATE TABLE IF NOT EXISTS question_traces (
+                    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                    run_id     TEXT,
+                    question_id TEXT,
+                    agent      TEXT,
+                    decision   TEXT,
+                    reason     TEXT,
+                    ts         TEXT
+                );
+                CREATE INDEX IF NOT EXISTS idx_qt_run   ON question_traces(run_id);
+                CREATE INDEX IF NOT EXISTS idx_qt_qid   ON question_traces(question_id);
                 """
             )
             con.commit()
@@ -104,6 +115,34 @@ class RunLogger:
                 (run_id, agent, status, datetime.now(timezone.utc).isoformat(), detail),
             )
             con.commit()
+
+    def trace_question(
+        self,
+        run_id: str,
+        question_id: str,
+        agent: str,
+        decision: str,
+        reason: str = "",
+    ) -> None:
+        """Record a per-question agent decision (approve/reject/flag/mismatch/etc.)."""
+        with closing(sqlite3.connect(self.db_path)) as con:
+            con.execute(
+                "INSERT INTO question_traces(run_id, question_id, agent, decision, reason, ts) "
+                "VALUES (?,?,?,?,?,?)",
+                (run_id, question_id, agent, decision,
+                 reason[:2000],  # cap to prevent runaway text
+                 datetime.now(timezone.utc).isoformat()),
+            )
+            con.commit()
+
+    def question_trace(self, run_id: str) -> list[dict[str, Any]]:
+        with closing(sqlite3.connect(self.db_path)) as con:
+            con.row_factory = sqlite3.Row
+            rows = con.execute(
+                "SELECT * FROM question_traces WHERE run_id=? ORDER BY ts",
+                (run_id,),
+            ).fetchall()
+            return [dict(r) for r in rows]
 
     def finish_run(
         self,

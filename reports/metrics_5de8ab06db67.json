@@ -1,0 +1,132 @@
+{
+  "run": {
+    "run_id": "5de8ab06db67",
+    "topic": "Robot_Mathematics_Assessment.docx",
+    "started_at": "2026-07-01T08:17:39.755278+00:00",
+    "ended_at": "2026-07-01T08:25:51.151325+00:00",
+    "total_elapsed_ms": 0.0
+  },
+  "questions": {
+    "generated": 2,
+    "passed_bar": 2,
+    "pass_rate_pct": 100.0
+  },
+  "tokens": {
+    "total": 37444,
+    "cost_usd": 0.006018
+  },
+  "agents": {
+    "context_retrieval": {
+      "calls": 1,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0.0,
+      "max_elapsed_ms": 0.0
+    },
+    "skill_triage": {
+      "calls": 1,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0.0,
+      "max_elapsed_ms": 0.0
+    },
+    "question_generator": {
+      "calls": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0.0,
+      "max_elapsed_ms": 0.0
+    },
+    "scope_quality": {
+      "calls": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 29.8,
+      "min_elapsed_ms": 0,
+      "max_elapsed_ms": 60
+    },
+    "grading_agent": {
+      "calls": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 39.2,
+      "min_elapsed_ms": 8,
+      "max_elapsed_ms": 86
+    },
+    "boilerplate_generator": {
+      "calls": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 48.8,
+      "min_elapsed_ms": 16,
+      "max_elapsed_ms": 91
+    },
+    "difficulty_agent": {
+      "calls": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 1892.5,
+      "min_elapsed_ms": 1178,
+      "max_elapsed_ms": 3619
+    },
+    "originality_agent": {
+      "calls": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 3783.0,
+      "min_elapsed_ms": 2730,
+      "max_elapsed_ms": 5261
+    },
+    "coverage_verifier": {
+      "calls": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 1019.8,
+      "min_elapsed_ms": 936,
+      "max_elapsed_ms": 1161
+    },
+    "executable_grading": {
+      "calls": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 6265.5,
+      "min_elapsed_ms": 4181,
+      "max_elapsed_ms": 10504
+    },
+    "eval_comparator": {
+      "calls": 5,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0,
+      "max_elapsed_ms": 0.0
+    },
+    "confidence_agent": {
+      "calls": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 31.8,
+      "min_elapsed_ms": 26,
+      "max_elapsed_ms": 43
+    },
+    "human_review": {
+      "calls": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0,
+      "max_elapsed_ms": 0.0
+    },
+    "supervisor": {
+      "calls": 1,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 31.0,
+      "min_elapsed_ms": 31,
+      "max_elapsed_ms": 31
+    }
+  }
+}

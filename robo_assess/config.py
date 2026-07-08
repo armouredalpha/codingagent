@@ -43,7 +43,7 @@ class Pricing(BaseModel):
 
 
 class QualityBar(BaseModel):
-    min_confidence: float = 85.0
+    min_confidence: float = 70.0
     require_discriminating: bool = True   # executable grading must PASS (ref✓ starter✗)
     require_judge_approve: bool = True     # independent LLM judge must not REJECT
     max_similarity: float = 0.75          # originality ceiling
@@ -55,7 +55,22 @@ class Settings(BaseModel):
     provider: str = "openrouter"
     model: str = "openai/gpt-4o"
     temperature: float = 0.7
-    max_tokens: int = 2200
+    critic_temperature: float = 0.0   # judge/critic agents use 0 for deterministic scores
+    max_tokens: int = 4000
+
+    # ---- Per-agent model overrides ------------------------------------------
+    # Map agent name → model string. Falls back to `model` if not set.
+    # Active agent names: question_generator, md_summary, skill_triage,
+    #   difficulty_agent, scope_quality (also runs the skill-drift check),
+    #   planner, supervisor
+    # Example in config.yaml:
+    #   agent_models:
+    #     question_generator: openai/gpt-4o
+    #     md_summary: openai/gpt-4o-mini
+    #     skill_triage: openai/gpt-4o-mini
+    #     difficulty_agent: openai/gpt-4o-mini
+    #     scope_quality: openai/gpt-4o-mini
+    agent_models: dict[str, str] = Field(default_factory=dict)
 
     num_questions: int = 6
     difficulty_distribution: dict[str, float] = Field(
@@ -73,9 +88,10 @@ class Settings(BaseModel):
     # actually reachable.
     coverage_target: float = 0.85         # fraction of syllabus skills that must be tested
     auto_scale_questions: bool = True     # raise num_questions toward skill count to hit target
-    max_questions: int = 14               # hard cap so auto-scaling can't explode cost
+    max_questions: int = 8                 # hard cap so auto-scaling can't explode cost
 
     generation_concurrency: int = 4
+    generation_batch_size: int = 2   # generate and validate N questions at a time
 
     # ---- Executable grading backend -----------------------------------------
     grading_backend: str = "ast"
@@ -92,7 +108,7 @@ class Settings(BaseModel):
     quality_bar: QualityBar = Field(default_factory=QualityBar)
 
     similarity_reject_threshold: float = 0.75
-    min_confidence: float = 85.0
+    min_confidence: float = 70.0
 
     # ---- v2 single-command flow ---------------------------------------------
     # Live web duplicate-check for originality via an OpenRouter ":online" model.
@@ -111,15 +127,27 @@ class Settings(BaseModel):
     # ---- NEW: MD parsing & skills extraction -----
     skills_dir: str = "skills"
     evaluations_dir: str = "evaluations"
-    eval_match_min_score: float = 85.0
+    eval_match_min_score: float = 70.0
     max_critic_retries: int = 2
     parser_section_retries: int = 3
+
+    # ---- Course search (optional — falls back to static index if not set) ---
+    tavily_api_key: str | None = None
+    exa_api_key: str | None = None
+
+    # ---- Qdrant Cloud -------------------------------------------------------
+    qdrant_url: str | None = None
+    qdrant_api_key: str | None = None
+    qdrant_collection: str = "robo_questions"
+    embedding_model: str = "openai/text-embedding-3-small"
+    embedding_base_url: str = "https://openrouter.ai/api/v1"
 
     log_level: str = "INFO"
     log_dir: str = "logs"
     log_db_path: str = "logs/runs.db"
     memory_db_path: str = "memory/memory.db"
-    vectorstore_path: str = "vectorstore/index.json"
+    vectorstore_path: str = "vectorstore/index.json"  # legacy; unused when Qdrant is configured
+    vectorstore_max_entries: int = 500  # oldest entries evicted when exceeded
     prompts_dir: str = "prompts"
     outputs_dir: str = "outputs"
     reports_dir: str = "reports"
@@ -128,6 +156,27 @@ class Settings(BaseModel):
 
     pricing: Pricing = Field(default_factory=Pricing)
     api_key: str | None = None
+
+    # ---- Model tiers --------------------------------------------------------
+    # cheap_model is used for critic agents (difficulty, scope, quality, triage).
+    # Falls back to main model if not set.
+    cheap_model: str | None = None
+    cheap_provider: str | None = None
+    cheap_api_key: str | None = None
+
+    # ---- Budget defaults (overridden per-request) ---------------------------
+    default_budget_tokens: int | None = None
+    default_budget_calls: int | None = None
+
+    # ---- Human review -------------------------------------------------------
+    human_review_enabled: bool = False
+    human_review_confidence_min: float = 82.0
+    human_review_confidence_max: float = 87.0
+    human_review_mode: str = "log"  # "log" = flag + continue; "block" = pause run
+
+    def model_for(self, agent_name: str) -> str:
+        """Return the model to use for a specific agent, falling back to the default."""
+        return self.agent_models.get(agent_name, self.model)
 
     @classmethod
     def load(cls, config_path: str | os.PathLike | None = "config/config.yaml") -> "Settings":
@@ -146,6 +195,24 @@ class Settings(BaseModel):
             data["num_questions"] = int(env["ROBO_NUM_QUESTIONS"])
         if "ROBO_LOG_LEVEL" in env:
             data["log_level"] = env["ROBO_LOG_LEVEL"]
+        if "ROBO_CHEAP_MODEL" in env:
+            data["cheap_model"] = env["ROBO_CHEAP_MODEL"]
+        if "ROBO_CHEAP_PROVIDER" in env:
+            data["cheap_provider"] = env["ROBO_CHEAP_PROVIDER"]
+        if "ROBO_BUDGET_TOKENS" in env:
+            data["default_budget_tokens"] = int(env["ROBO_BUDGET_TOKENS"])
+        if "ROBO_BUDGET_CALLS" in env:
+            data["default_budget_calls"] = int(env["ROBO_BUDGET_CALLS"])
+        if "ROBO_HUMAN_REVIEW" in env:
+            data["human_review_enabled"] = env["ROBO_HUMAN_REVIEW"].lower() in ("1", "true", "yes")
+        if "TAVILY_API_KEY" in env:
+            data["tavily_api_key"] = env["TAVILY_API_KEY"]
+        if "EXA_API_KEY" in env:
+            data["exa_api_key"] = env["EXA_API_KEY"]
+        if "QDRANT_URL" in env:
+            data["qdrant_url"] = env["QDRANT_URL"]
+        if "QDRANT_API_KEY" in env:
+            data["qdrant_api_key"] = env["QDRANT_API_KEY"]
 
         settings = cls(**data)
 

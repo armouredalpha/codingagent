@@ -3,7 +3,7 @@
 # ---------------------------------------------------------------------------
 PY ?= python
 
-.PHONY: help install dev datasets examples generate test eval calibrate docker-build docker-run clean
+.PHONY: help install dev datasets examples generate test eval calibrate docker-build docker-run grader-build clean
 
 help:
 	@echo "Targets:"
@@ -15,15 +15,16 @@ help:
 	@echo "  test         Run the pytest suite"
 	@echo "  eval         Run the benchmark suite + enforce regression gates (CI)"
 	@echo "  calibrate    Refit the confidence calibrator from grading outcomes"
-	@echo "  docker-build Build the Docker image"
+	@echo "  docker-build Build the generator Docker image"
 	@echo "  docker-run   Generate inside the container"
+	@echo "  grader-build Build the ROS2 grading sandbox image (robo-grader)"
 	@echo "  clean        Remove caches and generated runtime artefacts"
 
 install:
-	$(PY) -m pip install --break-system-packages -r requirements.txt
+	$(PY) -m pip install --user --no-build-isolation .
 
 dev:
-	$(PY) -m pip install --break-system-packages -r requirements-dev.txt
+	$(PY) -m pip install --user --no-build-isolation .
 
 datasets:
 	$(PY) tools/generate_datasets.py
@@ -49,6 +50,9 @@ docker-build:
 docker-run:
 	docker run --rm -v $$(pwd)/outputs:/app/outputs robo-assess:latest \
 		generate --request configs/ros2_fundamentals.yaml
+
+grader-build:
+	docker build -f Dockerfile.grading -t robo-grader .
 
 clean:
 	rm -rf .pytest_cache **/__pycache__ *.egg-info build dist

@@ -11,21 +11,11 @@ regeneration. The computed similarity is written back onto each Question.
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from ..schemas import AgentResult, Question
-from ..vectorstore import VectorStore, text_similarity
+from ..vectorstore import text_similarity
+from ..semantic_vectorstore import build_vectorstore
+from ..agents.context_retrieval import _structural_hash
 from .base import BaseAgent
-
-_PROMPTS_DIR = Path(__file__).parent.parent.parent / "prompts"
-
-
-def _load_prompt(name: str) -> str:
-    try:
-        return (_PROMPTS_DIR / name).read_text(encoding="utf-8")
-    except OSError:
-        return ""
-
 
 def _question_text(q: Question) -> str:
     return " ".join([q.title, q.scenario, q.objective, " ".join(q.tested_skills)])
@@ -34,113 +24,97 @@ def _question_text(q: Question) -> str:
 class OriginalityAgent(BaseAgent):
     name = "originality_agent"
 
-    def _web_duplicate_check(self, q: Question) -> tuple[float, str] | None:
-        """Search the web (OpenRouter ``:online`` model) for near-duplicates of
-        this question and return ``(originality_score, note)`` where 1.0 is fully
-        original. Returns ``None`` on any failure / when disabled / no key, so the
-        caller falls back to the vectorstore signal. Never raises.
-        """
-        if not getattr(self.settings, "enable_web_originality", False):
-            return None
-        if self.settings.provider != "openrouter" or not self.settings.api_key:
-            return None
-
-        try:
-            from ..llm_client import LLMClient
-
-            model = self.settings.model
-            if not model.endswith(":online"):
-                model = f"{model}:online"
-            online = LLMClient(
-                provider="openrouter",
-                model=model,
-                api_key=self.settings.api_key,
-            )
-            skill = q.tested_skills[0] if q.tested_skills else ""
-            template = _load_prompt("originality_web.txt")
-            prompt = template.format(
-                title=q.title,
-                skill=skill,
-                scenario=q.scenario,
-                objective=q.objective,
-            ) if template else (
-                "Search the web for existing ROS2 coding exercises/tutorials that "
-                "match the following assessment question. Judge how ORIGINAL it is "
-                "(1.0 = no close match found online, 0.0 = a near-identical exercise "
-                "exists).\n\n"
-                f"Title: {q.title}\n"
-                f"Skill: {skill}\n"
-                f"Scenario: {q.scenario}\n"
-                f"Objective: {q.objective}\n\n"
-                'Reply with JSON only: {"originality": <0.0-1.0>, "note": "<closest match or none>"}'
-            )
-            result, _ = online.complete_json(
-                system="You assess the originality of ROS2 coding questions using web search.",
-                user=prompt,
-                temperature=0.0,
-                max_tokens=200,
-            )
-            if isinstance(result, dict) and "originality" in result:
-                score = max(0.0, min(1.0, float(result["originality"])))
-                return score, str(result.get("note", ""))
-        except Exception as exc:  # noqa: BLE001 — web check is best-effort
-            self.log.debug("web_originality_unavailable", error=str(exc))
-        return None
-
     def run(
         self,
         questions: list[Question],
         existing: list[str] | None = None,
+        known_question_hashes: list[str] | None = None,
     ) -> AgentResult:
-        store = self.vectorstore or VectorStore(self.settings.vectorstore_path)
+        """Score originality using two layers.
 
-        # Seed with existing bank + historical memory
+        Layer A (structural) — O(1) hash lookup, runs first:
+            Normalise text (lowercase, strip punctuation, canonicalise numbers)
+            → MD5 hash → check against known_question_hashes set.
+            Catches reworded-identical questions that cosine might score below
+            the rejection threshold because a few words differ.
+
+        Layer B (semantic) — existing cosine + shingle vectorstore:
+            Only reached when Layer A does not flag the question.
+            Catches same-concept paraphrases that structural normalisation misses.
+        """
+        store = self.vectorstore or build_vectorstore(self.settings)
+
+        # Build the known-hash set from RAG context + existing bank only.
+        # Memory stems (previously-generated questions) are NOT loaded here;
+        # they are only added to the vectorstore after a run fully completes
+        # with APPROVED questions (in orchestrator._finish_run). Loading all
+        # past stems here caused every re-run of the same syllabus to see
+        # its own questions as near-duplicates (similarity=1.0), which made
+        # the entire batch fail confidence with no path out via regeneration.
+        hash_set: set[str] = set(known_question_hashes or [])
+
         for i, ex in enumerate(existing or []):
             store.add(f"existing_{i}", ex)
-        if self.memory:
-            for qid, stem in self.memory.all_stems():
-                store.add(qid, stem)
+            hash_set.add(_structural_hash(ex))
+
+        # Remove hashes belonging to the current batch so that a question
+        # validated in round 1 is not flagged as its own duplicate in round 2.
+        current_ids = {q.question_id for q in questions}
+        current_hashes = {_structural_hash(_question_text(q)) for q in questions}
+        hash_set -= current_hashes
 
         rejected = []
+        patches: dict[str, dict] = {}
+        layer_a_hits = 0
         batch_texts: list[tuple[str, str]] = []
+        batch_hashes: set[str] = set()
+
         for q in questions:
             text = _question_text(q)
-            # Exclude this question's own slot id so a re-validated or regenerated
-            # question is never flagged as a duplicate of the prior version it
-            # replaces (which shares the same question_id in the store/memory).
-            ext_sim, match = store.max_similarity(text, exclude_id=q.question_id)
-            # also compare within the current batch
-            batch_sim = 0.0
-            for prev_id, prev_text in batch_texts:
-                if prev_id == q.question_id:
-                    continue
-                batch_sim = max(batch_sim, text_similarity(text, prev_text))
-            sim = max(ext_sim, batch_sim)
+            q_hash = _structural_hash(text)
 
-            # Optional live web check — take the STRICTER signal (higher
-            # similarity = lower originality). Web originality s maps to
-            # similarity (1 - s); blend by max() so a web duplicate can only
-            # raise the similarity, never mask the vectorstore signal.
-            web = self._web_duplicate_check(q)
-            if web is not None:
-                web_score, note = web
-                web_sim = 1.0 - web_score
-                if web_sim > sim:
-                    self.log.info("web_originality_stricter",
-                                  qid=q.question_id, web_sim=round(web_sim, 3), note=note)
-                sim = max(sim, web_sim)
+            # ── Layer A: structural hash ─────────────────────────────────────
+            if q_hash in hash_set or q_hash in batch_hashes:
+                sim = 1.0  # treat structural duplicate as similarity=1
+                layer_a_hits += 1
+                self.log.info(
+                    "layer_a_duplicate",
+                    qid=q.question_id,
+                    title=q.title[:60],
+                )
+            else:
+                # ── Layer B: cosine + shingle vectorstore ────────────────────
+                # exclude_id (singular) skips the question's own prior version
+                ext_sim, match = store.max_similarity(text, exclude_id=q.question_id)
+                batch_sim = 0.0
+                for prev_id, prev_text in batch_texts:
+                    if prev_id == q.question_id:
+                        continue
+                    batch_sim = max(batch_sim, text_similarity(text, prev_text))
+                sim = max(ext_sim, batch_sim)
 
-            q.similarity_score = sim
+
+
+            patches[q.question_id] = {"similarity_score": sim}
             batch_texts.append((q.question_id, text))
+            batch_hashes.add(q_hash)
+            hash_set.add(q_hash)     # prevent intra-batch structural duplicates
             store.add(q.question_id, text)
-            if self.memory:
-                self.memory.remember_question(q.question_id, q.title, text)
+            # Do NOT call memory.remember_question() here — questions are saved
+            # to memory only after the run completes with APPROVED status
+            # (see orchestrator._finish_run). Saving rejected questions here
+            # caused the near-duplicate spiral: same-syllabus re-runs see their
+            # own questions as duplicates and cannot escape via regeneration.
             if sim > self.settings.similarity_reject_threshold:
-                rejected.append({"qid": q.question_id, "similarity": sim, "match": match})
+                rejected.append({"qid": q.question_id, "similarity": sim})
 
-        store.save()
-        res = self._result(rejected=rejected)
+        # Do NOT save the vectorstore here — it is persisted in _finish_run
+        # only for approved questions so rejected runs don't pollute future
+        # originality checks.
+        res = self._result(rejected=rejected, patches=patches)
         res.messages.append(
-            f"originality scored {len(questions)} questions; {len(rejected)} duplicates"
+            f"originality scored {len(questions)} questions; "
+            f"{layer_a_hits} layer-A (structural) + "
+            f"{len(rejected) - layer_a_hits} layer-B (semantic) duplicates"
         )
         return res.finish("warn" if rejected else "ok")

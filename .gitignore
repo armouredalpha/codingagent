@@ -24,9 +24,9 @@ vectorstore/*.json
 vectorstore/*.log
 outputs/*/
 reports/*/
-eval/
 calibration/*.jsonl
 calibration/*.json
+skills/
 
 # Test / tooling caches
 .pytest_cache/
@@ -67,4 +67,3 @@ run_all.log
 !vectorstore/.gitkeep
 !outputs/.gitkeep
 !reports/.gitkeep
-!eval/.gitkeep

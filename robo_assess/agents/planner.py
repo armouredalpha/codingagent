@@ -27,6 +27,7 @@ upward unchanged.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -44,6 +45,18 @@ from .base import BaseAgent
 # Reuse the supervisor's independent-judge rubric so there is one definition of
 # "is this a realistic, correctly-scoped, auto-gradable ticket".
 from .supervisor import _JUDGE_SYSTEM, _valid_judge_verdict
+
+_CRITIC_PROMPT_PATH = Path(__file__).parent.parent.parent / "prompts" / "llm_critic.txt"
+
+
+def _load_critic_prompt() -> str:
+    try:
+        return _CRITIC_PROMPT_PATH.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+
+
+_LLM_CRITIC_TEMPLATE = _load_critic_prompt()
 
 _DIFF_ORDER = {Difficulty.EASY: 0, Difficulty.MEDIUM: 1, Difficulty.HARD: 2}
 
@@ -81,6 +94,26 @@ class RunState:
     step: int
     max_steps: int
     feedback: dict[str, str] = field(default_factory=dict)
+
+    # Budget tracking — None means no budget constraint
+    tokens_spent: int = 0
+    calls_spent: int = 0
+    budget_tokens: int | None = None
+    budget_calls: int | None = None
+
+    def budget_exhausted(self) -> tuple[bool, str]:
+        """Return (exhausted, reason). Empty reason means not exhausted."""
+        if self.budget_tokens is not None and self.tokens_spent >= self.budget_tokens:
+            pct = self.tokens_spent / self.budget_tokens * 100
+            return True, f"token budget exhausted ({self.tokens_spent:,}/{self.budget_tokens:,} = {pct:.0f}%)"
+        if self.budget_calls is not None and self.calls_spent >= self.budget_calls:
+            return True, f"call budget exhausted ({self.calls_spent}/{self.budget_calls} calls)"
+        return False, ""
+
+    def tokens_remaining(self) -> int | None:
+        if self.budget_tokens is None:
+            return None
+        return max(0, self.budget_tokens - self.tokens_spent)
 
 
 class PlannerAgent(BaseAgent):
@@ -162,6 +195,9 @@ class PlannerAgent(BaseAgent):
                     f"{(q.calibrated_difficulty or q.difficulty).value}"
                 )
 
+            # skill_drift is informational only — bug-fix questions intentionally
+            # test one focused sub-skill; do not block quality bar on this signal.
+
             jv = judge.get(q.question_id)
             judge_approved = True
             if jv and str(jv.get("verdict", "")).upper() == "REJECT":
@@ -181,12 +217,60 @@ class PlannerAgent(BaseAgent):
         return out
 
     # -- reflection (LLM feedback for regeneration) -------------------------- #
+    def _llm_critic_diagnose(self, q: Question, qq: QuestionQuality) -> str | None:
+        """Use llm_critic.txt for questions with 2+ failed checks (critical severity).
+
+        Returns a structured fix directive string, or None if unavailable.
+        The batch reflector handles simple (single-check) failures; the targeted
+        critic handles complex multi-issue failures with more specific guidance.
+        """
+        if not _LLM_CRITIC_TEMPLATE or self.llm is None:
+            return None
+        if len(qq.failed_checks) < 2:
+            return None  # simple failures handled by batch reflector
+
+        ec = q.eval_comparison
+        prompt = _LLM_CRITIC_TEMPLATE
+        for k, v in [
+            ("{question_id}", q.question_id),
+            ("{title}", q.title),
+            ("{difficulty}", q.difficulty.value),
+            ("{scenario}", q.scenario or ""),
+            ("{tested_skills}", ", ".join(q.tested_skills)),
+            ("{confidence}", str(round(q.confidence.confidence, 1) if q.confidence else 0.0)),
+            ("{eval_match_score}", str(ec.eval_match_score if ec else 0)),
+            ("{originality}", str(round((1.0 - q.similarity_score) * 100, 1))),
+            ("{scope_violations}", ", ".join(q.scope_violations) or "none"),
+            ("{auto_gradable}", str(q.auto_gradable)),
+            ("{failed_checks}", "\n".join(f"- {c}" for c in qq.failed_checks)),
+        ]:
+            prompt = prompt.replace(k, v)
+
+        try:
+            result, _ = self.llm.complete_json(
+                system="You are a demanding senior robotics engineer diagnosing a failing assessment question.",
+                user=prompt,
+                temperature=0.0,
+                max_tokens=400,
+            )
+            directives = result.get("fix_directives", [])
+            severity = result.get("severity", "minor")
+            if directives:
+                return f"[{severity.upper()}] " + " | ".join(str(d) for d in directives[:3])
+        except Exception as exc:  # noqa: BLE001
+            self.log.debug("llm_critic_failed", error=str(exc))
+        return None
+
     def reflect(
         self, questions: list[Question], quality: list[QuestionQuality]
     ) -> dict[str, str]:
         """Produce per-question regeneration instructions. Starts from the bar's
         own failed-check strings (always available, deterministic) and, when an
-        LLM is present, enriches each with a concrete model-authored fix."""
+        LLM is present, enriches each with a concrete model-authored fix.
+
+        Critical failures (2+ failed checks) get a targeted llm_critic diagnosis
+        with structured severity + fix_directives in addition to the batch reflector.
+        """
         by_id = {q.question_id: q for q in questions}
         feedback: dict[str, str] = {}
         failing = [qq for qq in quality if not qq.passed]
@@ -195,6 +279,15 @@ class PlannerAgent(BaseAgent):
 
         if self.llm is None or not failing:
             return feedback
+
+        # Targeted llm_critic for critical multi-issue failures (runs first, fast)
+        for qq in failing:
+            q = by_id.get(qq.question_id)
+            if q is None:
+                continue
+            diagnosis = self._llm_critic_diagnose(q, qq)
+            if diagnosis:
+                feedback[qq.question_id] = f"{feedback.get(qq.question_id, '')} | CRITIC: {diagnosis}".lstrip(" | ")
 
         payload = [
             {
@@ -251,10 +344,17 @@ class PlannerAgent(BaseAgent):
             return step(PlanAction.FINALIZE, f"all {bar_total} questions meet the quality bar")
 
         # 4 — budget exhausted: ship best-effort rather than burn tokens forever.
+        exhausted, budget_reason = state.budget_exhausted()
+        if exhausted:
+            return step(
+                PlanAction.FINALIZE,
+                f"{budget_reason}; shipping {bar_passed}/{bar_total} with {len(failing)} still below bar",
+                targets=failing,
+            )
         if state.attempts >= state.max_attempts or state.step >= state.max_steps:
             return step(
                 PlanAction.FINALIZE,
-                f"budget spent (attempt {state.attempts}/{state.max_attempts}, "
+                f"step budget spent (attempt {state.attempts}/{state.max_attempts}, "
                 f"step {state.step}/{state.max_steps}); shipping {bar_passed}/{bar_total} "
                 f"with {len(failing)} still below bar",
                 targets=failing,

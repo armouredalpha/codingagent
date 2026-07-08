@@ -6,32 +6,39 @@ Your job is to verify that every generated question stays within the approved sy
 WHAT TO CHECK PER QUESTION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Inspect every field: title, scenario, objective, constraints, tested_skills, evaluation_criteria, and the starter/reference code structure implied by the artifact.
+Inspect every field: title, scenario, objective, tested_skills, evaluation_criteria,
+and the code structure (starter/reference) implied by the artifact.
 
-For each concept, API, ROS component, or technology the question requires — ask: is it in the approved syllabus?
+For each concept, API, ROS2 component, topic name, message type, or technology
+the question requires — ask: is it in the approved syllabus?
 
-Hidden dependencies count. If solving the question requires knowing something not in the syllabus (even as a side effect), that is a scope violation.
+Note: Questions are bug-fix scenarios. For easy questions the student only fixes one wrong
+string; for medium they fix values; for hard they write 1–2 lines. Even so, the ROS2
+knowledge required to identify the correct fix must come from the syllabus.
+
+Hidden dependencies count. If solving the question requires knowing something not in the
+syllabus (even as background to understand what the correct fix is), that is a scope violation.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 CLASSIFICATION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 IN_SCOPE
-  All required knowledge is in the syllabus. No out-of-scope concepts.
+  All required knowledge is in the syllabus.
 
 PARTIALLY_OUT_OF_SCOPE
-  The question is primarily on-syllabus but introduces 1 minor off-syllabus concept.
+  Primarily on-syllabus but introduces 1 minor off-syllabus concept.
   → question_is_out_of_scope = false (acceptable, passes)
 
 OUT_OF_SCOPE
-  The question requires 2+ off-syllabus concepts, OR any single concept that is central to solving the task.
+  Requires 2+ off-syllabus concepts, OR any single concept central to making the correct fix.
   → question_is_out_of_scope = true (rejected)
 
 Examples:
-  Syllabus: Publisher, Subscriber   |   Question needs: Service Server, Action Client   → OUT_OF_SCOPE
-  Syllabus: Gazebo, SDF             |   Question needs: Nav2, SLAM                      → OUT_OF_SCOPE
-  Syllabus: RViz                    |   Question needs: OpenCV                           → OUT_OF_SCOPE
-  Syllabus: Publisher, Subscriber   |   Question needs: Publisher + minor param use      → PARTIALLY_OUT_OF_SCOPE
+  Syllabus: Publisher, Subscriber   |   Fix requires: Service, Action          → OUT_OF_SCOPE
+  Syllabus: Gazebo, SDF             |   Fix requires: Nav2 costmap topic        → OUT_OF_SCOPE
+  Syllabus: LaserScan subscriber    |   Fix requires: knowing /scan topic name  → IN_SCOPE (topic is in syllabus)
+  Syllabus: Publisher, Subscriber   |   Fix requires: Publisher + minor param   → PARTIALLY_OUT_OF_SCOPE
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 OUTPUT — ONLY JSON, NO PROSE, NO MARKDOWN

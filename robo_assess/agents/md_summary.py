@@ -44,17 +44,39 @@ class MdSummaryAgent(BaseAgent):
         md_text = md_path.read_text(encoding="utf-8")
         md_hash = hashlib.md5(md_text.encode()).hexdigest()
 
+        # max_tokens is configurable so large curricula aren't silently truncated.
+        # Settings.max_tokens defaults to 4000; can be overridden per deployment.
+        max_tokens = getattr(self.settings, "max_tokens", 4000)
+
         prompt = self._load_prompt().replace("{md_text}", md_text)
 
         summary = ""
         try:
-            summary, _ = self.llm.complete(  # type: ignore[union-attr]
-                system="You are a robotics curriculum analyst.",
-                user=prompt,
-                temperature=0.3,
-                max_tokens=2000,
-            )
-            summary = summary.strip()
+            if hasattr(self.llm, "stream_complete"):
+                print("[md_summary] summarising curriculum", end="", flush=True)
+                chunks: list[str] = []
+
+                def _on_chunk(tok: str) -> None:
+                    print(".", end="", flush=True)
+                    chunks.append(tok)
+
+                _, _ = self.llm.stream_complete(  # type: ignore[union-attr]
+                    system="You are a robotics curriculum analyst.",
+                    user=prompt,
+                    on_chunk=_on_chunk,
+                    temperature=0.3,
+                    max_tokens=max_tokens,
+                )
+                print(" done", flush=True)
+                summary = "".join(chunks).strip()
+            else:
+                summary, _ = self.llm.complete(  # type: ignore[union-attr]
+                    system="You are a robotics curriculum analyst.",
+                    user=prompt,
+                    temperature=0.3,
+                    max_tokens=max_tokens,
+                )
+                summary = summary.strip()
         except Exception as exc:  # noqa: BLE001
             self.log.warning("md_summary_failed_fallback_raw", error=str(exc))
 
@@ -63,6 +85,23 @@ class MdSummaryAgent(BaseAgent):
         if not summary or len(summary) < 50:
             self.log.warning("md_summary_empty_using_raw")
             summary = md_text
+        else:
+            # Verify that section headers are preserved. A ratio below 0.8 means
+            # the summary dropped sections, likely due to truncation — fall back
+            # to raw markdown so MdParser doesn't silently lose skills.
+            orig_headers = md_text.count("\n## ")
+            summ_headers = summary.count("\n## ")
+            if orig_headers > 0:
+                retention = summ_headers / orig_headers
+                if retention < 0.8:
+                    self.log.warning(
+                        "md_summary_header_loss",
+                        original_headers=orig_headers,
+                        summary_headers=summ_headers,
+                        retention=round(retention, 2),
+                        note="falling back to raw markdown to preserve all sections",
+                    )
+                    summary = md_text
 
         # Persist summary alongside skills.yaml so skill extraction can reuse it.
         skills_dir = Path(self.settings.skills_dir)
@@ -71,11 +110,22 @@ class MdSummaryAgent(BaseAgent):
         summary_path.write_text(
             f"<!-- md_hash:{md_hash} -->\n{summary}", encoding="utf-8"
         )
-        self.log.info("summary_cached", path=str(summary_path), md_hash=md_hash)
+        self.log.info(
+            "summary_cached",
+            path=str(summary_path),
+            md_hash=md_hash,
+            used_raw=summary == md_text,
+        )
 
-        res = self._result(summary=summary, md_hash=md_hash, md_file=md_path.name)
+        res = self._result(
+            summary=summary,
+            md_hash=md_hash,
+            md_file=md_path.name,
+            used_raw=summary == md_text,
+        )
         res.messages.append(
             f"summarised {len(md_text)} chars → {len(summary)} chars"
+            + (" (raw fallback)" if summary == md_text else "")
         )
         return res.finish()
 

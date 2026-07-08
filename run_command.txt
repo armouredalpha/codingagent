@@ -1,1 +1,146 @@
-python3 -m robo_assess.cli generate --md "configs/SLAM_Assessment.docx.md"
+Setup (one-time)
+
+# Install dependencies + CLI
+pip install -r requirements.txt
+pip install --user --no-build-isolation -e .
+# (installs all deps from pyproject.toml and registers the robo-assess command)
+
+# Verify install
+robo-assess --help
+
+# Configure API keys
+cp .env.example .env
+# Edit .env — fill in your key:
+#   ROBO_PROVIDER=openrouter
+#   OPENROUTER_API_KEY=sk-or-...
+# OR for direct Anthropic:
+#   ROBO_PROVIDER=anthropic
+#   ANTHROPIC_API_KEY=sk-ant-...
+
+# (Optional) Build the ROS2 grading sandbox image
+# Only needed for live Docker execution grading; without it the system
+# falls back to static AST-based grading automatically.
+make grader-build
+# or manually:
+# docker pull ros:humble-ros-base
+# docker build -f Dockerfile.grading -t robo-grader .
+
+---
+Generate questions
+
+# Computer Vision
+robo-assess generate --md configs/Computer_Vision_Assessment.docx.md
+
+# SLAM
+robo-assess generate --md configs/SLAM_Assessment.docx.md
+
+# Navigation
+robo-assess generate --md configs/Navigation_Assessment.docx.md
+
+# Embedded Systems
+robo-assess generate --md configs/Embedded_Systems_Assessment.docx.md
+
+# Simulation
+robo-assess generate --md configs/Simulation_Assessment.docx.md
+
+# ROS2 Fundamentals
+robo-assess generate --md "configs/Robotics & AI Coding Assessment- LINUX & ROS2 Fundamentals.md"
+
+# Robot Mathematics
+robo-assess generate --md configs/Robot_Mathematics_Assessment.docx.md
+
+---
+Options (flags)
+
+# --md <path>   (required) path to the lesson markdown file to generate from
+robo-assess generate --md configs/Simulation_Assessment.docx.md
+
+# --max-loops <n>   how many supervisor regen loops to allow (default: 3)
+
+# 1 loop (generate once, no retries)
+robo-assess generate --md configs/Simulation_Assessment.docx.md --max-loops 1
+
+# 2 loops
+robo-assess generate --md configs/Simulation_Assessment.docx.md --max-loops 2
+
+# 3 loops (default, same as omitting the flag)
+robo-assess generate --md configs/Simulation_Assessment.docx.md --max-loops 3
+
+# --yes   skip the "run another loop?" prompt between loops (CI mode)
+robo-assess generate --md configs/Simulation_Assessment.docx.md --yes
+
+# --resume <run_id>   resume a failed/interrupted run instead of starting over
+robo-assess generate --md configs/Simulation_Assessment.docx.md --resume 2026-06-28_10-30-00_simulation
+
+# Flags can be combined, e.g. unattended CI run capped at 1 loop:
+robo-assess generate --md configs/Simulation_Assessment.docx.md --max-loops 1 --yes
+
+# Resuming with a loop cap still applies:
+robo-assess generate --md configs/Simulation_Assessment.docx.md --resume 2026-06-28_10-30-00_simulation --max-loops 2
+
+---
+After generation
+
+# List all past runs
+robo-assess runs
+
+# Review generated questions as instructor (records feedback for calibration)
+robo-assess review outputs/2026-06-28_10-30-00_simulation/
+
+---
+Output lands in:
+
+outputs/<date>_<topic>/
+    questions/Q001_<skill>/
+        question.yaml       <- student-facing
+        solution.yaml       <- reference solution
+        boilerplate/        <- starter code with # TODO markers
+        evaluation/grading.py
+    reports/
+        confidence_report.json
+        supervisor_verdict.json
+        token_report.json
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+How to add an exercise to course_index.py
+
+Open robo_assess/tools/course_index.py and append a dict to COURSE_EXERCISES:
+
+{
+    "id": "ros2_ex_05",                          # unique, short
+    "source": "ros2/examples (GitHub)",          # one of the verified sources above
+    "title": "Lambda subscriber to /chatter",
+    "description": (
+        "Write a subscriber using a lambda callback instead of a class method. "
+        "Subscribe to /chatter (std_msgs/String) and log each message inline."
+    ),
+    "difficulty": "easy",                        # easy / medium / hard
+    "skills": ["subscriber", "lambda", "std_msgs"],
+    "ros_concepts": ["topics", "callbacks"],
+    "url": "https://github.com/ros2/examples/blob/humble/rclpy/topics/minimal_subscriber/examples_rclpy_minimal_subscriber/subscriber_lambda.py",
+},
+
+Then re-run the seed script to push it into few_shots:
+python scripts/seed_from_courses.py --offline
+

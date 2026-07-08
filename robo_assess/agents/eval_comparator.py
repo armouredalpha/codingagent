@@ -22,11 +22,12 @@ from .base import BaseAgent, AgentResult
 
 
 class EvalComparatorAgent(BaseAgent):
+    name = "eval_comparator"
+
     def __init__(self, settings: Settings, llm: LLMClient, memory: Memory,
                  vectorstore: VectorStore, **kwargs):
         super().__init__(settings=settings, llm=llm, memory=memory, **kwargs)
         self.vectorstore = vectorstore
-        self.name = "eval_comparator"
         self.eval_refs: list[EvalReference] = []
         self._load_eval_sets()
 
@@ -76,63 +77,60 @@ class EvalComparatorAgent(BaseAgent):
 
         self.log.info("eval_sets_loaded", count=len(self.eval_refs))
 
-    def _find_closest_refs(self, question: Question, top_k: int = 3) -> list[str]:
-        """Find top-k most similar eval references using text similarity."""
+    # Minimum similarity for a reference to be considered relevant.
+    # Below this the topics are too different for difficulty comparison to mean anything.
+    _MIN_SIM = 0.15
+
+    def _find_closest_refs(self, question: Question, top_k: int = 3) -> list[tuple[str, float]]:
+        """Return top-k (ref_id, similarity) pairs above _MIN_SIM threshold."""
         if not self.eval_refs:
             return []
 
         q_text = f"{question.title} {question.scenario} {' '.join(question.tested_skills)}"
-        similarities = []
+        ref_texts = [f"{r.title} {r.scenario} {' '.join(r.skills)}" for r in self.eval_refs]
+        scored = [
+            (ref.id, text_similarity(q_text, ref_text))
+            for ref, ref_text in zip(self.eval_refs, ref_texts)
+        ]
+        scored.sort(key=lambda x: x[1], reverse=True)
+        # Only keep refs that are actually similar enough to be meaningful
+        relevant = [(rid, sim) for rid, sim in scored if sim >= self._MIN_SIM]
+        return relevant[:top_k]
 
-        for ref in self.eval_refs:
-            ref_text = f"{ref.title} {ref.scenario} {' '.join(ref.skills)}"
-            sim = text_similarity(q_text, ref_text)
-            similarities.append((ref.id, sim))
+    def _score_difficulty_match(
+        self, question: Question, closest: list[tuple[str, float]]
+    ) -> float | None:
+        """Score difficulty match against closest refs.
 
-        # Sort by similarity, return top-k IDs
-        similarities.sort(key=lambda x: x[1], reverse=True)
-        return [ref_id for ref_id, _ in similarities[:top_k]]
+        Skips LLM and returns None when no relevant references exist — the caller
+        treats None as 'no_match' and does not penalise confidence.
+        When refs exist, uses similarity-weighted difficulty comparison (no LLM call).
+        """
+        if not closest:
+            return None
 
-    def _score_difficulty_match(self, question: Question, closest_refs: list[str]) -> float:
-        """LLM scores difficulty match (0-100)."""
-        if not closest_refs:
-            return 50.0  # Neutral if no references available
+        # Difficulty tier weights — compare declared difficulty vs ref difficulty
+        _TIER = {"easy": 1, "medium": 2, "hard": 3}
+        q_tier = _TIER.get(question.difficulty.value, 2)
 
-        # Build reference summaries
-        ref_summaries = []
-        for ref_id in closest_refs:
+        weighted_score = 0.0
+        total_weight = 0.0
+        for ref_id, sim in closest:
             ref = next((r for r in self.eval_refs if r.id == ref_id), None)
-            if ref:
-                ref_summaries.append(
-                    f"[{ref.id}] {ref.title}\n"
-                    f"Difficulty: {ref.difficulty}\n"
-                    f"Scenario: {ref.scenario[:200]}..."
-                )
+            if not ref:
+                continue
+            ref_tier = _TIER.get(str(ref.difficulty).lower(), 2)
+            # Score 100 if same tier, 60 if 1 tier off, 20 if 2 tiers off
+            tier_diff = abs(q_tier - ref_tier)
+            tier_score = [100.0, 60.0, 20.0][min(tier_diff, 2)]
+            weighted_score += tier_score * sim
+            total_weight += sim
 
-        prompt = self._load_prompt("eval_comparator.txt")
-        prompt = prompt.format(
-            title=question.title,
-            difficulty=question.difficulty.value,
-            scenario=question.scenario[:300],
-            skills=", ".join(question.tested_skills),
-            closest_refs="\n\n".join(ref_summaries)
-        )
-
-        try:
-            result, _ = self.llm.complete_json(
-                system="You are a difficulty calibrator.",
-                user=prompt,
-                temperature=0.3,
-                max_tokens=400
-            )
-
-            score = float(result.get("eval_match_score", 50))
-            return min(100.0, max(0.0, score))
-        except Exception:
-            return 50.0
+        if total_weight == 0:
+            return None
+        return round(weighted_score / total_weight, 1)
 
     def _load_prompt(self, filename: str) -> str:
-        """Load prompt template."""
         path = Path(self.settings.prompts_dir) / filename
         if path.exists():
             return path.read_text(encoding="utf-8")
@@ -140,31 +138,51 @@ class EvalComparatorAgent(BaseAgent):
 
     def run(self, question: Question) -> AgentResult:
         """Compare question against eval set and score difficulty match."""
-        closest_refs = self._find_closest_refs(question)
-        eval_match_score = self._score_difficulty_match(question, closest_refs)
+        if not self.eval_refs:
+            # No reference set configured — skip scoring entirely rather than
+            # emitting a misleading neutral 50/100 that poisons downstream signals.
+            comparison = EvalComparison(
+                eval_match_score=0.0,
+                closest_refs=[],
+                difficulty_verdict="no_refs",
+                style_notes="No eval references loaded; skipping comparison.",
+            )
+            question.eval_comparison = comparison
+            return self._result(
+                comparison=comparison.model_dump(),
+                messages=["eval_comparator skipped: no reference set configured"],
+            ).finish("skip")
 
-        # Determine difficulty verdict
-        if eval_match_score >= 85:
+        closest = self._find_closest_refs(question)
+        closest_ids = [ref_id for ref_id, _ in closest]
+        eval_match_score = self._score_difficulty_match(question, closest)
+
+        if eval_match_score is None:
+            difficulty_verdict = "no_match"
+            style_notes = "No similar references in eval set — difficulty score not penalised."
+            eval_match_score = 75.0  # neutral: don't penalise when topic has no close refs
+        elif eval_match_score >= 85:
             difficulty_verdict = question.difficulty.value
+            style_notes = f"Match quality: {eval_match_score}/100"
         elif eval_match_score >= 65:
-            # Likely a different tier
             difficulty_verdict = "uncertain"
+            style_notes = f"Match quality: {eval_match_score}/100 — possible tier mismatch"
         else:
             difficulty_verdict = "mismatch"
+            style_notes = f"Match quality: {eval_match_score}/100 — difficulty likely wrong"
 
         comparison = EvalComparison(
             eval_match_score=eval_match_score,
-            closest_refs=closest_refs,
+            closest_refs=closest_ids,
             difficulty_verdict=difficulty_verdict,
-            style_notes=f"Match quality: {eval_match_score}/100"
+            style_notes=style_notes,
         )
-
         question.eval_comparison = comparison
 
         return self._result(
             comparison=comparison.model_dump(),
             messages=[
-                f"Difficulty match: {eval_match_score}/100",
-                f"Closest refs: {', '.join(closest_refs)}"
-            ]
+                f"Difficulty match: {eval_match_score}/100 ({difficulty_verdict})",
+                f"Closest refs: {', '.join(f'{r}({s:.2f})' for r, s in closest)}",
+            ],
         )

@@ -2,33 +2,46 @@
 Agent 10b — Executable Grading
 ==============================
 
-The static :class:`AutoGradingAgent` only checks that grading *metadata* exists.
-This agent goes further: it **runs** the hidden tests and proves they
-discriminate a correct solution from an unsolved scaffold.
+Proves that generated tests discriminate a correct solution from an unsolved
+scaffold by running them twice: once against the reference solution (must PASS)
+and once against the starter (must FAIL).
 
-For each question it:
+Two backends are supported, selected by ``settings.grading_backend``:
 
-1. Materialises the reference solution and the starter scaffold to a temp dir.
-2. Generates a self-contained pytest module from the question's declared
-   interfaces (topics/services/rates/required rclpy calls). The tests are pure
-   static/AST analysis of the source — they do **not** require a live ROS2
-   runtime, so they run anywhere pytest is installed.
-3. Runs the suite twice:
-   * against the **reference solution** — expected to PASS,
-   * against the **starter scaffold** — expected to FAIL.
-4. A question is *executably verified* only when the reference passes **and**
-   the starter fails (``discriminating``). That is the real signal the old
-   "≥1 check declared" gate never provided.
+``"docker"`` (recommended)
+    Runs pytest inside a ``robo-grader`` container built from
+    ``Dockerfile.grading``. The container has a live ROS2 Humble environment
+    so three additional runtime tests run: Python compile check, rclpy import
+    verification, and an actual node-initialization test with mocked
+    ``rclpy.spin``. This is real executable grading.
 
-Honest degradation (per design decision — soft gate):
-* No reference solution (current LLM path) -> ``NO_ARTIFACTS``.
-* pytest not importable -> ``SKIPPED_NO_RUNTIME``.
-Neither of those blocks approval; only a genuine ``FAIL`` does.
+    Build the image once with::
+
+        docker build -f Dockerfile.grading -t robo-grader .
+
+    Then set in ``config/config.yaml``::
+
+        grading_backend: docker
+        sandbox_image: robo-grader
+
+    Falls back to ``"ast"`` mode automatically when Docker is unavailable or
+    the image is not found, so CI environments without Docker still work.
+
+``"ast"`` (default / fallback)
+    Pure static analysis: AST-walk to verify rclpy call presence, interface
+    string literals, balanced TODO markers. No ROS2 runtime required.
+
+Honest degradation:
+* No reference solution → ``NO_ARTIFACTS`` (not a blocker).
+* pytest not importable AND Docker unavailable → ``SKIPPED_NO_RUNTIME``.
+Only a genuine ``FAIL`` (reference fails its own tests, or starter passes
+when it should not) blocks approval.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -37,17 +50,21 @@ from pathlib import Path
 from ..schemas import AgentResult, GradingExecution, Question
 from .base import BaseAgent
 
-# Map a declared check/interface to the rclpy call a real solution must contain.
 _CHECK_TO_API = {
     "topic_exists": "create_publisher",
     "topic_active": "create_publisher",
-    "publish_rate": "create_timer",
+    "topic_published": "create_publisher",
+    "topic_subscribed": "create_subscription",
     "subscriber": "create_subscription",
     "subscription": "create_subscription",
-    "service_exists": "create_service",
+    "service_exists": "create_client",
     "service": "create_service",
+    "publish_rate": "create_timer",
     "parameter_set": "declare_parameter",
+    "tf_frame": "TransformBroadcaster",
     "tf_frame_exists": "TransformBroadcaster",
+    # message_content checks a value in source — no specific rclpy API required
+    "message_type": "create_publisher",
 }
 
 
@@ -59,12 +76,24 @@ def _runtime_available() -> bool:
         return False
 
 
+def _docker_available(docker_bin: str = "docker", image: str = "robo-grader") -> bool:
+    """Return True when the Docker daemon is reachable AND the target image exists."""
+    try:
+        r = subprocess.run(
+            [docker_bin, "images", "-q", image],
+            capture_output=True, text=True, timeout=10,
+        )
+        return r.returncode == 0 and bool(r.stdout.strip())
+    except Exception:
+        return False
+
+
 class ExecutableGradingAgent(BaseAgent):
     name = "executable_grading"
 
     # ---- artifact extraction ------------------------------------------- #
+
     def _reference_solution(self, q: Question) -> tuple[str, str] | None:
-        """(filename, source) for the reference solution, or None if absent."""
         for f in q.files_to_edit:
             ref = (f.reference_solution or "").strip()
             if ref and ref != (f.starter_code or "").strip():
@@ -95,10 +124,12 @@ class ExecutableGradingAgent(BaseAgent):
             apis.add("create_subscription")
         if "service" in blob:
             apis.add("create_service")
+            apis.add("create_client")
+        if "spawn" in blob or "client" in blob:
+            apis.add("create_client")
         return sorted(apis)
 
     def _expected_tokens(self, q: Question) -> list[str]:
-        """Concrete interface strings (topic/service paths) a solution must reference."""
         toks: set[str] = set()
         for c in q.hidden_checks:
             if c.target.startswith("/"):
@@ -108,27 +139,49 @@ class ExecutableGradingAgent(BaseAgent):
                 toks.add(ec.target)
         return sorted(toks)
 
+    def _content_checks(self, q: Question) -> list[str]:
+        """Non-path message_content targets (numeric values, constants).
+
+        These are checked as raw source substrings in the grading test, which
+        discriminates questions like 'fix wheel_radius from 0.05 to 0.1' where
+        the correct value only appears in the reference solution.
+        """
+        toks: set[str] = set()
+        for ec in q.evaluation_criteria:
+            if ec.check == "message_content" and not ec.target.startswith("/"):
+                toks.add(ec.target)
+        for c in q.hidden_checks:
+            if c.check_type.value == "message_content" and not c.target.startswith("/"):
+                toks.add(c.target)
+        return sorted(toks)
+
     # ---- generated test module ----------------------------------------- #
-    def _test_module(self, apis: list[str], tokens: list[str], is_python: bool) -> str:
-        # Python files get an AST parse + rclpy-call check; YAML/launch/xacro
-        # files get a structural sanity check instead (ast.parse would wrongly
-        # fail on them). Both share the no-TODO + interface-token discriminators.
+
+    def _test_module(
+        self,
+        apis: list[str],
+        tokens: list[str],
+        is_python: bool,
+        docker_mode: bool = False,
+        content_checks: list[str] | None = None,
+    ) -> str:
+        """Return the pytest source for one grading run.
+
+        ``docker_mode=True`` appends three additional tests that require a
+        live ROS2 environment: Python-compiler check, rclpy import check, and
+        a node-initialization test with mocked rclpy.spin.
+        """
         parse_test = (
-            "def test_parses():\n    ast.parse(SRC)  # must be valid Python\n"
+            "def test_parses():\n    ast.parse(SRC)\n"
             if is_python else
             "def test_parses():\n"
             "    assert SRC.strip(), 'config file is empty'\n"
-            "    # config files are not Python; a YAML round-trip is best-effort\n"
             "    try:\n"
             "        import yaml; yaml.safe_load(SRC)\n"
             "    except Exception:\n"
             "        pass\n"
         )
-        # For Python we analyse the AST so that an API name or interface string
-        # sitting in a COMMENT or unrelated identifier cannot satisfy a check —
-        # the call must really be invoked and the interface must appear in a real
-        # string literal. This closes the "write `# create_publisher` and pass"
-        # gaming hole the old substring test had.
+
         if is_python:
             impl_test = (
                 "def test_implementation_present():\n"
@@ -140,21 +193,21 @@ class ExecutableGradingAgent(BaseAgent):
             )
             interfaces_test = (
                 "def test_interfaces_referenced():\n"
-                "    missing = [t for t in EXPECTED_TOKENS\n"
-                "               if not any(t in s for s in _STR_LITERALS)]\n"
+                "    missing = [t for t in EXPECTED_TOKENS if t not in _STR_LITERALS]\n"
                 "    assert not missing, (\n"
-                "        f'required interfaces not referenced in any string literal: {missing}')\n"
+                "        f'required interfaces not found as exact string literal: {missing}')\n"
             )
         else:
             impl_test = (
                 "def test_implementation_present():\n"
-                "    return  # non-Python config: implementation proven via interfaces/no-TODO\n"
+                "    return\n"
             )
             interfaces_test = (
                 "def test_interfaces_referenced():\n"
                 "    missing = [t for t in EXPECTED_TOKENS if t not in SRC]\n"
                 "    assert not missing, f'missing required interfaces: {missing}'\n"
             )
+
         ast_collect = (
             (
                 "_CALLED_NAMES = set()\n"
@@ -176,7 +229,19 @@ class ExecutableGradingAgent(BaseAgent):
             if is_python else
             "_CALLED_NAMES = set()\n_STR_LITERALS = [SRC]\n"
         )
-        return f'''"""Auto-generated executable grading test. Target file: $GRADE_TARGET."""
+
+        docker_extra = self._docker_extra_tests(is_python) if docker_mode else ""
+
+        cc = content_checks or []
+        content_test = (
+            f"CONTENT_CHECKS = {json.dumps(cc)}\n\n"
+            "def test_content_values():\n"
+            "    missing = [t for t in CONTENT_CHECKS if t not in SRC]\n"
+            "    assert not missing, (\n"
+            "        f'required values not found in source: {missing}')\n"
+        )
+
+        return f'''"""Auto-generated executable grading test."""
 import ast, os
 from pathlib import Path
 
@@ -195,19 +260,85 @@ def test_no_unfilled_todo():
 
 {impl_test}
 
-{interfaces_test}'''
+{interfaces_test}
+
+{content_test}
+{docker_extra}'''
+
+    @staticmethod
+    def _docker_extra_tests(is_python: bool) -> str:
+        """Three runtime tests that only make sense inside a ROS2 container."""
+        if not is_python:
+            return ""
+        return '''
+
+def test_module_compiles():
+    """Real Python compiler check — catches errors ast.parse misses (e.g. late binding)."""
+    import pytest as _pt
+    try:
+        compile(SRC, os.environ["GRADE_TARGET"], "exec")
+    except SyntaxError as exc:
+        _pt.fail(f"SyntaxError: {exc}")
+
+
+def test_rclpy_importable():
+    """Verify rclpy is present in the grading environment."""
+    import pytest as _pt
+    try:
+        import rclpy  # noqa: F401
+    except ImportError as exc:
+        _pt.fail(f"rclpy not available: {exc}")
+
+
+def test_node_can_initialize():
+    """Execute the module with mocked rclpy.spin and call main() if present.
+
+    This is the real runtime test: it instantiates the ROS2 node inside a
+    live rclpy environment and confirms the node does not crash on startup.
+    Skipped (not failed) when the source imports a custom ROS2 package that
+    is not installed in the grading image.
+    """
+    import unittest.mock, pytest as _pt
+    try:
+        import rclpy
+        import rclpy.exceptions
+    except ImportError as exc:
+        _pt.skip(f"rclpy unavailable: {exc}")
+
+    if "rclpy" not in SRC:
+        return  # TYPE_A pure-Python question — no ROS2 node to initialize
+
+    ns: dict = {"__name__": "__main__", "__file__": os.environ["GRADE_TARGET"]}
+    try:
+        rclpy.init(args=[])
+    except Exception:
+        pass
+
+    try:
+        with unittest.mock.patch("rclpy.spin", lambda n: None), \\
+             unittest.mock.patch("rclpy.spin_once", lambda n, **kw: None), \\
+             unittest.mock.patch("rclpy.shutdown", lambda: None), \\
+             unittest.mock.patch("rclpy.init", lambda **kw: None):
+            exec(compile(SRC, os.environ["GRADE_TARGET"], "exec"), ns)
+            if "main" in ns and callable(ns["main"]):
+                ns["main"]()
+    except ImportError as exc:
+        _pt.skip(f"custom package not available in grading image: {exc}")
+    except SystemExit:
+        pass  # nodes that call sys.exit(0) in main() are fine
+    except Exception as exc:
+        _pt.fail(f"node failed to initialize: {exc}")
+    finally:
+        try:
+            rclpy.try_shutdown()
+        except Exception:
+            pass
+'''
 
     # ---- execution ----------------------------------------------------- #
-    def _run_pytest(self, workdir: Path, target_file: Path) -> tuple[bool, str]:
-        """Return (all_passed, short_detail).
 
-        The suite runs in a minimal, hardened subprocess: a scrubbed environment
-        (no inherited API keys), CPU/address-space/file-size rlimits via a POSIX
-        preexec hook, and a wall-clock timeout. This is defence-in-depth for the
-        current AST-only tests and a prerequisite before any future variant that
-        actually executes candidate code. NOTE: rlimits are not a full sandbox —
-        see the author hand-off for container/network isolation.
-        """
+    def _run_pytest(self, workdir: Path, target_file: Path) -> tuple[bool, str]:
+        """Run pytest locally (AST-only mode, no ROS2 runtime needed)."""
         proc = subprocess.run(
             [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
              str(workdir / "test_grade.py")],
@@ -215,8 +346,6 @@ def test_no_unfilled_todo():
             env={
                 "PATH": _os_environ().get("PATH", "/usr/bin:/bin"),
                 "GRADE_TARGET": str(target_file),
-                # Generated tests need no third-party plugins; disabling autoload
-                # keeps grading hermetic and immune to a broken host plugin set.
                 "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
             },
             capture_output=True, text=True, timeout=60,
@@ -226,34 +355,96 @@ def test_no_unfilled_todo():
         tail = (proc.stdout or proc.stderr).strip().splitlines()
         return passed, (tail[-1] if tail else "")
 
-    def execute(self, q: Question) -> GradingExecution:
-        # Uses AST-based static analysis (ros2_sandbox backend removed)
+    def _run_pytest_docker(
+        self,
+        workdir: Path,
+        target_file: Path,
+        docker_bin: str,
+        image: str,
+        timeout: int,
+    ) -> tuple[bool, str]:
+        """Run pytest inside the robo-grader Docker container.
 
-        if not _runtime_available():
-            return GradingExecution(status="SKIPPED_NO_RUNTIME", detail="pytest not importable")
+        The workdir is bind-mounted read-only at ``/grade``; the target file
+        path is passed as ``GRADE_TARGET``. Network is disabled so generated
+        code cannot make outbound calls during grading.
+        """
+        rel = target_file.relative_to(workdir)
+        proc = subprocess.run(
+            [
+                docker_bin, "run", "--rm",
+                "--network=none",
+                "--memory=512m",
+                "--cpus=1",
+                "--pids-limit=256",
+                "-v", f"{workdir}:/grade:ro",
+                "-e", f"GRADE_TARGET=/grade/{rel}",
+                image,
+                "python3", "-m", "pytest", "-q", "--tb=short",
+                "-p", "no:cacheprovider",
+                "/grade/test_grade.py",
+            ],
+            capture_output=True, text=True, timeout=timeout,
+        )
+        passed = proc.returncode == 0
+        output = (proc.stdout or proc.stderr).strip()
+        lines = output.splitlines()
+        label = str(target_file.relative_to(workdir))
+        print(f"\n[docker:{image}] grading {label}")
+        for ln in lines:
+            print(f"  {ln}")
+        return passed, (lines[-1] if lines else "")
+
+    def execute(self, q: Question) -> GradingExecution:
+        docker_bin = getattr(self.settings, "sandbox_docker_bin", "docker")
+        image = getattr(self.settings, "sandbox_image", "robo-grader")
+        timeout = getattr(self.settings, "sandbox_timeout_s", 120)
+        grading_backend = getattr(self.settings, "grading_backend", "ast")
+
+        use_docker = (
+            grading_backend == "docker"
+            and _docker_available(docker_bin, image)
+        )
+        if not use_docker and grading_backend == "docker":
+            self.log.warning(
+                "docker_grading_unavailable",
+                image=image,
+                fallback="ast",
+            )
+
+        if not use_docker and not _runtime_available():
+            return GradingExecution(
+                status="SKIPPED_NO_RUNTIME",
+                detail="pytest not importable and Docker not available",
+            )
 
         ref = self._reference_solution(q)
         if ref is None:
             return GradingExecution(
                 status="NO_ARTIFACTS", runtime_available=True,
-                detail="no reference solution distinct from starter (provider returned none)",
+                detail="no reference solution distinct from starter",
             )
 
         ref_name, ref_src = ref
         start_name, start_src = self._starter_source(q)
-        tokens = self._expected_tokens(q)
-        # File-role-aware implementation markers. A launch file is Python but is
-        # not a node — it must contain launch actions, not rclpy node calls.
+
         if ref_name.endswith(".launch.py") or ref_name.endswith("launch.py"):
             apis = ["LaunchDescription", "Node"]
         else:
             apis = self._expected_apis(q)
-
+        tokens = self._expected_tokens(q)
+        cc = self._content_checks(q)
         is_python = ref_name.endswith(".py")
-        with tempfile.TemporaryDirectory(prefix=f"grade_{q.question_id}_") as tmp:
+
+        # Docker (snap) cannot mount /tmp; use a home-dir path instead.
+        _grade_tmp = Path.home() / ".cache" / "robo-grader"
+        _grade_tmp.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix=f"grade_{q.question_id}_", dir=_grade_tmp) as tmp:
             wd = Path(tmp)
             (wd / "test_grade.py").write_text(
-                self._test_module(apis, tokens, is_python), encoding="utf-8")
+                self._test_module(apis, tokens, is_python, docker_mode=use_docker, content_checks=cc),
+                encoding="utf-8",
+            )
             ref_path = wd / "reference" / ref_name
             start_path = wd / "starter" / (start_name or ref_name)
             ref_path.parent.mkdir(parents=True, exist_ok=True)
@@ -261,16 +452,36 @@ def test_no_unfilled_todo():
             ref_path.write_text(ref_src, encoding="utf-8")
             start_path.write_text(start_src, encoding="utf-8")
 
-            ref_pass, ref_detail = self._run_pytest(wd, ref_path)
-            start_pass, _ = self._run_pytest(wd, start_path)
+            try:
+                if use_docker:
+                    ref_pass, ref_detail = self._run_pytest_docker(
+                        wd, ref_path, docker_bin, image, timeout)
+                    start_pass, _ = self._run_pytest_docker(
+                        wd, start_path, docker_bin, image, timeout)
+                    backend_tag = f"docker:{image}"
+                else:
+                    ref_pass, ref_detail = self._run_pytest(wd, ref_path)
+                    start_pass, _ = self._run_pytest(wd, start_path)
+                    backend_tag = "ast"
+            except subprocess.TimeoutExpired:
+                return GradingExecution(
+                    status="FAIL",
+                    detail=f"docker grading timed out after {timeout}s — node likely hangs on init",
+                    runtime_available=True,
+                    discriminating=False,
+                    auto_grading_score=0.0,
+                )
 
         discriminating = ref_pass and not start_pass
         if discriminating:
-            status, detail = "PASS", "reference passes, starter fails — tests discriminate"
+            status = "PASS"
+            detail = f"reference passes, starter fails [{backend_tag}]"
         elif ref_pass and start_pass:
-            status, detail = "FAIL", "starter also passes — tests do not discriminate a solution"
+            status = "FAIL"
+            detail = f"starter also passes — tests do not discriminate [{backend_tag}]"
         else:
-            status, detail = "FAIL", f"reference solution failed its own tests: {ref_detail}"
+            status = "FAIL"
+            detail = f"reference solution failed its own tests: {ref_detail} [{backend_tag}]"
 
         return GradingExecution(
             status=status, runtime_available=True,
@@ -279,6 +490,7 @@ def test_no_unfilled_todo():
         )
 
     # ---- agent entrypoint ---------------------------------------------- #
+
     def run(self, questions: list[Question]) -> AgentResult:
         verified = failed = skipped = 0
         for q in questions:
@@ -288,17 +500,12 @@ def test_no_unfilled_todo():
                 verified += 1
             elif ex.status == "FAIL":
                 failed += 1
-                # NOTE: we deliberately do NOT flip q.auto_gradable here.
-                # `auto_gradable` is the *static* contract ("declares gradable
-                # criteria"). A failed execution is routed to the Supervisor,
-                # which flags it per-question and drives targeted regeneration —
-                # keeping the execution signal authoritative without corrupting
-                # the static flag other agents depend on.
             else:
                 skipped += 1
         res = self._result(verified=verified, failed=failed, skipped=skipped)
         res.messages.append(
-            f"executable grading: {verified} verified, {failed} failed, {skipped} skipped/no-artifacts"
+            f"executable grading: {verified} verified, {failed} failed, "
+            f"{skipped} skipped/no-artifacts"
         )
         return res.finish("warn" if failed else "ok")
 
@@ -311,12 +518,11 @@ def _os_environ() -> dict:
 try:
     import resource as _resource
     _RLIMITS_SUPPORTED = True
-except ImportError:  # non-POSIX
+except ImportError:
     _RLIMITS_SUPPORTED = False
 
 
-def _apply_rlimits() -> None:  # pragma: no cover - runs only in the child process
-    """Cap CPU seconds, address space and file size in the grading subprocess."""
+def _apply_rlimits() -> None:  # pragma: no cover
     _resource.setrlimit(_resource.RLIMIT_CPU, (30, 30))
     _resource.setrlimit(_resource.RLIMIT_AS, (1024 * 1024 * 1024, 1024 * 1024 * 1024))
     _resource.setrlimit(_resource.RLIMIT_FSIZE, (16 * 1024 * 1024, 16 * 1024 * 1024))

@@ -60,32 +60,66 @@ class DifficultyCalibrationAgent(BaseAgent):
 
     # ------------------------------------------------------------------ #
     def calibrate(self, q: Question) -> tuple[Difficulty, str]:
-        n_skills = len(set(q.tested_skills))
-        loc = sum(
-            len(f.reference_solution.splitlines()) for f in q.files_to_edit
-        )
-        multifile = len(q.files_to_edit) > 1
+        """Rule-based difficulty estimator.
+
+        Difficulty is orthogonal to question type (TYPE_A/B/C). What matters
+        is HOW MUCH the student writes, not total solution size:
+
+          easy   = 0 new lines (find+fix one string value, no TODO blocks)
+          medium = fix 1–2 values/expressions in existing code (no new logic)
+          hard   = write 1–2 missing critical lines (# TODO markers present)
+
+        We measure student workload from the *starter* code, not the reference
+        solution — a TYPE_A question with a 200-line math library is not hard
+        just because the solution is long; what makes it hard is whether the
+        student must write new code lines.
+        """
+        import re as _re
+
+        # Count TODO blocks in starter code — the primary workload signal
+        starter_todos = 0
+        bug_markers = 0
+        for f in q.files_to_edit:
+            starter = f.starter_code or ""
+            starter_todos += len(_re.findall(r"#\s*TODO", starter, _re.IGNORECASE))
+            bug_markers += len(_re.findall(r"#\s*BUG", starter, _re.IGNORECASE))
 
         # CLI-only tasks (no files to edit) are always easy
         no_files = len(q.files_to_edit) == 0
+        multifile = len(q.files_to_edit) > 1
+
         if no_files:
             d = Difficulty.EASY
-        elif n_skills <= 1 and loc < 35 and not multifile:
-            d = Difficulty.EASY
-        elif n_skills <= 4 and loc < 80:
-            d = Difficulty.MEDIUM
-        else:
+            reason = "CLI-only (no files to edit)"
+        elif starter_todos == 0 and not multifile:
+            # No TODO blocks → student just fixes a wrong value (easy or medium)
+            # Use bug marker count and task count as tiebreaker
+            n_tasks = len(getattr(q, "tasks", [])) or 1
+            if bug_markers <= 1 and n_tasks <= 1:
+                d = Difficulty.EASY
+                reason = f"0 TODOs, {bug_markers} BUG markers → string-fix only"
+            else:
+                d = Difficulty.MEDIUM
+                reason = f"0 TODOs, {bug_markers} BUG markers, {n_tasks} tasks → value fixes"
+        elif starter_todos <= 2:
             d = Difficulty.HARD
+            reason = f"{starter_todos} TODO block(s) → student writes missing line(s)"
+        else:
+            # Many TODOs → implementation task; still hard by definition
+            d = Difficulty.HARD
+            reason = f"{starter_todos} TODO blocks → substantial implementation"
 
-        # Bloom level pulls difficulty up when it implies higher cognition
+        if multifile and d == Difficulty.EASY:
+            d = Difficulty.MEDIUM
+            reason += ", multi-file → bumped to medium"
+
+        # Bloom level can only raise difficulty, never lower it
         bloom_d = _BLOOM_DIFF[q.bloom_level]
         order = {Difficulty.EASY: 0, Difficulty.MEDIUM: 1, Difficulty.HARD: 2}
         if order[bloom_d] > order[d]:
+            reason += f", bloom={q.bloom_level.value} raises to {bloom_d.value}"
             d = bloom_d
-        reason = (
-            f"{n_skills} skills, ~{loc} solution LOC, "
-            f"{'multi-file' if multifile else 'single-file'}, bloom={q.bloom_level.value}"
-        )
+
         return d, reason
 
     def _llm_verdicts(self, questions: list[Question]) -> dict[str, dict]:
@@ -94,6 +128,23 @@ class DifficultyCalibrationAgent(BaseAgent):
         template = _load_prompt(self.settings.prompts_dir)
         if not template:
             return {}
+        import re as _re
+
+        def _todo_count(q: Question) -> int:
+            return sum(len(_re.findall(r"#\s*TODO", f.starter_code or "", _re.IGNORECASE))
+                       for f in q.files_to_edit)
+
+        def _bug_count(q: Question) -> int:
+            return sum(len(_re.findall(r"#\s*BUG", f.starter_code or "", _re.IGNORECASE))
+                       for f in q.files_to_edit)
+
+        def _starter_snippet(q: Question) -> str:
+            # Send first 600 chars of first starter file for context
+            for f in q.files_to_edit:
+                if f.starter_code:
+                    return f.starter_code[:600]
+            return ""
+
         payload = [
             {
                 "id": q.question_id,
@@ -104,9 +155,10 @@ class DifficultyCalibrationAgent(BaseAgent):
                 "constraints": q.constraints,
                 "declared_difficulty": q.difficulty.value,
                 "bloom_level": q.bloom_level.value,
-                "solution_loc": sum(
-                    len(f.reference_solution.splitlines()) for f in q.files_to_edit
-                ),
+                # Workload signals — use these, NOT solution_loc
+                "starter_todo_count": _todo_count(q),
+                "starter_bug_marker_count": _bug_count(q),
+                "starter_snippet": _starter_snippet(q),
                 "files": len(q.files_to_edit),
             }
             for q in questions
@@ -128,6 +180,7 @@ class DifficultyCalibrationAgent(BaseAgent):
         verdicts = self._llm_verdicts(questions)
 
         mismatches = []
+        patches: dict[str, dict] = {}
         n_llm = 0
         for q in questions:
             v = verdicts.get(q.question_id)
@@ -137,17 +190,24 @@ class DifficultyCalibrationAgent(BaseAgent):
                 reason = str(v.get("rationale", "")) or "llm verdict"
             else:
                 calibrated, reason = self.calibrate(q)
-            # Persist the calibrated verdict so the Confidence agent can score
-            # the *fit* between declared and true difficulty instead of treating
-            # difficulty as a free constant.
-            q.calibrated_difficulty = calibrated
+            patches[q.question_id] = {"calibrated_difficulty": calibrated}
             if calibrated != q.difficulty:
                 mismatches.append(
                     {"qid": q.question_id, "declared": q.difficulty.value,
                      "calibrated": calibrated.value, "reason": reason}
                 )
 
-        res = self._result(mismatches=mismatches)
+        qt = []
+        for m in mismatches:
+            qt.append({"qid": m["qid"], "decision": "difficulty_mismatch",
+                       "reason": f"declared={m['declared']} calibrated={m['calibrated']}: {m['reason']}"})
+        # Also trace questions where calibration agreed (pass)
+        for q in questions:
+            if q.question_id not in {m["qid"] for m in mismatches}:
+                cal = patches.get(q.question_id, {}).get("calibrated_difficulty", q.difficulty)
+                qt.append({"qid": q.question_id, "decision": "difficulty_ok",
+                           "reason": f"declared={q.difficulty.value} confirmed={getattr(cal,'value',str(cal))}"})
+        res = self._result(mismatches=mismatches, patches=patches, question_traces=qt)
         src = f"llm:{n_llm}/{len(questions)}" if n_llm else "rule-based"
         res.messages.append(f"{len(mismatches)} difficulty mismatches ({src})")
         return res.finish("warn" if mismatches else "ok")

@@ -18,6 +18,8 @@ import re
 from pathlib import Path
 from datetime import datetime, timezone
 
+import yaml
+
 from ..config import Settings
 from ..llm_client import LLMClient
 from ..memory import Memory
@@ -30,29 +32,26 @@ class MdParserAgent(BaseAgent):
         super().__init__(settings=settings, llm=llm, memory=memory, **kwargs)
         self.name = "md_parser"
 
-    def _read_md(self, md_path: str | Path) -> dict[str, str]:
-        """Read markdown, extract sections by ## headers.
-
-        Returns: {section_header: section_text}
-        """
-        path = Path(md_path)
-        if not path.exists():
-            raise FileNotFoundError(f"Markdown file not found: {md_path}")
-
-        text = path.read_text(encoding="utf-8")
-        sections = {}
-
-        # Split by ## headers
-        parts = re.split(r'^## ', text, flags=re.MULTILINE)
-        for part in parts[1:]:  # skip pre-header text
+    @staticmethod
+    def _split_by_headers(text: str) -> dict[str, str]:
+        """Split markdown text into {header: content} by ## headings."""
+        sections: dict[str, str] = {}
+        for part in re.split(r'^## ', text, flags=re.MULTILINE)[1:]:
             lines = part.split('\n', 1)
             header = lines[0].strip()
             content = lines[1].strip() if len(lines) > 1 else ""
             sections[header] = content
+        return sections
 
+    def _read_md(self, md_path: str | Path) -> dict[str, str]:
+        """Read markdown file and extract sections by ## headers."""
+        path = Path(md_path)
+        if not path.exists():
+            raise FileNotFoundError(f"Markdown file not found: {md_path}")
+
+        sections = self._split_by_headers(path.read_text(encoding="utf-8"))
         if not sections:
             raise ValueError(f"No ## sections found in {md_path}")
-
         return sections
 
     def _summarise_section(self, header: str, text: str) -> str:
@@ -76,8 +75,11 @@ class MdParserAgent(BaseAgent):
         if not summary or len(summary) < 30:
             return []
 
-        prompt = self._load_prompt("skill_extractor.txt")
-        prompt = prompt.replace("{section_text}", summary)
+        template = self._load_prompt("skill_extractor.txt")
+        if not template:
+            self.log.warning("skill_extractor_prompt_missing", header=header)
+            return []
+        prompt = template.replace("{section_text}", summary)
 
         try:
             result, _ = self.llm.complete_json(
@@ -110,19 +112,12 @@ class MdParserAgent(BaseAgent):
         return ""
 
     def _split_sections_text(self, text: str) -> dict[str, str]:
-        """Split an in-memory markdown/summary string into ## sections.
+        """Split an in-memory summary string into ## sections.
 
-        Unlike ``_read_md`` this works on a string (the LLM summary), not a file,
-        and degrades to a single synthetic section when no ## headers are present
+        Degrades to a single synthetic section when no ## headers are present
         so skill extraction still runs.
         """
-        sections: dict[str, str] = {}
-        parts = re.split(r'^## ', text, flags=re.MULTILINE)
-        for part in parts[1:]:
-            lines = part.split('\n', 1)
-            header = lines[0].strip()
-            content = lines[1].strip() if len(lines) > 1 else ""
-            sections[header] = content
+        sections = self._split_by_headers(text)
         if not sections:
             sections["Curriculum"] = text.strip()
         return sections
@@ -173,8 +168,8 @@ class MdParserAgent(BaseAgent):
         sections_with_skills = []
 
         for header, text in sections.items():
-            # Extract skills directly (no summarization for now)
-            skills = self._extract_skills(header, text)
+            summarised = self._summarise_section(header, text)
+            skills = self._extract_skills(header, summarised)
 
             if skills:
                 all_skills.extend(skills)
@@ -191,9 +186,7 @@ class MdParserAgent(BaseAgent):
 
         # Write to skills/ folder
         skills_dir = Path(self.settings.skills_dir)
-        skills_dir.mkdir(exist_ok=True)
-
-        import yaml
+        skills_dir.mkdir(parents=True, exist_ok=True)
 
         # Write skills.yaml
         skills_yaml = {
@@ -209,11 +202,13 @@ class MdParserAgent(BaseAgent):
                 for s in skill_set.skills
             ]
         }
-        (skills_dir / "skills.yaml").write_text(
-            yaml.dump(skills_yaml, default_flow_style=False, sort_keys=False)
-        )
+        try:
+            (skills_dir / "skills.yaml").write_text(
+                yaml.dump(skills_yaml, default_flow_style=False, sort_keys=False)
+            )
+        except OSError as e:
+            raise RuntimeError(f"Failed to write skills.yaml to {skills_dir}: {e}") from e
 
-        # Write meta.yaml
         meta = {
             "md_file": skill_set.md_file,
             "md_hash": skill_set.md_hash,
@@ -222,9 +217,12 @@ class MdParserAgent(BaseAgent):
             "total_skills": len(all_skills),
             "parsed_at": skill_set.parsed_at.isoformat()
         }
-        (skills_dir / "meta.yaml").write_text(
-            yaml.dump(meta, default_flow_style=False, sort_keys=False)
-        )
+        try:
+            (skills_dir / "meta.yaml").write_text(
+                yaml.dump(meta, default_flow_style=False, sort_keys=False)
+            )
+        except OSError as e:
+            raise RuntimeError(f"Failed to write meta.yaml to {skills_dir}: {e}") from e
 
         messages = [
             f"Extracted {len(all_skills)} skills from {len(sections)} sections",

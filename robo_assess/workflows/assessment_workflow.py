@@ -61,104 +61,224 @@ def _clean_question_dict(q: Question) -> dict:
 
 
 def _evaluate_script(q: Question) -> str:
-    """Generate a runnable evaluation script with per-criterion scoring."""
-    ec_repr = json.dumps([ec.model_dump() for ec in q.evaluation_criteria], indent=4)
+    """Generate a per-task grading script.
+
+    Output format (points scale with task count — 10 points per task, so
+    2 tasks -> max_points 20, not a fixed 100):
+        {
+          "T1": {"passed": true,  "description": "...", "points": 10},
+          "T2": {"passed": false, "description": "...", "points": 10},
+          "total_points": 10,
+          "max_points": 20,
+          "all_passed": false
+        }
+
+    Each task maps to one EvaluationCriterion. The check is AST-based
+    (static analysis of the student file) so it works without a live ROS2 runtime.
+    """
     file_path = q.file_to_edit or (q.files_to_edit[0].path if q.files_to_edit else "node.py")
+    tasks = q.tasks or []
+    criteria = q.evaluation_criteria
+
+    # Build per-task check specs: pair each task with its criterion (by index)
+    task_checks = []
+    for i, task in enumerate(tasks):
+        ec = criteria[i] if i < len(criteria) else None
+        task_id = f"T{i+1}"
+        if ec:
+            task_checks.append({
+                "id": task_id,
+                "description": task,
+                "check": ec.check,
+                "target": ec.target,
+                "expected": ec.expected,
+                "points": ec.points,
+            })
+        else:
+            task_checks.append({
+                "id": task_id,
+                "description": task,
+                "check": "compiles",
+                "target": "",
+                "expected": "",
+                "points": 10,  # flat 10 points per task
+            })
+
+    task_checks_repr = json.dumps(task_checks, indent=4)
+
     lines = [
-        f'"""',
-        f"Evaluation script for {q.question_id}: {q.title}",
-        f"",
-        f"Run:   python evaluate.py",
-        f"Total: 100 points",
-        f'"""',
-        f"",
-        f"import subprocess",
-        f"import sys",
-        f"import time",
-        f"",
+        '"""',
+        f"Per-task grading script for: {q.question_id}",
+        f"Question: {q.title}",
+        "",
+        "Usage:",
+        f"  python grading.py <path/to/student_file.py>",
+        "",
+        "Returns JSON with per-task pass/fail and total score.",
+        '"""',
+        "import ast",
+        "import json",
+        "import sys",
+        "from pathlib import Path",
+        "",
         f"QUESTION_ID = {q.question_id!r}",
         f"FILE_TO_EDIT = {file_path!r}",
-        f"",
-        f"EVALUATION_CRITERIA = {ec_repr}",
-        f"",
-        f"",
-        f"# ── Check implementations ────────────────────────────────────────────",
-        f"",
-        f"def check_node_exists(target: str) -> bool:",
-        f"    result = subprocess.run(['ros2', 'node', 'list'], capture_output=True, text=True, timeout=5)",
-        f"    return f'/{{target}}' in result.stdout or target in result.stdout",
-        f"",
-        f"",
-        f"def check_topic_active(target: str, expected: str = '') -> bool:",
-        f"    result = subprocess.run(['ros2', 'topic', 'list'], capture_output=True, text=True, timeout=5)",
-        f"    return target in result.stdout",
-        f"",
-        f"",
-        f"def check_publish_rate(target: str, expected: str) -> bool:",
-        f"    try:",
-        f"        hz = float(expected)",
-        f"        result = subprocess.run(",
-        f"            ['ros2', 'topic', 'hz', target, '--window', '10'],",
-        f"            capture_output=True, text=True, timeout=15,",
-        f"        )",
-        f"        for line in result.stdout.splitlines():",
-        f"            if 'average rate' in line:",
-        f"                rate = float(line.split(':')[1].strip().split()[0])",
-        f"                return abs(rate - hz) <= hz * 0.15  # 15% tolerance",
-        f"    except Exception:",
-        f"        pass",
-        f"    return False",
-        f"",
-        f"",
-        f"def check_service_exists(target: str, expected: str = '') -> bool:",
-        f"    result = subprocess.run(['ros2', 'service', 'list'], capture_output=True, text=True, timeout=5)",
-        f"    return target in result.stdout",
-        f"",
-        f"",
-        f"def check_parameter_set(target: str, expected: str) -> bool:",
-        f"    result = subprocess.run(['ros2', 'param', 'get', '--', target], capture_output=True, text=True, timeout=5)",
-        f"    return expected in result.stdout",
-        f"",
-        f"",
-        f"def check_tf_frame_exists(target: str, expected: str = '') -> bool:",
-        f"    result = subprocess.run(['ros2', 'run', 'tf2_ros', 'tf2_echo', target, target],",
-        f"                            capture_output=True, text=True, timeout=5)",
-        f"    return 'Transform' in result.stdout or 'frames' in result.stdout",
-        f"",
-        f"",
-        f"CHECK_FN = {{",
-        f"    'node_exists': lambda ec: check_node_exists(ec['target']),",
-        f"    'topic_active': lambda ec: check_topic_active(ec['target'], ec.get('expected', '')),",
-        f"    'service_exists': lambda ec: check_service_exists(ec['target'], ec.get('expected', '')),",
-        f"    'publish_rate': lambda ec: check_publish_rate(ec['target'], ec.get('expected', '0')),",
-        f"    'parameter_set': lambda ec: check_parameter_set(ec['target'], ec.get('expected', '')),",
-        f"    'tf_frame_exists': lambda ec: check_tf_frame_exists(ec['target'], ec.get('expected', '')),",
-        f"    'behaviour': lambda ec: True,   # manual or custom assertion required",
-        f"    'message_field': lambda ec: True,",
-        f"}}",
-        f"",
-        f"",
-        f"def run_evaluation() -> int:",
-        f"    print(f'\\n=== Evaluating {{QUESTION_ID}} ===\\n')",
-        f"    total = 0",
-        f"    for ec in EVALUATION_CRITERIA:",
-        f"        fn = CHECK_FN.get(ec['check'], lambda ec: False)",
-        f"        try:",
-        f"            passed = fn(ec)",
-        f"        except Exception as e:",
-        f"            passed = False",
-        f"            print(f\"  [ERROR] {{ec['id']}}: {{e}}\")",
-        f"        pts = ec['points'] if passed else 0",
-        f"        total += pts",
-        f"        status = '✓ PASS' if passed else '✗ FAIL'",
-        f"        print(f\"  {{status}} {{ec['id']}} (+{{pts}}/{{ec['points']}}) — {{ec['description']}}\")",
-        f"    print(f'\\nFinal score: {{total}} / 100')",
-        f"    return total",
-        f"",
-        f"",
-        f"if __name__ == '__main__':",
-        f"    score = run_evaluation()",
-        f"    sys.exit(0 if score >= 70 else 1)",
+        "",
+        f"TASK_CHECKS = {task_checks_repr}",
+        "",
+        "",
+        "# ── AST helpers ──────────────────────────────────────────────────────",
+        "",
+        "def _parse(src: str):",
+        "    try:",
+        "        return ast.parse(src)",
+        "    except SyntaxError:",
+        "        return None",
+        "",
+        "",
+        "def _called_names(tree) -> set:",
+        "    names = set()",
+        "    if tree is None:",
+        "        return names",
+        "    for node in ast.walk(tree):",
+        "        if isinstance(node, ast.Call):",
+        "            f = node.func",
+        "            if isinstance(f, ast.Attribute):",
+        "                names.add(f.attr)",
+        "            elif isinstance(f, ast.Name):",
+        "                names.add(f.id)",
+        "    return names",
+        "",
+        "",
+        "def _string_literals(tree) -> list:",
+        "    vals = []",
+        "    if tree is None:",
+        "        return vals",
+        "    for node in ast.walk(tree):",
+        "        if isinstance(node, ast.Constant) and isinstance(node.value, str):",
+        "            vals.append(node.value)",
+        "    return vals",
+        "",
+        "",
+        "def _attr_chains(tree) -> set:",
+        "    \"\"\"Collect attribute access chains like msg.linear.x as 'linear.x'.\"\"\"",
+        "    chains = set()",
+        "    if tree is None:",
+        "        return chains",
+        "    for node in ast.walk(tree):",
+        "        if isinstance(node, ast.Attribute):",
+        "            parts = []",
+        "            cur = node",
+        "            while isinstance(cur, ast.Attribute):",
+        "                parts.append(cur.attr)",
+        "                cur = cur.value",
+        "            if parts:",
+        "                chains.add('.'.join(reversed(parts)))",
+        "    return chains",
+        "",
+        "",
+        "# ── Check implementations ─────────────────────────────────────────────",
+        "",
+        "def _check(src: str, tree, check: str, target: str, expected: str) -> bool:",
+        "    strings = _string_literals(tree)",
+        "    calls = _called_names(tree)",
+        "    attrs = _attr_chains(tree)",
+        "    leaf = target.split('/')[-1].split('.')[-1] if target else ''",
+        "",
+        "    if check in ('topic_published', 'topic_subscribed', 'topic_active'):",
+        "        # Target topic must appear as a string literal in the source",
+        "        return target in strings or (leaf and leaf in strings)",
+        "",
+        "    elif check in ('node_exists', 'node_active'):",
+        "        # Any rclpy node call proves the node is active",
+        "        ros_calls = {'create_publisher', 'create_subscription', 'create_service',",
+        "                     'create_client', 'create_timer', 'declare_parameter'}",
+        "        return bool(calls & ros_calls)",
+        "",
+        "    elif check == 'service_exists':",
+        "        return target in strings or (leaf and leaf in strings)",
+        "",
+        "    elif check == 'function_output':",
+        "        # Function/method name must be defined or called",
+        "        return leaf in src if leaf else False",
+        "",
+        "    elif check == 'class_method':",
+        "        return leaf in src if leaf else False",
+        "",
+        "    elif check == 'numerical_accuracy':",
+        "        # Target field/variable must appear in source",
+        "        return leaf in src if leaf else False",
+        "",
+        "    elif check == 'message_content':",
+        "        return target in strings or (leaf and leaf in src)",
+        "",
+        "    elif check in ('message_type', 'compiles'):",
+        "        return tree is not None  # successfully parsed = compiles",
+        "",
+        "    elif check == 'publish_rate':",
+        "        return 'create_timer' in calls or 'Timer' in calls",
+        "",
+        "    elif check == 'parameter_set':",
+        "        return 'declare_parameter' in calls and (leaf in src if leaf else True)",
+        "",
+        "    elif check == 'tf_frame':",
+        "        return 'TransformBroadcaster' in calls or target in strings",
+        "",
+        "    elif check in ('behaviour', 'simulation', 'topic_echo', 'ros2_run', 'launch_file'):",
+        "        # Cannot be checked statically — pass if file compiles",
+        "        return tree is not None",
+        "",
+        "    # Unknown check — fall back to substring search",
+        "    return (leaf in src) if leaf else (tree is not None)",
+        "",
+        "",
+        "# ── Main grading logic ────────────────────────────────────────────────",
+        "",
+        "def grade(student_file: str) -> dict:",
+        "    path = Path(student_file)",
+        "    if not path.exists():",
+        "        max_pts = sum(tc['points'] for tc in TASK_CHECKS)",
+        "        return {'error': f'File not found: {student_file}', 'total_points': 0, 'max_points': max_pts}",
+        "    src = path.read_text(encoding='utf-8')",
+        "    tree = _parse(src)",
+        "",
+        "    results = {}",
+        "    total = 0",
+        "    max_pts = 0",
+        "    for tc in TASK_CHECKS:",
+        "        passed = _check(src, tree, tc['check'], tc['target'], tc.get('expected', ''))",
+        "        pts = tc['points'] if passed else 0",
+        "        total += pts",
+        "        max_pts += tc['points']",
+        "        results[tc['id']] = {",
+        "            'passed': passed,",
+        "            'description': tc['description'],",
+        "            'points': pts,",
+        "            'max_points': tc['points'],",
+        "        }",
+        "",
+        "    return {",
+        "        'question_id': QUESTION_ID,",
+        "        'tasks': results,",
+        "        'total_points': total,",
+        "        'max_points': max_pts,",
+        "        'all_passed': total == max_pts,",
+        "    }",
+        "",
+        "",
+        "if __name__ == '__main__':",
+        "    if len(sys.argv) < 2:",
+        "        print(f'Usage: python grading.py <student_file>', file=sys.stderr)",
+        "        sys.exit(1)",
+        "    result = grade(sys.argv[1])",
+        "    print(json.dumps(result, indent=2))",
+        "    # Print human-readable summary",
+        "    print()",
+        "    for tid, r in result.get('tasks', {}).items():",
+        "        status = '✓' if r['passed'] else '✗'",
+        "        print(f\"  {status} {tid}: {r['description']} ({r['points']}/{r['max_points']} pts)\")",
+        "    print(f\"\\nTotal: {result['total_points']}/{result['max_points']} pts\")",
+        "    sys.exit(0 if result['all_passed'] else 1)",
     ]
     return "\n".join(lines) + "\n"
 
@@ -194,8 +314,8 @@ def _readme(q: Question) -> str:
         "",
         "## Grading",
         "",
-        "Your submission is scored out of 100 points by the automated checks in "
-        "`evaluate.py` (see `grading.json` for the criteria). Run:",
+        f"Your submission is scored out of {sum(ec.points for ec in q.evaluation_criteria) or 10} "
+        "points by the automated checks in `evaluate.py` (see `grading.json` for the criteria). Run:",
         "",
         "```",
         "python evaluate.py",
@@ -409,58 +529,142 @@ def _dump_yaml(path: Path, data: dict) -> None:
     )
 
 
-def _question_yaml_dict(q: Question) -> dict:
-    """Student-facing question, mirroring outputs/question.json as YAML.
+def _extract_notes_from_code(starter: str, reference: str, criteria) -> list[str]:
+    """Derive notes by diffing the starter (buggy) and reference (correct) code via AST.
 
-    Adds the primary_skill / secondary_concepts weighting from the requested
-    input/output format. starter_code is null — the solution lives in solution.yaml.
+    Finds string literals and attribute chains that appear in the reference but not
+    in the starter — these are the exact names the student must use.
+    Also adds notes from evaluation_criteria targets for any value not already covered.
     """
-    dec = q.detailed_evaluation_criteria
-    concepts = q.metadata.concepts if q.metadata else q.tested_skills
-    primary = q.generation_skill or (q.tested_skills[0] if q.tested_skills else "")
-    secondary = [c for c in concepts if c != primary]
+    import ast as _ast
 
-    metadata = (
-        q.metadata.model_dump()
-        if q.metadata
-        else {
-            "topic": q.title,
-            "difficulty_level": q.difficulty.value,
-            "estimated_time_minutes": q.estimated_solve_minutes,
-            "language": "Python",
-            "ros_version": "ROS2",
-            "concepts": concepts,
+    def _strings(src: str) -> set:
+        try:
+            tree = _ast.parse(src)
+        except SyntaxError:
+            return set()
+        return {
+            node.value
+            for node in _ast.walk(tree)
+            if isinstance(node, _ast.Constant) and isinstance(node.value, str) and node.value.strip()
         }
+
+    def _attr_chains(src: str) -> set:
+        try:
+            tree = _ast.parse(src)
+        except SyntaxError:
+            return set()
+        chains = set()
+        for node in _ast.walk(tree):
+            if isinstance(node, _ast.Attribute):
+                parts = []
+                cur = node
+                while isinstance(cur, _ast.Attribute):
+                    parts.append(cur.attr)
+                    cur = cur.value
+                if len(parts) >= 2:
+                    chains.add(".".join(reversed(parts)))
+        return chains
+
+    notes: list[str] = []
+    seen: set[str] = set()
+
+    if starter and reference:
+        starter_strings = _strings(starter)
+        ref_strings = _strings(reference)
+        new_strings = ref_strings - starter_strings
+        removed_strings = starter_strings - ref_strings
+
+        for val in sorted(new_strings):
+            if val.startswith("/") or len(val) > 2:
+                if removed_strings:
+                    wrong = next(iter(removed_strings))
+                    note = f"Use '{val}' (not '{wrong}')"
+                    removed_strings.discard(wrong)
+                else:
+                    note = f"Use exact value: '{val}'"
+                if note not in seen:
+                    notes.append(note)
+                    seen.add(note)
+
+        starter_attrs = _attr_chains(starter)
+        ref_attrs = _attr_chains(reference)
+        for chain in sorted(ref_attrs - starter_attrs):
+            note = f"Use field access: {chain}"
+            if note not in seen:
+                notes.append(note)
+                seen.add(note)
+
+    # Fill in from criteria targets only when the target value isn't already in any note
+    existing_text = " ".join(notes)
+    for ec in (criteria or []):
+        t = (ec.target or "").strip()
+        if not t or t in existing_text:
+            continue
+        if t.startswith("/"):
+            note = f"Topic/service name must be exactly: {t}"
+        else:
+            note = f"Use exact name: {t}"
+        if note not in seen:
+            notes.append(note)
+            seen.add(note)
+
+    return notes
+
+
+def _question_yaml_dict(q: Question, md_source: str = "") -> dict:
+    """Student-facing question.yaml — slim, task-driven format."""
+    # Topic: prefer the md source filename, fall back to metadata topic or title
+    topic = (
+        md_source
+        or (q.metadata.topic if q.metadata else "")
+        or q.generation_skill
+        or q.tested_skills[0] if q.tested_skills else q.title
     )
+
+    # Files the student must edit
+    files = []
+    for f in q.files_to_edit:
+        if f.path:
+            files.append(f.path)
+    if not files and q.file_to_edit:
+        files.append(q.file_to_edit)
+    if not files:
+        files.append("node.py")
+
+    # Notes: start from LLM-provided notes, then enrich with code diff
+    llm_notes: list[str] = []
+    if q.notes:
+        llm_notes = [ln.lstrip("•-* ").strip() for ln in q.notes.splitlines() if ln.strip()]
+
+    starter = q.boilerplate_code or (q.files_to_edit[0].starter_code if q.files_to_edit else "")
+    reference = q.files_to_edit[0].reference_solution if q.files_to_edit else ""
+    code_notes = _extract_notes_from_code(starter, reference, q.evaluation_criteria)
+
+    # Merge: LLM notes first (they're more readable), then code-derived notes not already covered
+    seen = set(llm_notes)
+    all_notes = list(llm_notes)
+    for n in code_notes:
+        if n not in seen:
+            all_notes.append(n)
+            seen.add(n)
+
+    # Build direct question (no story — just what to do)
+    question_text = q.objective or q.scenario
 
     return {
         "question_id": q.question_id,
-        "metadata": metadata,
-        "title": q.title,
-        "context": q.context or q.scenario,
-        "scenario": q.scenario,
-        "prerequisites": q.prerequisites,
-        "notes": q.notes,
-        "objective": q.objective,
-        "constraints": q.constraints,
-        "tested_skills": q.tested_skills,
-        "common_mistakes": q.common_mistakes,
-        "parts": [p.model_dump() for p in q.parts],
-        "tasks": q.tasks,
-        "file_structure": q.file_structure.model_dump() if q.file_structure else None,
-        "starter_code": None,
-        "expected_output": [eo.model_dump() for eo in q.expected_output],
-        "run_commands": q.run_commands,
-        "evaluation_criteria": {
-            "compiles_without_error": dec.compiles_without_error if dec else True,
-            "primary_skill": {"skill": primary, "weight": 70},
-            "secondary_concepts": {"weight": 30, "concepts": secondary},
-            "nodes": dec.nodes if dec else None,
-            "topics_subscribed": dec.topics_subscribed if dec else None,
-            "topics_published": dec.topics_published if dec else None,
-            "services": dec.services if dec else None,
-            "publish_rate": dec.publish_rate if dec else None,
-        },
+        "topic": topic,
+        "difficulty": q.difficulty.value,
+        "estimated_time_minutes": q.estimated_solve_minutes or (
+            q.metadata.estimated_time_minutes if q.metadata else 15
+        ),
+        "question": question_text,
+        "context": (q.context or q.scenario or "").strip(),
+        "files_to_edit": files,
+        "notes": all_notes,
+        "tasks": q.tasks or ([q.objective] if q.objective else ["Complete the implementation"]),
+        "skill": q.generation_skill or (q.tested_skills[0] if q.tested_skills else ""),
     }
 
 
@@ -508,6 +712,8 @@ def export_run_v2(
     summary_text: str = "",
     skillset=None,
     out_root: str = "outputs",
+    duration_seconds: float | None = None,
+    loop_num: int = 1,
 ) -> Path:
     """Write the v2 run into a date-stamped folder with YAML artefacts.
 
@@ -515,22 +721,35 @@ def export_run_v2(
             run_metadata.json, summary.md, skills.yaml
             questions/Q00N_<slug>/{question.yaml, solution.yaml,
                                    boilerplate/, evaluation/{test_*.py, grading.json}}
+            rejected/R00N_<slug>/   ← same structure, questions that didn't pass
             reports/{coverage_matrix.json, confidence_report.json, supervisor_verdict.json}
     """
     stamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    root = Path(out_root) / f"{stamp}_{_slug(pkg.topic)}"
+    loop_tag = f"_loop{loop_num}" if loop_num > 1 else ""
+    root = Path(out_root) / f"{stamp}{loop_tag}_{_slug(pkg.topic)}"
     root.mkdir(parents=True, exist_ok=True)
 
     # Run-level artefacts
-    _write(root / "run_metadata.json", json.dumps({
+    counter = getattr(pkg, "_token_counter", None)
+    token_summary = counter.summary() if counter is not None else {}
+    n_approved = len(pkg.approved_questions)
+    meta: dict = {
         "run_id": pkg.run_id,
         "topic": pkg.topic,
+        "loop_num": loop_num,
         "created_at": pkg.created_at.isoformat(),
         "md_hash": getattr(skillset, "md_hash", ""),
         "md_file": getattr(skillset, "md_file", ""),
         "num_questions": len(pkg.questions),
+        "num_approved": n_approved,
+        "num_rejected": len(pkg.questions) - n_approved,
         "supervisor_status": pkg.supervisor.supervisor_status,
-    }, indent=2))
+    }
+    if duration_seconds is not None:
+        meta["duration_seconds"] = round(duration_seconds, 1)
+    if token_summary:
+        meta["token_usage"] = token_summary
+    _write(root / "run_metadata.json", json.dumps(meta, indent=2))
 
     _write(root / "summary.md", summary_text or "")
 
@@ -542,21 +761,31 @@ def export_run_v2(
         })
 
     # Per-question YAML + boilerplate + evaluation
-    for i, q in enumerate(pkg.questions, start=1):
+    # Approved questions go to questions/, rejected ones go to rejected/
+    approved_ids = {q.question_id for q in pkg.approved_questions}
+    approved_counter = 0
+    rejected_counter = 0
+    for q in pkg.questions:
         skill_slug = _slug(q.generation_skill or (q.tested_skills[0] if q.tested_skills else q.title), 24)
-        qdir = root / "questions" / f"Q{i:03d}_{skill_slug}"
-        _dump_yaml(qdir / "question.yaml", _question_yaml_dict(q))
+        is_approved = q.question_id in approved_ids
+        if is_approved:
+            approved_counter += 1
+            qdir = root / "questions" / f"Q{approved_counter:03d}_{skill_slug}"
+        else:
+            rejected_counter += 1
+            qdir = root / "rejected" / f"R{rejected_counter:03d}_{skill_slug}"
+        md_name = getattr(skillset, "md_file", "") if skillset else ""
+        _dump_yaml(qdir / "question.yaml", _question_yaml_dict(q, md_source=md_name))
         _dump_yaml(qdir / "solution.yaml", _solution_yaml_dict(q))
 
-        # boilerplate/ — starter files the student edits
+        # boilerplate/ — starter files the student edits (with bug markers)
         boilerplate = q.boilerplate_code or (q.files_to_edit[0].starter_code if q.files_to_edit else "")
         if boilerplate:
             fname = Path(q.file_to_edit or (q.files_to_edit[0].path if q.files_to_edit else "node.py")).name
             _write(qdir / "boilerplate" / fname, boilerplate)
 
-        # evaluation/ — runnable grading script + grading.json
-        _write(qdir / "evaluation" / f"test_{q.question_id}.py", _evaluate_script(q))
-        _write(qdir / "evaluation" / "grading.json", json.dumps(_grading_dict(q), indent=2))
+        # evaluation/ — per-task grading script
+        _write(qdir / "evaluation" / "grading.py", _evaluate_script(q))
 
     # Reports
     _write(root / "reports" / "coverage_matrix.json",
@@ -584,4 +813,31 @@ def export_run_v2(
     _write(root / "reports" / "supervisor_verdict.json",
            json.dumps(pkg.supervisor.model_dump(), indent=2))
 
+    # Full token report (per-call breakdown + by_agent costs)
+    if counter is not None:
+        _write(root / "reports" / "token_report.json",
+               json.dumps(counter.report(), indent=2))
+
+    # Append one line to cross-run usage history at outputs root
+    _append_usage_history(Path(out_root), meta, token_summary)
+
     return root
+
+
+def _append_usage_history(out_root: Path, meta: dict, token_summary: dict) -> None:
+    """Append a one-line JSON record to outputs/usage_history.jsonl."""
+    import json as _json
+    record = {
+        "run_id": meta.get("run_id"),
+        "topic": meta.get("topic"),
+        "created_at": meta.get("created_at"),
+        "num_questions": meta.get("num_questions"),
+        "num_approved": meta.get("num_approved"),
+        "supervisor_status": meta.get("supervisor_status"),
+        "duration_seconds": meta.get("duration_seconds"),
+    }
+    record.update(token_summary)
+    hist_path = out_root / "usage_history.jsonl"
+    out_root.mkdir(parents=True, exist_ok=True)
+    with hist_path.open("a", encoding="utf-8") as f:
+        f.write(_json.dumps(record) + "\n")

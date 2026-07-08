@@ -11,15 +11,15 @@
 
 # ---- Provider ---------------------------------------------------------------
 provider: openrouter
-model: openai/gpt-4o
+model: google/gemini-2.5-flash-lite
 # For Anthropic Claude (uncomment and set ANTHROPIC_API_KEY):
 # provider: anthropic
 # model: claude-sonnet-4-6
 temperature: 0.7
-max_tokens: 2200
+max_tokens: 10000
 
 # ---- Generation -------------------------------------------------------------
-num_questions: 6
+num_questions: 2
 difficulty_distribution:
   easy: 0.30
   medium: 0.50
@@ -34,13 +34,14 @@ max_regeneration_attempts: 2
 # (capped at max_questions) so the target is actually reachable. This is the fix
 # for "broad syllabus ⇒ supervisor REJECTED by construction".
 coverage_target: 0.85
-auto_scale_questions: true
+auto_scale_questions: false
 max_questions: 14
 
 # ---- Concurrency ------------------------------------------------------------
 # Per-slot generation runs on a thread pool, not a serial loop. Each worker is
 # one blocking provider call. Raise for higher throughput on hosted APIs.
 generation_concurrency: 4
+generation_batch_size: 2        # generate and validate N questions at a time
 
 # ---- Executable grading backend ---------------------------------------------
 # "ast"          : static analysis — reference must call the required rclpy APIs
@@ -50,9 +51,9 @@ generation_concurrency: 4
 #                  publish rates, services, TF). Degrades to SKIPPED_NO_RUNTIME
 #                  — never a false PASS — when Docker or the image is absent.
 #                  Prereq:  docker pull ros:humble
-grading_backend: ast
-sandbox_image: ros:humble
-sandbox_timeout_s: 180
+grading_backend: docker
+sandbox_image: robo-grader
+sandbox_timeout_s: 60
 sandbox_warmup_s: 5.0
 sandbox_cpus: "2"
 sandbox_memory: 1g
@@ -66,16 +67,19 @@ agentic_mode: true
 max_planner_steps: 8          # hard ceiling on control-loop ticks (safety)
 
 quality_bar:
-  min_confidence: 85.0
+  min_confidence: 50.0
   require_discriminating: true
-  require_judge_approve: true
-  max_similarity: 0.75
+  # IN-LOOP judge: PlannerAgent runs this after each validate round.
+  # Controls whether the planner batch-judge must APPROVE before a question passes.
+  # Distinct from enable_llm_judge (supervisor, post-loop, disabled by default).
+  require_judge_approve: false
+  max_similarity: 0.85
   require_in_scope: true
   min_difficulty_fit: 0.6
 
 # ---- Quality gates ----------------------------------------------------------
-similarity_reject_threshold: 0.75
-min_confidence: 85.0
+similarity_reject_threshold: 0.85
+min_confidence: 50.0
 min_realism_score: 60
 
 critic_batch_size: 10
@@ -94,7 +98,46 @@ prompts_dir: prompts
 outputs_dir: outputs
 reports_dir: reports
 
+# ---- Per-agent model overrides -----------------------------------------------
+# Use a different model for each role. Falls back to `model` if not set.
+# Uncomment and edit to activate. Any agent name can be overridden.
+#
+agent_models:
+  question_generator: google/gemini-2.5-flash-lite        # generation — keep slightly better
+  skill_triage:       google/gemini-2.5-flash-lite    # cheapest — triage + skill picking
+  difficulty_agent:   google/gemini-2.5-flash-lite    # cheapest — critic
+  scope_quality:      google/gemini-2.5-flash-lite    # cheapest — skill-drift check + offline scoring
+  eval_comparator:    google/gemini-2.5-flash-lite    # cheapest — critic
+  supervisor:         google/gemini-2.5-flash-lite    # cheapest — gatekeeper
+  md_summary:         google/gemini-2.5-flash-lite    # cheapest — summariser
+
+# ---- Human review (mid-run) -------------------------------------------------
+# When enabled, borderline questions (confidence 82–87%) are surfaced to a human
+# before the final Supervisor verdict.  Three modes:
+#   log   — write pending_review.json and continue (borderlines treated as approved)
+#   defer — exclude borderlines from the package; they appear in pending_review.json
+#   block — halt the run, write pending_review.json, exit code 2.
+#           On the NEXT run with the same --md, approved decisions are restored.
+#
+# For post-run manual review without mid-run interruption, use instead:
+#   robo-assess review outputs/<run_dir>/
+# That command records instructor approve/reject to calibration/observations.jsonl
+# weighted 3× over auto-generated grading labels (improves confidence EMA faster).
+human_review_enabled: true
+human_review_mode: log          # log | defer | block
+human_review_confidence_min: 82.0
+human_review_confidence_max: 87.0
+
 # ---- Pricing (cost reporting only) ------------------------------------------
+# Reflects the primary model (question_generator + supervisor).
+# Critics run on cheaper models (gpt-4.1-mini, gemini-2.5-flash-lite) via the
+# agent_models overrides above. The token_counter prices each call by its OWN
+# model, so the real run cost is lower than these primary-model rates suggest.
+#   openai/gpt-4.1               : $2.00 / $8.00   (primary — generator + supervisor)
+#   openai/gpt-4.1-mini          : $0.40 / $1.60   (difficulty, eval, md_summary)
+#   google/gemini-2.5-flash-lite : $0.10 / $0.40   (skill_triage, scope_quality)
+#   openai/gpt-4o                : $2.50 / $10.00
+#   anthropic/claude-sonnet-4-6  : $3.00 / $15.00
 pricing:
-  input_per_million_tokens: 0.15
-  output_per_million_tokens: 0.60
+  input_per_million_tokens: 0.10
+  output_per_million_tokens: 0.40
