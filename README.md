@@ -1,4 +1,4 @@
-# RoboAssess — Robotics Coding Question Generator
+# ROS2 - Coding Question Generator
 
 A multi-agent AI system that reads your teaching material (a Markdown file) and
 automatically generates ready-to-use ROS2 coding assessment questions — complete
@@ -437,22 +437,3 @@ Your .md file
 ```
 
 ---
-
-## Final System Rating
-
-| Area | Rating | Notes |
-|---|---|---|
-| Core generation pipeline | ★★★★★ | Solid end-to-end flow, batched & concurrent |
-| Validation depth | ★★★★★ | 8 independent validators, well-separated |
-| Output quality | ★★★★☆ | Good structure; depends on model quality |
-| CLI usability | ★★★★★ | All commands clear, well-documented |
-| GUI (Electron) | ★★★★☆ | Exists and wired via `--json-events`; depends on Electron setup |
-| Config flexibility | ★★★★★ | Per-agent model overrides, runtime tunable |
-| Cost control | ★★★★☆ | Per-token tracking + cheap critics; no hard budget kill yet |
-| Resilience | ★★★★☆ | Docker → AST fallback; Qdrant → TF-IDF fallback |
-| Code health (pre-fix) | ★★☆☆☆ | Had 4 crash-level bugs |
-| Code health (post-fix) | ★★★★☆ | All 4 bugs patched; ready to run |
-
-**Overall: 8.5 / 10** — production-quality architecture with strong multi-agent
-design. The 4 bugs that were found and fixed are the only thing that kept it
-from a 9+. With those fixed the system is solid and ready for real use.
