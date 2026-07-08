@@ -4,8 +4,7 @@
 <div align="center">
 >>>>>>> ca0d235 (v1 with ui)
 
-# 🤖 RoboAssess
-
+# 🤖 ROS2_assement generator 
 ### Multi-agent AI pipeline that turns a lesson `.md` file into ready-to-grade ROS2 coding questions
 
 [![CI](https://github.com/armouredalpha/codingagent/actions/workflows/ci.yml/badge.svg)](https://github.com/armouredalpha/codingagent/actions/workflows/ci.yml)
