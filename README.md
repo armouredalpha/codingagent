@@ -1,8 +1,28 @@
+<<<<<<< HEAD
 # ROS2 - Coding Question Generator
+=======
+<div align="center">
+>>>>>>> ca0d235 (v1 with ui)
 
-A multi-agent AI system that reads your teaching material (a Markdown file) and
-automatically generates ready-to-use ROS2 coding assessment questions — complete
-with starter code, reference solutions, and automated graders.
+# 🤖 RoboAssess
+
+### Multi-agent AI pipeline that turns a lesson `.md` file into ready-to-grade ROS2 coding questions
+
+[![CI](https://github.com/armouredalpha/codingagent/actions/workflows/ci.yml/badge.svg)](https://github.com/armouredalpha/codingagent/actions/workflows/ci.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
+[![Orchestration: LangGraph](https://img.shields.io/badge/orchestration-LangGraph-8A2BE2.svg)](robo_assess/graph/builder.py)
+[![ROS2: Humble](https://img.shields.io/badge/ROS2-Humble-22314E.svg)](Dockerfile.grading)
+
+</div>
+
+---
+
+Hand it a lesson `.md` file. Seventeen specialized agents read it, figure out
+what's being taught, write original coding questions, generate starter code +
+reference solutions, actually **run the reference solution in a sandboxed
+Docker container** to make sure it's not broken, and only ship a batch once a
+Supervisor agent signs off.
 
 ---
 
@@ -147,6 +167,20 @@ container (Docker) and check if it behaves correctly.
 
 If Docker isn't installed or the image isn't built, it automatically falls back
 to `ast` mode — never crashes.
+
+---
+
+### Grading Points (10 points per task)
+Every question is broken into a `tasks` list — the concrete steps a student
+must complete. Each task gets exactly **one evaluation criterion worth 10
+points**, so the total scales with the question:
+
+- 1 task → 10 points
+- 3 tasks → 30 points
+- 5 tasks → 50 points
+
+No fixed 100-point budget to force-fit — a small bug fix and a from-scratch
+node don't get squeezed into the same scale.
 
 ---
 
@@ -417,9 +451,7 @@ Your .md file
         │  Boilerplate check (# TODO markers)      │
         │  Difficulty calibration                  │
         │  Originality check (vectorstore)         │
-        │  Scope & realism check                   │
-        │  Auto-gradability check                  │
-        │  Coverage verifier (skill drift)         │
+        │  Scope, realism & skill-drift check      │
         │  Executable grading (Docker/AST)         │
         │  Confidence scoring (0–100)              │
         └─────────────────────────────────────────┘
@@ -437,3 +469,44 @@ Your .md file
 ```
 
 ---
+<<<<<<< HEAD
+=======
+
+## GUI (Electron + React)
+
+A desktop app in `gui/` gives you a point-and-click alternative to the CLI —
+same underlying pipeline, driven visually.
+
+### Launch it
+
+```bash
+cd gui
+npm install
+npm run dev
+```
+
+This starts the Vite dev server and opens the Electron window automatically
+(via `vite-plugin-electron`). The GUI reads directly from `outputs/`,
+`logs/runs.db`, and `config/config.yaml` — no separate backend server to run.
+
+For a production build:
+
+```bash
+npm run build
+```
+
+### What each tab does
+
+| Tab | What it's for |
+|---|---|
+| **Dashboard** | Analytics across all runs — total questions, approval rate, cost per run, confidence distribution, approval-by-topic charts. Reads `logs/runs.db` + `outputs/usage_history.jsonl`. |
+| **Run** | Kick off a new generation run from the GUI — pick a `.md` file, set difficulty/question count, watch live progress instead of using the CLI. |
+| **Questions** | Browse, filter (by run/status/difficulty), and export every question ever generated across all runs in `outputs/` — as JSON, XLSX, or DOCX. |
+| **Review** | Instructor-facing pass: step through generated questions one at a time and approve/reject them manually. Decisions feed back into the confidence calibration the same way `robo-assess review` does from the CLI. |
+| **Qdrant** | Inspect/manage the vector store used for originality checks — see what's indexed, when Qdrant Cloud is configured as the semantic backend instead of local TF-IDF. |
+| **Config** | Edit `config/config.yaml` values (model, temperature, thresholds, per-agent model overrides) through a form instead of hand-editing YAML. |
+
+### Notes
+- The GUI and CLI share the same `outputs/` directory and `config/config.yaml` — a run started in one shows up correctly in the other.
+- If `logs/runs.db` doesn't exist yet (no runs recorded), the Dashboard tab just shows zeros — run something via the CLI or the Run tab first.
+>>>>>>> ca0d235 (v1 with ui)
