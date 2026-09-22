@@ -91,10 +91,10 @@ originality_lookback_days: 5
 min_confidence_score: 50.0
 confidence_weights:
   coverage: 20
-  difficulty: 20
+  difficulty_eval_calibration: 20  # merged: declared-vs-calibrated difficulty fit + eval-bank tier match (10 each)
   originality: 20
   format_quality: 20
-  eval_calibration: 20
+  test_case_quality: 20            # LLM rating of evaluation_criteria vs. evaluations/test cases/ exemplars
 
 # ---- Supervisor (final-audit gate) ------------------------------------------
 supervisor_min_validation_score: 75
@@ -127,6 +127,7 @@ agent_models:
   question_generator: google/gemini-2.5-flash-lite        # generation — keep slightly better
   skill_triage:       google/gemini-2.5-flash-lite    # cheapest — triage + skill picking
   difficulty_agent:   google/gemini-2.5-flash-lite    # cheapest — critic
+  confidence_agent:   google/gemini-2.5-flash-lite    # cheapest — test_case_quality rating
   supervisor_judge:   google/gemini-2.5-flash-lite    # cheapest — gatekeeper
   md_summary:         google/gemini-2.5-flash-lite    # cheapest — summariser
 

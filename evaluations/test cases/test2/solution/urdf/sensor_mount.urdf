@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<robot name="turtlebot3_sensor_mount">
+
+  <link name="base_footprint"/>
+
+  <link name="base_link">
+    <visual>
+      <geometry><box size="0.14 0.14 0.04"/></geometry>
+      <origin xyz="0 0 0.02" rpy="0 0 0"/>
+    </visual>
+  </link>
+
+  <joint name="base_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0.01" rpy="0 0 0"/>
+  </joint>
+
+  <link name="sensor_mount_link">
+    <visual>
+      <geometry><box size="0.05 0.05 0.02"/></geometry>
+      <origin xyz="0 0 0.01" rpy="0 0 0"/>
+    </visual>
+  </link>
+
+  <joint name="sensor_mount_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="sensor_mount_link"/>
+    <origin xyz="0 0 0.06" rpy="0 0 0"/>
+  </joint>
+
+</robot>

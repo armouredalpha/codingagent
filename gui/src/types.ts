@@ -285,10 +285,10 @@ export interface FullConfig {
   min_confidence_score: number
   confidence_weights: {
     coverage: number
-    difficulty: number
+    difficulty_eval_calibration: number
     originality: number
     format_quality: number
-    eval_calibration: number
+    test_case_quality: number
   }
   supervisor_min_validation_score: number
   quality_bar: {

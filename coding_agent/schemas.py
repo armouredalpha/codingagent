@@ -67,6 +67,10 @@ class CheckType(str, Enum):
     MESSAGE_FIELD = "message_field"
     BEHAVIOUR = "behaviour"
     SIMULATION = "simulation"
+    STRING_ABSENT = "string_absent"
+    TOPIC_MESSAGE_TYPE = "topic_message_type"
+    MESSAGE_FIELD_CONTAINS = "message_field_contains"
+    SERVICE_RESPONDS = "service_responds"
 
 
 # ---------------------------------------------------------------------------
@@ -365,6 +369,7 @@ class ConfidenceBreakdown(BaseModel):
     auto_grading: float = 0.0
     format_quality: float = 0.0
     eval_calibration: float = 0.0     # difficulty match against reference eval set
+    test_case_quality: float = 0.0    # LLM-rated match against evaluations/test cases/ exemplars
     confidence: float = 0.0           # calibrated value used for the APPROVED gate
     raw_confidence: float = 0.0       # pre-calibration weighted heuristic score
     calibrated: bool = False          # True when a fitted calibrator was applied

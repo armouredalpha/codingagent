@@ -25,18 +25,21 @@ function loadProfiles(): Record<string, FullConfig> {
 
 const KNOWN_AGENTS = [
   'question_generator', 'skill_triage', 'difficulty_agent',
-  'supervisor_judge', 'md_summary',
+  'confidence_agent', 'supervisor_judge', 'md_summary',
 ]
 
 // confidence_weights components — auto_grading was removed (no sandbox
 // execution ever runs in this pipeline, so it had no real signal to score;
-// its former 60-point weight is now spread evenly across these five).
+// its former 60-point weight is now spread across these five). "Difficulty +
+// Eval Calibration" is a merged 20-point pool (10/10 split between declared-
+// vs-calibrated difficulty fit and eval-bank tier match). "Test Case Quality"
+// is an LLM rating of evaluation_criteria against evaluations/test cases/.
 const CONFIDENCE_WEIGHT_KEYS = [
   { key: 'coverage', label: 'Coverage' },
-  { key: 'difficulty', label: 'Difficulty' },
+  { key: 'difficulty_eval_calibration', label: 'Difficulty + Eval Calibration' },
   { key: 'originality', label: 'Originality' },
   { key: 'format_quality', label: 'Format Quality' },
-  { key: 'eval_calibration', label: 'Eval Calibration' },
+  { key: 'test_case_quality', label: 'Test Case Quality' },
 ]
 
 export default function ConfigTab() {

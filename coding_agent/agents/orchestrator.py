@@ -134,7 +134,7 @@ class Orchestrator:
         self.generator = QuestionGeneratorAgent(**_kw("question_generator"), token_counter=self.token_counter)
         self.difficulty = DifficultyCalibrationAgent(**_kw("difficulty_agent"), token_counter=self.token_counter)
         self.originality = OriginalityAgent(**kw)
-        self.confidence = ConfidenceScoringAgent(**kw)
+        self.confidence = ConfidenceScoringAgent(**_kw("confidence_agent"), token_counter=self.token_counter)
         self.supervisor = SupervisorAgent(**_kw("supervisor_judge"))
         self.planner = PlannerAgent(**kw)
         self.md_summary = MdSummaryAgent(settings=self.settings, llm=_llm("md_summary"), memory=self.memory)

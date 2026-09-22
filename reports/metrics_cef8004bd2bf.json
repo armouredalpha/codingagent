@@ -1,0 +1,84 @@
+{
+  "run": {
+    "run_id": "cef8004bd2bf",
+    "topic": "Robot_Mathematics",
+    "started_at": "2026-09-22T11:51:22.083888+00:00",
+    "ended_at": "2026-09-22T11:55:22.891058+00:00",
+    "total_elapsed_ms": 0.0
+  },
+  "questions": {
+    "generated": 3,
+    "passed_bar": 2,
+    "pass_rate_pct": 66.7
+  },
+  "tokens": {
+    "total": 30436,
+    "cost_usd": 0.004284
+  },
+  "agents": {
+    "context_retrieval": {
+      "calls": 1,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0.0,
+      "max_elapsed_ms": 0.0
+    },
+    "skill_triage": {
+      "calls": 1,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0.0,
+      "max_elapsed_ms": 0.0
+    },
+    "question_generator": {
+      "calls": 2,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0.0,
+      "max_elapsed_ms": 0.0
+    },
+    "originality_agent": {
+      "calls": 2,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 69.5,
+      "min_elapsed_ms": 37,
+      "max_elapsed_ms": 102
+    },
+    "difficulty_agent": {
+      "calls": 2,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 1625.5,
+      "min_elapsed_ms": 1577,
+      "max_elapsed_ms": 1674
+    },
+    "supervisor": {
+      "calls": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0,
+      "max_elapsed_ms": 0.0
+    },
+    "confidence_agent": {
+      "calls": 2,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 1661.0,
+      "min_elapsed_ms": 1658,
+      "max_elapsed_ms": 1664
+    },
+    "human_review": {
+      "calls": 2,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0,
+      "max_elapsed_ms": 0.0
+    }
+  }
+}

@@ -106,9 +106,14 @@ class Settings(BaseModel):
     # >= this value (and no hard blockers) to be APPROVED. Raise it for a
     # stricter bar, lower it to let more questions through.
     min_confidence_score: float = 50.0
+    # "difficulty_eval_calibration" is a merged bucket — declared-vs-calibrated
+    # difficulty fit and the eval-bank difficulty-tier match share one 20-point
+    # pool (10 each) rather than two separate 20-point ones. "test_case_quality"
+    # is an LLM-rated comparison of evaluation_criteria against real exemplars
+    # in evaluations/test cases/ — see ConfidenceScoringAgent._rate_test_case_quality.
     confidence_weights: dict[str, float] = Field(default_factory=lambda: {
-        "coverage": 20, "difficulty": 20, "originality": 20,
-        "format_quality": 20, "eval_calibration": 20,
+        "coverage": 20, "difficulty_eval_calibration": 20, "originality": 20,
+        "format_quality": 20, "test_case_quality": 20,
     })
 
     # ---- Supervisor (final-audit gate — see SupervisorAgent) --------------------

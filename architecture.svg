@@ -1,278 +1,274 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 2600" font-family="Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1720 2560" font-family="Helvetica, Arial, sans-serif">
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
     </marker>
     <marker id="arrowRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#b3261e"/>
+      <path d="M0,0 L10,5 L0,10 z" fill="#c0392b"/>
     </marker>
   </defs>
 
   <style>
-    .box { stroke:#333; stroke-width:1.5; }
-    .agent { fill:#dbe9fe; }
-    .tool { fill:#fde9c8; }
-    .api { fill:#fbdcdc; }
-    .gate { fill:#d9f2e3; }
-    .terminal { fill:#eceff1; }
-    .lbl { font-size:14px; fill:#111; }
-    .small { font-size:12.5px; fill:#222; }
-    .tiny { font-size:11px; fill:#444; }
-    .title { font-size:26px; font-weight:700; fill:#111; }
-    .subtitle { font-size:14px; fill:#555; }
-    .h2 { font-size:16px; font-weight:700; fill:#0d1b2a; }
-    .flowlabel { font-size:12.5px; font-weight:700; fill:#b3261e; }
-    .edge { stroke:#555; stroke-width:1.8; fill:none; marker-end:url(#arrow); }
-    .edgeRed { stroke:#b3261e; stroke-width:1.8; fill:none; marker-end:url(#arrowRed); stroke-dasharray:6,4; }
+    .title   { font-size: 22px; font-weight: 700; fill: #1a1a1a; }
+    .subtitle{ font-size: 13px; fill: #555; }
+    .node    { fill: #eaf2ff; stroke: #2c5cc5; stroke-width: 1.6; rx: 8; }
+    .llmnode { fill: #fdeedc; stroke: #cf7a1f; stroke-width: 1.6; rx: 8; }
+    .rulenode{ fill: #eafaf0; stroke: #1f9d55; stroke-width: 1.6; rx: 8; }
+    .gatenode{ fill: #fdecea; stroke: #c0392b; stroke-width: 1.6; rx: 8; }
+    .toolbox { fill: #f3e9ff; stroke: #7a3fc0; stroke-width: 1.3; rx: 6; }
+    .label   { font-size: 13.5px; fill: #1a1a1a; font-weight: 600; }
+    .sub     { font-size: 11px; fill: #444; }
+    .plain   { font-size: 10.5px; fill: #7a3fc0; font-style: italic; }
+    .tiny    { font-size: 10px; fill: #666; }
+    .section { font-size: 14px; fill: #333; font-weight: 700; }
+    .edge    { stroke: #555; stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
+    .loopedge{ stroke: #c0392b; stroke-width: 1.6; fill: none; marker-end: url(#arrowRed); stroke-dasharray: 5 3; }
+    .frame   { fill: none; stroke: #ccc; stroke-width: 1; stroke-dasharray: 4 3; rx: 10; }
   </style>
 
-  <rect width="1600" height="2600" fill="#ffffff"/>
+  <text x="30" y="34" class="title">coding_agent — LangGraph Assessment Pipeline</text>
+  <text x="30" y="54" class="subtitle">A state machine (a flowchart the code actually walks through, step by step) with 7 steps, saved to disk after every step, run in a loop up to max_planner_steps=8 times per CLI call</text>
 
-  <!-- HEADER -->
-  <text x="40" y="45" class="title">Coding-Agent — Multi-Agent Architecture</text>
-  <text x="40" y="70" class="subtitle">coding-agent generate --md configs/&lt;file&gt;.md   ·   entry: cli.py → Orchestrator → LangGraph state machine</text>
+  <!-- ============ ENTRY ============ -->
+  <rect x="30" y="72" width="330" height="52" class="node"/>
+  <text x="45" y="93" class="label">CLI: coding-agent generate --md file.md</text>
+  <text x="45" y="110" class="tiny">cli.py → Settings.load() → Orchestrator → graph.invoke() × max_loops</text>
 
-  <!-- LEGEND -->
-  <g transform="translate(40,90)">
-    <rect width="18" height="18" class="box agent"/><text x="24" y="14" class="small">Agent</text>
-    <rect x="100" width="18" height="18" class="box tool"/><text x="124" y="14" class="small">Tool call</text>
-    <rect x="220" width="18" height="18" class="box api"/><text x="244" y="14" class="small">External API</text>
-    <rect x="360" width="18" height="18" class="box gate"/><text x="384" y="14" class="small">Quality / grading gate</text>
-    <rect x="560" width="18" height="18" class="box terminal"/><text x="584" y="14" class="small">CLI / I-O</text>
-    <line x1="680" y1="9" x2="720" y2="9" class="edge"/><text x="726" y="14" class="small">normal flow</text>
-    <line x1="860" y1="9" x2="900" y2="9" class="edgeRed"/><text x="906" y="14" class="small">control-loop branch</text>
-  </g>
+  <line x1="195" y1="124" x2="195" y2="150" class="edge"/>
 
-  <!-- ROW 0: CLI -->
-  <rect x="40" y="130" width="1520" height="60" rx="10" class="box terminal"/>
-  <text x="60" y="155" class="h2">cli.py generate</text>
-  <text x="60" y="175" class="small">Settings.load() (.env → YAML → env overrides → API key)  →  Orchestrator() builds every agent + clients  →  loop up to --max-loops: run_from_md() → graph.invoke()</text>
+  <!-- ============ NODE 1: build_context ============ -->
+  <rect x="30" y="150" width="330" height="98" class="node"/>
+  <text x="45" y="170" class="label">1. build_context</text>
+  <text x="45" y="187" class="sub">MdSummaryAgent (LLM, cheap tier) →</text>
+  <text x="45" y="201" class="sub">MdParserAgent (rule-based, NO LLM) →</text>
+  <text x="45" y="215" class="sub">SkillEntry[] + CoverageMatrix + SkillGraph</text>
+  <text x="45" y="230" class="plain">plain: reads the lesson file, writes down the list of things it teaches</text>
+  <text x="45" y="242" class="tiny">graph/nodes.py:build_context — this is where skills are pulled out of the .md file</text>
 
-  <!-- ROW 1: build_context / retrieve_context / generate / tools -->
-  <rect x="40" y="220" width="330" height="170" rx="10" class="box agent"/>
-  <text x="58" y="246" class="h2">1. build_context</text>
-  <text x="58" y="268" class="small">MdSummaryAgent</text>
-  <text x="58" y="286" class="tiny">cached by md-hash; else 1 LLM call</text>
-  <text x="58" y="308" class="small">MdParserAgent (rule-based)</text>
-  <text x="58" y="326" class="tiny">→ SkillEntry list</text>
-  <text x="58" y="344" class="tiny">→ CoverageMatrix + SkillGraph</text>
-  <text x="58" y="366" class="tiny">stored in orch._run_contexts[run_id]</text>
+  <line x1="195" y1="248" x2="195" y2="274" class="edge"/>
 
-  <rect x="410" y="220" width="330" height="170" rx="10" class="box agent"/>
-  <text x="428" y="246" class="h2">2. retrieve_context</text>
-  <text x="428" y="268" class="small">ContextRetrievalAgent</text>
-  <text x="428" y="286" class="tiny">RAG: past exemplars + dedup hashes</text>
-  <text x="428" y="304" class="tiny">+ cross-run skill_usage_history (Memory)</text>
-  <text x="428" y="326" class="small">SkillTriageAgent — 1 LLM call</text>
-  <text x="428" y="344" class="tiny">complexity triage + skill/domain/</text>
-  <text x="428" y="360" class="tiny">question-type selection</text>
-  <text x="428" y="378" class="tiny">builds ToolRegistry for step 3</text>
+  <!-- ============ NODE 2: retrieve_context ============ -->
+  <rect x="30" y="274" width="330" height="124" class="node"/>
+  <text x="45" y="294" class="label">2. retrieve_context</text>
+  <text x="45" y="311" class="sub">ContextRetrievalAgent (RAG — looks up past examples)</text>
+  <text x="45" y="325" class="sub">SkillTriageAgent (LLM, cheap tier): 1 call →</text>
+  <text x="45" y="339" class="sub">picks skill order + how many TYPE_A/B/C + sim_package_id</text>
+  <text x="45" y="353" class="sub">Wires the tool list onto the generator</text>
+  <text x="45" y="369" class="plain">plain: decides what to ask for next and what "flavor" each question is</text>
+  <text x="45" y="384" class="tiny">TYPE_A = pure math/Python bug · TYPE_B = ROS2 node, wrong string · TYPE_C = math bug inside a node</text>
 
-  <rect x="780" y="220" width="380" height="170" rx="10" class="box agent"/>
-  <text x="798" y="246" class="h2">3. generate — QuestionGeneratorAgent</text>
-  <text x="798" y="268" class="small">Plans coverage-driven slots</text>
-  <text x="798" y="284" class="tiny">(skill × difficulty × domain × question-type)</text>
-  <text x="798" y="304" class="small">Fans out 1 LLM call per slot</text>
-  <text x="798" y="320" class="tiny">ThreadPoolExecutor, generation_concurrency = 4</text>
-  <text x="798" y="340" class="small">Parses 3-block response:</text>
-  <text x="798" y="356" class="tiny">JSON spec / starter code / reference solution</text>
-  <text x="798" y="374" class="tiny">May call tools during generation →</text>
+  <line x1="195" y1="398" x2="195" y2="424" class="edge"/>
 
-  <rect x="1200" y="220" width="360" height="170" rx="10" class="box tool"/>
-  <text x="1218" y="246" class="h2">Tools available to generator</text>
-  <text x="1218" y="266" class="small">check_similarity → local vectorstore</text>
-  <text x="1218" y="284" class="small">query_skill_graph → in-memory graph</text>
-  <text x="1218" y="302" class="small">estimate_difficulty → local heuristic</text>
-  <text x="1218" y="320" class="small" fill="#8a1f1f">fetch_ros2_docs → Context7 API</text>
-  <text x="1218" y="338" class="small" fill="#8a1f1f">search_course_exercises → Tavily/Exa API</text>
-  <text x="1218" y="356" class="small" fill="#8a1f1f">fetch_course_content → web fetch</text>
-  <text x="1218" y="374" class="small">submit_question → terminal tool call</text>
+  <!-- ============ NODE 3: generate ============ -->
+  <rect x="30" y="424" width="330" height="162" class="llmnode"/>
+  <text x="45" y="444" class="label">3. generate</text>
+  <text x="45" y="461" class="sub">QuestionGeneratorAgent (LLM, primary model)</text>
+  <text x="45" y="475" class="sub">3-part reply: JSON spec / starter code / reference code</text>
+  <text x="45" y="489" class="sub">Prompt is built from (in order):</text>
+  <text x="55" y="503" class="tiny">• real check examples from evaluations/test cases/</text>
+  <text x="55" y="516" class="tiny">• few-shot examples from past approved runs (memory.py)</text>
+  <text x="55" y="529" class="tiny">• feedback from the previous rejected attempt, if this is a retry</text>
+  <text x="45" y="546" class="sub">Tool calling happens here — see purple box on the right</text>
+  <text x="45" y="562" class="plain">plain: the AI actually writes the question + code + fix</text>
+  <text x="45" y="576" class="tiny">agents/question_generator.py — several questions written in parallel (ThreadPoolExecutor)</text>
 
-  <!-- ROW 2: LLM API bar -->
-  <rect x="780" y="420" width="780" height="60" rx="10" class="box api"/>
-  <text x="798" y="445" class="h2">LLM API layer (llm_client.py)</text>
-  <text x="798" y="465" class="tiny">OpenRouter (openai/*, google/*) or native Anthropic API · every agent call above is priced per-model and logged to outputs/usage_history.jsonl</text>
+  <line x1="195" y1="586" x2="195" y2="612" class="edge"/>
 
-  <!-- ROW 3: validate -->
-  <rect x="40" y="520" width="1000" height="300" rx="10" class="box gate"/>
-  <text x="60" y="548" class="h2">4. validate  (runs on every question, each pass through the loop)</text>
+  <!-- ============ NODE 4: validate ============ -->
+  <rect x="30" y="612" width="330" height="196" class="llmnode"/>
+  <text x="45" y="632" class="label">4. validate</text>
+  <text x="45" y="649" class="sub">DifficultyCalibrationAgent (LLM, cheap tier, batched)</text>
+  <text x="45" y="663" class="sub">OriginalityAgent (math similarity check, no LLM)</text>
+  <text x="45" y="677" class="sub">SupervisorAgent.compare_to_eval_bank() — eval calibration #1</text>
+  <text x="55" y="691" class="tiny">compares to evaluations/question.json+solution.json</text>
+  <text x="55" y="704" class="tiny">(text-similarity match → is the difficulty label about right?)</text>
+  <text x="45" y="720" class="sub">ConfidenceScoringAgent._rate_test_case_quality() — eval calibration #2</text>
+  <text x="55" y="734" class="tiny">1 LLM call, batched, compares to evaluations/test cases/</text>
+  <text x="55" y="747" class="tiny">(rates the grading checks 0-100 → test_case_quality score)</text>
+  <text x="45" y="763" class="sub">PlannerAgent.evaluate_quality() → pass/fail per question</text>
+  <text x="45" y="780" class="plain">plain: checks the work; good ones are kept, bad ones go back for a redo</text>
+  <text x="45" y="794" class="tiny">passing → accumulated_questions · failing → stays for regeneration</text>
 
-  <rect x="60" y="565" width="460" height="60" rx="6" fill="#ffffff" class="box"/>
-  <text x="75" y="586" class="small">DifficultyAgent (LLM critic)</text>
-  <text x="75" y="604" class="tiny">declared difficulty vs actual solution complexity</text>
+  <line x1="195" y1="808" x2="195" y2="834" class="edge"/>
 
-  <rect x="540" y="565" width="460" height="60" rx="6" fill="#ffffff" class="box"/>
-  <text x="555" y="586" class="small">OriginalityAgent</text>
-  <text x="555" y="604" class="tiny">cosine similarity vs vectorstore; hard-reject if &gt; 0.60</text>
+  <!-- ============ DECISION: planner.decide() ============ -->
+  <polygon points="195,834 330,884 195,934 60,884" class="gatenode"/>
+  <text x="195" y="878" text-anchor="middle" class="label">planner.decide()</text>
+  <text x="195" y="894" text-anchor="middle" class="tiny">REGENERATE / NEXT_BATCH</text>
+  <text x="195" y="907" text-anchor="middle" class="tiny">/ FINALIZE</text>
+  <text x="195" y="923" text-anchor="middle" class="plain">plain: what do we do next?</text>
 
-  <rect x="60" y="635" width="940" height="50" rx="6" fill="#ffffff" class="box"/>
-  <text x="75" y="656" class="small">SupervisorAgent.compare_to_eval_bank() — scores this question against evaluations/question.json</text>
+  <!-- NEXT_BATCH branch loops to generate -->
+  <path d="M 195,834 C 400,700 400,510 360,494" class="loopedge"/>
+  <text x="405" y="660" class="tiny" fill="#c0392b">NEXT_BATCH = still more questions to write → back to generate</text>
 
-  <rect x="60" y="695" width="940" height="60" rx="6" fill="#c8ecd6" class="box"/>
-  <text x="75" y="716" class="small" font-weight="700">ConfidenceAgent → 0–100 score = coverage(20) + difficulty(20) + originality(20) + format_quality(20) + eval_calibration(20)</text>
-  <text x="75" y="736" class="small" font-weight="700">PASS BAR: min_confidence_score = 80.0</text>
+  <!-- REGENERATE branch to reflect node -->
+  <rect x="30" y="962" width="330" height="86" class="llmnode"/>
+  <text x="45" y="982" class="label">5. reflect</text>
+  <text x="45" y="999" class="sub">PlannerAgent.reflect() — 1 LLM call that critiques the failure</text>
+  <text x="45" y="1013" class="sub">writes feedback text for the failing question(s)</text>
+  <text x="45" y="1029" class="plain">plain: explains what went wrong so the retry can fix it</text>
+  <text x="45" y="1043" class="tiny">feedback goes verbatim into the next regenerate prompt</text>
+  <line x1="195" y1="934" x2="195" y2="962" class="edge"/>
 
-  <rect x="60" y="765" width="940" height="44" rx="6" fill="#ffffff" class="box"/>
-  <text x="75" y="792" class="tiny">optional HumanReviewAgent — confidence 82–87% surfaced to a human (modes: log / defer / block)</text>
+  <rect x="30" y="1072" width="330" height="98" class="llmnode"/>
+  <text x="45" y="1092" class="label">6. regenerate</text>
+  <text x="45" y="1109" class="sub">QuestionGeneratorAgent.regenerate()</text>
+  <text x="45" y="1123" class="sub">ONLY the failing questions are replaced, using the feedback</text>
+  <text x="45" y="1137" class="sub">Same tool calling as step 3</text>
+  <text x="45" y="1153" class="plain">plain: rewrites just the bad questions, not the whole batch</text>
+  <text x="45" y="1166" class="tiny">up to max_regeneration_attempts=2 tries per question slot</text>
+  <line x1="195" y1="1048" x2="195" y2="1072" class="edge"/>
 
-  <!-- Quality gate box, right side -->
-  <rect x="1080" y="520" width="480" height="300" rx="10" class="box gate"/>
-  <text x="1100" y="548" class="h2">5. Quality-bar gate</text>
-  <text x="1100" y="548" class="h2" dx="0"/>
-  <text x="1100" y="570" class="small">PlannerAgent.evaluate_quality() — ALL required:</text>
-  <text x="1100" y="596" class="tiny">• min_confidence ≥ 80.0</text>
-  <text x="1100" y="618" class="tiny">• max_similarity ≤ 0.60</text>
-  <text x="1100" y="640" class="tiny">• require_in_scope = true</text>
-  <text x="1100" y="662" class="tiny">  (must map to a real syllabus skill)</text>
-  <text x="1100" y="684" class="tiny">• min_difficulty_fit ≥ 0.6</text>
-  <text x="1100" y="706" class="tiny">• require_judge_approve = false</text>
-  <text x="1100" y="722" class="tiny">  (in-loop judge optional, off by default)</text>
-  <rect x="1100" y="740" width="440" height="60" rx="6" fill="#ffffff" class="box"/>
-  <text x="1115" y="762" class="small" font-weight="700">PASS → accumulated_questions</text>
-  <text x="1115" y="782" class="small" font-weight="700" fill="#b3261e">FAIL → reflect / regenerate loop</text>
+  <!-- regenerate loops back to validate -->
+  <path d="M 360,1121 C 700,1121 700,700 360,700" class="loopedge"/>
+  <text x="642" y="900" class="tiny" fill="#c0392b" transform="rotate(90 642,900)">regenerate → back to validate (re-checked)</text>
 
-  <!-- ROW 4: planner.decide -->
-  <rect x="40" y="860" width="1520" height="70" rx="10" class="box agent"/>
-  <text x="60" y="888" class="h2">6. planner.decide()  — deterministic control-loop router</text>
-  <text x="60" y="910" class="small">REGENERATE (failures remain, budget left)   ·   NEXT_BATCH (batch passed, more slots needed)   ·   FINALIZE (done / budget exhausted)</text>
+  <!-- FINALIZE branch -->
+  <line x1="330" y1="884" x2="430" y2="884" class="edge"/>
+  <rect x="430" y="834" width="340" height="108" class="node"/>
+  <text x="445" y="854" class="label">7. supervise</text>
+  <text x="445" y="871" class="sub">SupervisorAgent.validate() — final check over the WHOLE batch</text>
+  <text x="445" y="885" class="sub">coverage ≥ target, at least 1 approved, validation_score ≥ 75</text>
+  <text x="445" y="899" class="sub">optional second-opinion LLM judge (enable_llm_judge)</text>
+  <text x="445" y="915" class="plain">plain: is this whole batch good enough to ship?</text>
+  <text x="445" y="931" class="tiny">score = 0.6×eval_score + 40×pass_rate → APPROVED / REJECTED</text>
 
-  <!-- ROW 5: reflect / regenerate branch (left) vs supervise (right) -->
-  <rect x="40" y="960" width="460" height="140" rx="10" class="box agent"/>
-  <text x="58" y="988" class="h2">7a. reflect — PlannerAgent</text>
-  <text x="58" y="1010" class="small">Deterministic failed-check strings</text>
-  <text x="58" y="1028" class="tiny">2+ issues → LLM critique (_llm_critic_diagnose)</text>
-  <text x="58" y="1046" class="tiny">otherwise → batched critic (critic_batch_size = 10)</text>
-  <text x="58" y="1068" class="tiny">produces per-question fix directive</text>
-  <text x="58" y="1086" class="tiny">→ passed to regenerate</text>
+  <line x1="600" y1="942" x2="600" y2="968" class="edge"/>
+  <rect x="430" y="968" width="340" height="78" class="node"/>
+  <text x="445" y="990" class="label">export_run_v2()</text>
+  <text x="445" y="1007" class="sub">outputs/&lt;run&gt;/questions/Q*/{question.yaml, solution.yaml,</text>
+  <text x="445" y="1021" class="sub">README.md, ros_ws/(5-file grading harness)}, reports/*.json</text>
+  <text x="445" y="1037" class="plain">plain: writes the finished files to disk</text>
 
-  <rect x="540" y="960" width="460" height="140" rx="10" class="box agent"/>
-  <text x="558" y="988" class="h2">7b. regenerate — QuestionGeneratorAgent</text>
-  <text x="558" y="1010" class="small">Replaces ONLY the failing questions</text>
-  <text x="558" y="1028" class="tiny">(accumulated_questions are never touched)</text>
-  <text x="558" y="1046" class="tiny">injects planner feedback into the prompt</text>
-  <text x="558" y="1068" class="tiny" font-weight="700">bounded: max_regeneration_attempts = 2</text>
-  <text x="558" y="1086" class="tiny">→ loops back to validate (step 4)</text>
+  <line x1="600" y1="1046" x2="600" y2="1074" class="edge"/>
+  <rect x="430" y="1074" width="340" height="74" class="gatenode"/>
+  <text x="445" y="1096" class="label">REJECTED + loops left?</text>
+  <text x="445" y="1113" class="tiny">→ prompt (or --yes) → another CLI loop → build_context again</text>
+  <text x="445" y="1130" class="plain">plain: if it failed and we still have tries left, start over</text>
 
-  <rect x="1080" y="960" width="480" height="200" rx="10" class="box gate"/>
-  <text x="1100" y="988" class="h2">8. supervise — final package audit</text>
-  <text x="1100" y="1010" class="small">merges accumulated_questions + remainder → AssessmentPackage</text>
-  <text x="1100" y="1030" class="small" font-weight="700">gate: supervisor_min_validation_score ≥ 75</text>
-  <text x="1100" y="1050" class="small" font-weight="700">gate: coverage_target ≥ 0.85 of syllabus skills</text>
-  <text x="1100" y="1070" class="small">requires ≥ 1 approved question, else REJECTED</text>
-  <text x="1100" y="1090" class="tiny">optional post-loop LLM judge (enable_llm_judge, off by default)</text>
-  <text x="1100" y="1112" class="tiny">orch._attach_costs() → per-question token/cost</text>
-  <text x="1100" y="1134" class="small" font-weight="700">verdict: APPROVED / REJECTED</text>
-  <text x="1100" y="1154" class="tiny">only APPROVED questions are persisted →</text>
+  <!-- ================= TOOL CALLING BOX ================= -->
+  <rect x="1000" y="150" width="680" height="300" class="frame"/>
+  <text x="1020" y="175" class="section">Tool calling — the AI can ask for extra info mid-answer</text>
+  <text x="1020" y="192" class="tiny">Set up in retrieve_context, used from inside generate/regenerate (steps 3 &amp; 6) via llm.complete_with_tools()</text>
+  <text x="1020" y="206" class="plain">plain: "tool calling" = the AI pauses, asks a real function for data, then keeps writing using that answer</text>
 
-  <!-- ROW 6: memory / vectorstore -->
-  <rect x="1080" y="1220" width="230" height="100" rx="10" class="box api"/>
-  <text x="1096" y="1246" class="h2">Memory (SQLite)</text>
-  <text x="1096" y="1266" class="tiny">few-shot store,</text>
-  <text x="1096" y="1282" class="tiny">question-stem memory,</text>
-  <text x="1096" y="1298" class="tiny">skill-usage-history</text>
+  <rect x="1020" y="218" width="300" height="50" class="toolbox"/>
+  <text x="1032" y="235" class="label">fetch_ros2_docs</text>
+  <text x="1032" y="249" class="tiny">Context7 API — looks up real ROS2 docs</text>
+  <text x="1032" y="261" class="plain">plain: required before writing medium/hard ROS2 code</text>
 
-  <rect x="1330" y="1220" width="230" height="100" rx="10" class="box api"/>
-  <text x="1346" y="1246" class="h2">Vectorstore</text>
-  <text x="1346" y="1266" class="tiny" fill="#8a1f1f">Qdrant API (QDRANT_API_KEY)</text>
-  <text x="1346" y="1282" class="tiny">or local vectorstore/index.json</text>
-  <text x="1346" y="1298" class="tiny">payload: status = approved/rejected</text>
+  <rect x="1020" y="276" width="300" height="50" class="toolbox"/>
+  <text x="1032" y="293" class="label">search_course_exercises</text>
+  <text x="1032" y="307" class="tiny">Tavily/Exa web search</text>
+  <text x="1032" y="319" class="plain">plain: finds similar real-world exercises for grounding</text>
 
-  <!-- ROW 7: export -->
-  <rect x="40" y="1220" width="1000" height="100" rx="10" class="box terminal"/>
-  <text x="60" y="1248" class="h2">9. export_run_v2 (workflows/assessment_workflow.py)</text>
-  <text x="60" y="1270" class="small">outputs/&lt;run&gt;/questions/Q*/question.yaml + solution.yaml + boilerplate/grading artifacts</text>
-  <text x="60" y="1290" class="small">If REJECTED and loops remain → prompt user → repeat from step 1 (resume_id cleared after loop 1)</text>
-  <text x="60" y="1310" class="small" font-weight="700">CLI exit: 0 = APPROVED · 2 = REJECTED/exhausted · 1 = fatal error</text>
+  <rect x="1020" y="334" width="300" height="50" class="toolbox"/>
+  <text x="1032" y="351" class="label">fetch_course_content</text>
+  <text x="1032" y="365" class="tiny">Fetches one specific web page</text>
+  <text x="1032" y="377" class="plain">plain: reads a URL the AI wants more detail on</text>
 
-  <!-- ROW 8: safety bounds -->
-  <rect x="40" y="1360" width="1520" height="90" rx="10" class="box terminal"/>
-  <text x="60" y="1386" class="h2">Control-loop safety bounds (config/config.yaml)</text>
-  <text x="60" y="1408" class="small">max_regeneration_attempts = 2 (per failing question) · max_planner_steps = 8 (hard ceiling, whole run) · generation_concurrency = 4</text>
-  <text x="60" y="1428" class="small">similarity_reject_threshold = 0.60 (hard reject) · accumulated_questions are NEVER re-validated once passed</text>
+  <rect x="1360" y="218" width="300" height="50" class="toolbox"/>
+  <text x="1372" y="235" class="label">check_similarity</text>
+  <text x="1372" y="249" class="tiny">Compares against past questions stored locally</text>
+  <text x="1372" y="261" class="plain">plain: catches near-duplicate questions</text>
 
-  <!-- GRADING DETAIL PANEL -->
-  <rect x="40" y="1480" width="1520" height="620" rx="10" class="box gate"/>
-  <text x="60" y="1512" class="h2" font-size="19">Grading &amp; Points Allocation — full breakdown</text>
+  <rect x="1360" y="276" width="300" height="50" class="toolbox"/>
+  <text x="1372" y="293" class="label">query_skill_graph</text>
+  <text x="1372" y="307" class="tiny">Looks up which skills depend on which</text>
+  <text x="1372" y="319" class="plain">plain: checks prerequisites and coverage</text>
 
-  <text x="60" y="1548" class="lbl" font-weight="700">1) Per-question confidence score (ConfidenceAgent) — scale 0–100, pass bar = 80.0</text>
-  <g transform="translate(60,1560)">
-    <rect width="290" height="50" class="box" fill="#ffffff"/><text x="14" y="30" class="small">coverage</text><text x="14" y="45" class="tiny">20 pts</text>
-    <rect x="300" width="290" height="50" class="box" fill="#ffffff"/><text x="314" y="30" class="small">difficulty</text><text x="314" y="45" class="tiny">20 pts</text>
-    <rect x="600" width="290" height="50" class="box" fill="#ffffff"/><text x="614" y="30" class="small">originality</text><text x="614" y="45" class="tiny">20 pts</text>
-    <rect x="900" width="290" height="50" class="box" fill="#ffffff"/><text x="914" y="30" class="small">format_quality</text><text x="914" y="45" class="tiny">20 pts</text>
-    <rect x="1200" width="290" height="50" class="box" fill="#ffffff"/><text x="1214" y="30" class="small">eval_calibration</text><text x="1214" y="45" class="tiny">20 pts</text>
-  </g>
-  <text x="60" y="1638" class="small" font-weight="700">Total = 100 pts · question keeps if score ≥ 80</text>
-  <text x="60" y="1660" class="tiny" fill="#8a5a00">Note: "auto_grading" field exists in the schema but is hardcoded to 0 — sandboxed/executable grading (sandbox/harness.py) is built but not wired into scoring.</text>
+  <rect x="1360" y="334" width="300" height="50" class="toolbox"/>
+  <text x="1372" y="351" class="label">estimate_difficulty</text>
+  <text x="1372" y="365" class="tiny">Quick local formula on the code, no LLM</text>
+  <text x="1372" y="377" class="plain">plain: a self-check before submitting</text>
 
-  <line x1="60" y1="1682" x2="1540" y2="1682" stroke="#bbb"/>
+  <rect x="1020" y="392" width="640" height="46" class="toolbox"/>
+  <text x="1032" y="409" class="label">submit_question</text>
+  <text x="1032" y="423" class="tiny">The AI's way of handing back its final structured answer instead of plain text</text>
+  <text x="1032" y="435" class="plain">plain: "I'm done, here's my answer in the exact shape you asked for"</text>
 
-  <text x="60" y="1712" class="lbl" font-weight="700">2) Quality-bar gate (PlannerAgent.evaluate_quality) — ALL must pass, every validate round</text>
-  <text x="80" y="1736" class="small">• min_confidence ≥ 80.0</text>
-  <text x="80" y="1756" class="small">• max_similarity ≤ 0.60 (vs any past question in the vectorstore)</text>
-  <text x="80" y="1776" class="small">• require_in_scope = true (question must map to a real syllabus skill)</text>
-  <text x="80" y="1796" class="small">• min_difficulty_fit ≥ 0.6</text>
-  <text x="80" y="1816" class="small">• require_judge_approve = false (in-loop LLM judge not mandatory by default)</text>
+  <!-- ================= SKILL EXTRACTION DETAIL ================= -->
+  <rect x="1000" y="470" width="680" height="190" class="frame"/>
+  <text x="1020" y="495" class="section">Skill extraction (step 1 — build_context)</text>
+  <text x="1020" y="510" class="plain">plain: reading the lesson and making a list of "things a student needs to know"</text>
+  <rect x="1020" y="522" width="300" height="52" class="llmnode"/>
+  <text x="1032" y="540" class="label">MdSummaryAgent</text>
+  <text x="1032" y="554" class="tiny">LLM, cheap tier — shortens the .md file</text>
+  <text x="1032" y="566" class="plain">plain: makes a summary, cached so it's not redone</text>
+  <rect x="1360" y="522" width="300" height="52" class="rulenode"/>
+  <text x="1372" y="540" class="label">MdParserAgent</text>
+  <text x="1372" y="554" class="tiny">plain rules/code, NO LLM call</text>
+  <text x="1372" y="566" class="plain">plain: splits the summary into a skill list</text>
+  <text x="1020" y="592" class="sub">→ CoverageMatrix (skill → has a question tested it yet?) + SkillGraph (which skill needs which)</text>
+  <text x="1020" y="610" class="sub">→ SkillTriageAgent (step 2, LLM) then picks the TYPE_A/B/C mix + order + sim_package_id</text>
+  <text x="1020" y="632" class="tiny">TYPE_A: pure Python/math bug, no rclpy · TYPE_B: ROS2 node, one/two wrong strings</text>
+  <text x="1020" y="646" class="tiny">TYPE_C: math bug inside a node's callback (e.g. wrong field or formula)</text>
 
-  <line x1="60" y1="1838" x2="1540" y2="1838" stroke="#bbb"/>
+  <!-- ================= EVAL CALIBRATION DETAIL ================= -->
+  <rect x="1000" y="680" width="680" height="250" class="frame"/>
+  <text x="1020" y="705" class="section">Eval calibration — two separate comparisons (step 4 — validate)</text>
+  <text x="1020" y="720" class="plain">plain: "how does this question compare to real, human-made examples?"</text>
 
-  <text x="60" y="1866" class="lbl" font-weight="700">3) Package-level final audit (SupervisorAgent)</text>
-  <text x="80" y="1888" class="small">• supervisor_min_validation_score ≥ 75</text>
-  <text x="80" y="1908" class="small">• coverage_target ≥ 0.85 (at least 85% of extracted syllabus skills must be covered)</text>
-  <text x="80" y="1928" class="small">• at least 1 approved question required, else whole package REJECTED</text>
-  <text x="80" y="1948" class="small">• optional post-loop LLM judge (enable_llm_judge, disabled by default) for a second opinion</text>
+  <rect x="1020" y="732" width="640" height="94" class="node"/>
+  <text x="1032" y="752" class="label">#1 SupervisorAgent.compare_to_eval_bank()</text>
+  <text x="1032" y="768" class="tiny">Compares against: evaluations/question.json + solution.json (titles/scenarios/skills)</text>
+  <text x="1032" y="782" class="tiny">Method: text-similarity match, no LLM call — finds the closest real questions</text>
+  <text x="1032" y="796" class="tiny">Feeds: half (10 of 20 points) of the difficulty_eval_calibration score</text>
+  <text x="1032" y="810" class="plain">plain: "is this question's difficulty label believable, compared to real ones?"</text>
 
-  <line x1="60" y1="1970" x2="1540" y2="1970" stroke="#bbb"/>
+  <rect x="1020" y="834" width="640" height="86" class="llmnode"/>
+  <text x="1032" y="854" class="label">#2 ConfidenceScoringAgent._rate_test_case_quality()</text>
+  <text x="1032" y="870" class="tiny">Compares against: evaluations/test cases/ (real grading scripts) via eval_bank_criteria.py</text>
+  <text x="1032" y="884" class="tiny">Method: 1 batched LLM call rating the grading checks 0-100</text>
+  <text x="1032" y="898" class="tiny">Feeds: the full test_case_quality score (20 points)</text>
+  <text x="1032" y="911" class="plain">plain: "would this actually catch a wrong answer, or is it a rubber stamp?"</text>
 
-  <text x="60" y="1998" class="lbl" font-weight="700">4) Human review (optional, borderline band)</text>
-  <text x="80" y="2020" class="small">confidence 82–87% → surfaced for a human decision.  log = continue (treated approved) · defer = excluded, logged · block = halt run, exit code 2</text>
+  <!-- ================= FRAMEWORK NOTE ================= -->
+  <rect x="1000" y="950" width="680" height="150" class="frame"/>
+  <text x="1020" y="975" class="section">Framework</text>
+  <text x="1020" y="990" class="plain">plain: the whole pipeline is one flowchart the code walks, with a save point after every box</text>
+  <text x="1020" y="1010" class="sub">LangGraph StateGraph (graph/builder.py) — 7 steps bound via make_nodes(orch)</text>
+  <text x="1020" y="1026" class="sub">Branching after `validate` decided by PlannerAgent.decide() — plain code, not an LLM call</text>
+  <text x="1020" y="1042" class="sub">Saved with a SqliteSaver checkpointer — every step is written to disk, so --resume RUN_ID works</text>
+  <text x="1020" y="1058" class="sub">State passed between steps as plain dictionaries (validated Pydantic models at each boundary)</text>
+  <text x="1020" y="1078" class="tiny">graph.invoke() runs once per CLI loop; max_planner_steps=8 caps ticks inside one invoke call</text>
 
-  <line x1="60" y1="2042" x2="1540" y2="2042" stroke="#bbb"/>
+  <!-- ================= CONFIDENCE SCORE STRUCTURE ================= -->
+  <rect x="30" y="1180" width="1650" height="180" class="frame"/>
+  <text x="50" y="1205" class="section">Confidence score (0-100 per question) — 5 buckets, 20 points each</text>
+  <text x="50" y="1221" class="plain">plain: how the pipeline decides "is this question good enough to ship?" — set in config/config.yaml confidence_weights</text>
 
-  <text x="60" y="2070" class="lbl" font-weight="700">5) Model → cost table (config/config.yaml pricing, $ per 1M tokens, in / out)</text>
-  <g transform="translate(60,2082)">
-    <rect width="740" height="40" class="box" fill="#ffffff"/><text x="12" y="25" class="small">openai/gpt-4.1 — primary: generator + supervisor</text><text x="600" y="25" class="small" font-weight="700">$2.00 / $8.00</text>
-    <rect y="44" width="740" height="40" class="box" fill="#ffffff"/><text x="12" y="69" class="small">openai/gpt-4.1-mini — difficulty, eval, md_summary</text><text x="600" y="69" class="small" font-weight="700">$0.40 / $1.60</text>
-    <rect x="760" width="740" height="40" class="box" fill="#ffffff"/><text x="772" y="25" class="small">google/gemini-2.5-flash-lite — triage, scope_quality</text><text x="1360" y="25" class="small" font-weight="700">$0.10 / $0.40</text>
-    <rect x="760" y="44" width="740" height="40" class="box" fill="#ffffff"/><text x="772" y="69" class="small">openai/gpt-4o · anthropic/claude-sonnet-4-6</text><text x="1360" y="69" class="small" font-weight="700">$2.50/$10 · $3/$15</text>
-  </g>
+  <rect x="50" y="1236" width="300" height="94" class="node"/>
+  <text x="62" y="1256" class="label">coverage (20)</text>
+  <text x="62" y="1272" class="tiny">does this question actually test</text>
+  <text x="62" y="1285" class="tiny">a real skill from the lesson?</text>
+  <text x="62" y="1301" class="plain">plain: on-topic check</text>
 
-  <!-- ARROWS: main vertical spine -->
-  <path d="M370,305 L410,305" class="edge"/>
-  <path d="M740,305 L780,305" class="edge"/>
-  <path d="M1160,305 L1200,305" class="edge"/>
-  <path d="M1170,390 L1170,420" class="edge"/>
-  <path d="M1170,480 L1170,520" class="edge"/>
-  <path d="M540,820 L540,860" class="edge"/>
-  <path d="M1320,820 L1320,860" class="edge"/>
+  <rect x="370" y="1236" width="320" height="94" class="node"/>
+  <text x="382" y="1256" class="label">difficulty_eval_calibration (20)</text>
+  <text x="382" y="1272" class="tiny">10: declared vs. re-checked difficulty</text>
+  <text x="382" y="1285" class="tiny">10: eval calibration #1 (question bank match)</text>
+  <text x="382" y="1301" class="plain">plain: is the difficulty label honest?</text>
 
-  <!-- decide -> branches -->
-  <path d="M300,930 L270,960" class="edgeRed"/>
-  <text x="150" y="945" class="flowlabel">REGENERATE</text>
+  <rect x="710" y="1236" width="300" height="94" class="node"/>
+  <text x="722" y="1256" class="label">originality (20)</text>
+  <text x="722" y="1272" class="tiny">1 minus how similar it is to</text>
+  <text x="722" y="1285" class="tiny">questions already generated</text>
+  <text x="722" y="1301" class="plain">plain: not a copy-paste repeat</text>
 
-  <path d="M900,930 L900,960" class="edge"/>
-  <text x="905" y="945" class="flowlabel">NEXT_BATCH → back to step 3</text>
+  <rect x="1030" y="1236" width="300" height="94" class="node"/>
+  <text x="1042" y="1256" class="label">format_quality (20)</text>
+  <text x="1042" y="1272" class="tiny">all the required fields are</text>
+  <text x="1042" y="1285" class="tiny">present and filled in</text>
+  <text x="1042" y="1301" class="plain">plain: nothing is missing/broken</text>
 
-  <path d="M1320,930 L1320,960" class="edge"/>
-  <text x="1250" y="945" class="flowlabel">FINALIZE</text>
+  <rect x="1350" y="1236" width="300" height="94" class="llmnode"/>
+  <text x="1362" y="1256" class="label">test_case_quality (20)</text>
+  <text x="1362" y="1272" class="tiny">eval calibration #2 — LLM rating</text>
+  <text x="1362" y="1285" class="tiny">of the grading checks' realism</text>
+  <text x="1362" y="1301" class="plain">plain: would the test actually catch a wrong answer?</text>
 
-  <!-- reflect -> regenerate -->
-  <path d="M500,1030 L540,1030" class="edge"/>
+  <text x="50" y="1345" class="tiny">Pass bar: min_confidence_score (50 by default) AND no hard blockers (out of scope / not auto-gradable / near-duplicate) → APPROVED</text>
 
-  <!-- regenerate -> validate (loop back, dashed) -->
-  <path d="M770,960 L770,900 L680,900 L680,820" class="edgeRed"/>
-  <text x="700" y="895" class="tiny" fill="#b3261e">loop back to validate</text>
-
-  <!-- NEXT_BATCH loop back to generate -->
-  <path d="M1450,860 L1450,500 L1160,500 L1160,390" class="edgeRed"/>
-
-  <!-- supervise -> memory/vectorstore -->
-  <path d="M1195,1160 L1195,1220" class="edge"/>
-  <path d="M1445,1160 L1445,1220" class="edge"/>
-
-  <!-- supervise -> export -->
-  <path d="M1080,1060 L1040,1160 L1040,1220" class="edge"/>
-
-  <!-- export -> safety bounds -->
-  <path d="M540,1320 L540,1360" class="edge"/>
 </svg>

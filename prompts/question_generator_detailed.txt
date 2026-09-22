@@ -43,6 +43,21 @@ VALID EVALUATION CHECK TYPES
   message_content   — exact string/expression appears in source (target = "variable = correct_value")
                       IMPORTANT: target must be the FULL ASSIGNMENT like "wheel_radius = 0.1",
                       NOT just the value "0.1" — a bare number may appear elsewhere in the code.
+  string_absent     — the OLD/buggy string must be GONE from the fixed source (target = "wrong_value")
+                      Use alongside message_content to catch partial fixes that leave the wrong
+                      value sitting next to the right one (e.g. old topic name still referenced).
+  topic_message_type — topic exists AND is advertised with this exact type
+                      (target = "/topic_name", expected = "std_msgs/msg/String")
+  message_field_contains — the node actually PUBLISHES a std_msgs/String message whose .data
+                      field contains this substring (target = "/topic_name", expected = "substring").
+                      Use only when the fix is runtime behaviour, not just a string in source —
+                      this spins a live subscriber for several seconds to catch it.
+  tf_frame_exists   — this tf frame (or comma-separated list of frames) is present in the live
+                      tf tree (target = "frame_name" or "frame_a,frame_b"). Use for URDF/robot_state_publisher
+                      questions where the fix is a joint/link that should now broadcast a transform.
+  service_responds  — the service exists AND responds successfully when called once
+                      (target = "/service_name", expected = "pkg.srv.Type" dotted import path,
+                      e.g. "std_srvs.srv.Trigger"). Use for service-server questions.
   function_output   — function returns expected value (target = "expected_result")
   class_method      — class has a method (target = "method_name")
   numerical_accuracy — numeric result within tolerance (target = "value±tolerance")

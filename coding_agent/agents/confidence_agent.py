@@ -7,9 +7,12 @@ signals into a single 0-100 score. Weights live in ``Settings.confidence_weights
 (config/config.yaml) and are updated at runtime via EMA as grading observations
 accumulate — see ``_ema_update_weights``.
 
-Current defaults (config.yaml):
-    10% coverage + 10% difficulty + 10% originality +
-    60% auto_grading + 10% format_quality + 0% eval_calibration
+Current defaults (config.yaml, 5 buckets of 20 points each):
+    coverage(20) + difficulty_eval_calibration(20, split 10/10 between
+    declared-vs-calibrated difficulty fit and eval-bank tier match) +
+    originality(20) + format_quality(20) + test_case_quality(20, an LLM
+    rating of evaluation_criteria against real exemplars in
+    evaluations/test cases/ — see ``_rate_test_case_quality``).
 
 A question is APPROVED when confidence >= ``settings.min_confidence_score``
 (50 by default) and there are no hard blockers (scope violation, not
@@ -55,6 +58,7 @@ def record_instructor_feedback(
     }])
 
 
+from .. import eval_bank_criteria as _eval_bank
 from ..schemas import (
     AgentResult,
     ConfidenceBreakdown,
@@ -63,6 +67,27 @@ from ..schemas import (
     Question,
 )
 from .base import BaseAgent
+from ._llm_batch import run_batched_critic
+
+_TEST_CASE_JUDGE_SYSTEM = (
+    "You are grading the QUALITY of a generated auto-grading test suite "
+    "(evaluation_criteria), NOT the question itself. For each question, compare "
+    "its evaluation_criteria against real, human-authored eval-bank examples. "
+    "Rate how realistic, specific, and DISCRIMINATING the criteria are — would "
+    "they actually catch an unsolved/half-fixed submission, or are they generic "
+    "/ rubber-stamp checks (e.g. checking something present in both starter and "
+    "reference, or a bare 'compiles' check)? Be skeptical.\n\n"
+    + _eval_bank.render_examples_block()
+    + '\n\nReturn ONLY JSON: {"results": [{"id": "...", "score": <0-100 integer>, '
+    '"reason": "<one sentence>"}]}'
+)
+
+_TEST_CASE_JUDGE_TEMPLATE = "QUESTIONS (each with its evaluation_criteria to rate):\n{questions}"
+
+
+def _valid_test_case_verdict(v: dict) -> bool:
+    score = v.get("score")
+    return isinstance(score, (int, float)) and 0 <= score <= 100
 
 _REQUIRED_FIELDS_LEGACY = (
     "title", "scenario", "objective", "expected_behaviour",
@@ -116,6 +141,10 @@ class ConfidenceScoringAgent(BaseAgent):
     name = "confidence_agent"
 
     _DIFF_ORDER = {Difficulty.EASY: 0, Difficulty.MEDIUM: 1, Difficulty.HARD: 2}
+
+    def __init__(self, *args, token_counter=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.token_counter = token_counter
 
     @property
     def _calibrator(self) -> Calibrator:
@@ -174,10 +203,50 @@ class ConfidenceScoringAgent(BaseAgent):
             return 0.7
         return 0.3  # "mismatch" — difficulty label likely wrong
 
+    def _rate_test_case_quality(self, questions: list[Question]) -> dict[str, float]:
+        """Batched LLM call: rate each question's evaluation_criteria (0-1)
+        against real exemplars in evaluations/test cases/ (see eval_bank_criteria).
+
+        Returns {question_id: 0-1 score} only for questions the LLM actually
+        scored — the caller (``run``) defaults any missing id to a neutral 0.75
+        (same "don't penalise for infrastructure gaps" policy as _eval_calibration),
+        so an unavailable LLM or a bare-criteria question never zeroes out a
+        fifth of the confidence score.
+        """
+        if self.llm is None:
+            return {}
+        rateable = [q for q in questions if q.evaluation_criteria]
+        if not rateable:
+            return {}
+        payload = [
+            {
+                "id": q.question_id,
+                "evaluation_criteria": [
+                    {"check": ec.check, "target": ec.target, "expected": ec.expected,
+                     "description": ec.description}
+                    for ec in q.evaluation_criteria
+                ],
+            }
+            for q in rateable
+        ]
+        verdicts = run_batched_critic(
+            llm=self.llm,
+            system=_TEST_CASE_JUDGE_SYSTEM,
+            template=_TEST_CASE_JUDGE_TEMPLATE,
+            payload=payload,
+            settings=self.settings,
+            validate=_valid_test_case_verdict,
+            agent_name=self.name,
+            log=self.log,
+            token_counter=self.token_counter,
+        )
+        return {qid: max(0.0, min(1.0, float(v["score"]) / 100.0)) for qid, v in verdicts.items()}
+
     def score(
         self,
         q: Question,
         coverage: CoverageMatrix,
+        test_case_quality_component: float = 0.75,
     ) -> ConfidenceBreakdown:
         w = self.settings.confidence_weights
         min_conf = self.settings.min_confidence_score
@@ -203,20 +272,27 @@ class ConfidenceScoringAgent(BaseAgent):
         # auto_grading removed from the weighted score entirely — no sandbox has
         # ever actually run in this pipeline (the reference/starter package is
         # handed to the author to write by hand), so there was no real execution
-        # signal to score. Its former 60-point weight is redistributed evenly
-        # across the remaining five components (20 each, summing to 100).
+        # signal to score. Its former 60-point weight is redistributed across
+        # the five components below (20 each, summing to 100).
         # Gradability is still enforced as a hard PASS/FAIL gate below — a
         # question with no evaluation_criteria still cannot ship — it just no
         # longer contributes to (or inflates) the numeric confidence score.
         ge = q.grading_execution
 
+        # difficulty + eval_calibration share ONE 20-point pool (10 each) — both
+        # measure "is the declared difficulty tier right", just from different
+        # signals (declared-vs-calibrated fit, and eval-bank tier match).
+        diffeval_weight = w.get("difficulty_eval_calibration", 20)
+        difficulty_points = diffeval_weight / 2 * difficulty_component
+        eval_points = diffeval_weight / 2 * eval_component
+
         # Use weights from settings.confidence_weights (config/config.yaml)
         confidence = (
             w.get("coverage", 20) * coverage_component
-            + w.get("difficulty", 20) * difficulty_component
+            + difficulty_points + eval_points
             + w.get("originality", 20) * originality_component
             + w.get("format_quality", 20) * format_component
-            + w.get("eval_calibration", 20) * eval_component
+            + w.get("test_case_quality", 20) * test_case_quality_component
         )
         raw_confidence = round(confidence, 1)
 
@@ -247,11 +323,12 @@ class ConfidenceScoringAgent(BaseAgent):
             )
         return ConfidenceBreakdown(
             coverage=round(w.get("coverage", 20) * coverage_component, 1),
-            difficulty=round(w.get("difficulty", 20) * difficulty_component, 1),
+            difficulty=round(difficulty_points, 1),
             originality=round(w.get("originality", 20) * originality_component, 1),
             auto_grading=0.0,  # removed from the weighted score — see score()
             format_quality=round(w.get("format_quality", 20) * format_component, 1),
-            eval_calibration=round(w.get("eval_calibration", 20) * eval_component, 1),
+            eval_calibration=round(eval_points, 1),
+            test_case_quality=round(w.get("test_case_quality", 20) * test_case_quality_component, 1),
             confidence=confidence,
             raw_confidence=raw_confidence,
             calibrated=is_calibrated,
@@ -265,9 +342,13 @@ class ConfidenceScoringAgent(BaseAgent):
         coverage: CoverageMatrix,
     ) -> AgentResult:
         min_conf = self.settings.min_confidence_score
+        # One batched LLM call rates every question's evaluation_criteria
+        # against evaluations/test cases/ exemplars — not per-question, to keep
+        # this cheap-tier agent to O(1) calls per validate round.
+        test_case_scores = self._rate_test_case_quality(questions)
         approved = 0
         for q in questions:
-            q.confidence = self.score(q, coverage)
+            q.confidence = self.score(q, coverage, test_case_scores.get(q.question_id, 0.75))
             if q.confidence.status == "APPROVED":
                 approved += 1
         self._log_calibration_observations(questions)
@@ -301,10 +382,11 @@ class ConfidenceScoringAgent(BaseAgent):
                 "source": "executable_grading",
                 "components": {
                     "coverage": q.confidence.coverage,
-                    "difficulty": q.confidence.difficulty,
+                    # merged bucket — recombine the two halves for EMA scoring
+                    "difficulty_eval_calibration": q.confidence.difficulty + q.confidence.eval_calibration,
                     "originality": q.confidence.originality,
                     "format_quality": q.confidence.format_quality,
-                    "eval_calibration": q.confidence.eval_calibration,
+                    "test_case_quality": q.confidence.test_case_quality,
                 },
             })
         if not rows:
@@ -347,8 +429,8 @@ class ConfidenceScoringAgent(BaseAgent):
         if len(observations) < self._MIN_OBS_FOR_EMA:
             return
 
-        component_keys = ["coverage", "difficulty", "originality",
-                          "format_quality", "eval_calibration"]
+        component_keys = ["coverage", "difficulty_eval_calibration", "originality",
+                          "format_quality", "test_case_quality"]
 
         # Instructor labels are pedagogically authoritative — weight them 3×
         # over auto-generated executable_grading labels so a handful of reviews

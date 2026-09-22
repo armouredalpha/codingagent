@@ -21,6 +21,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from .. import eval_bank_criteria as _eval_bank
 from ..telemetry import TokenCounter
 from ..tools.registry import ToolRegistry
 from ..schemas import (
@@ -567,6 +568,14 @@ class QuestionGeneratorAgent(BaseAgent):
                 f"REQUIRED QUESTION TYPE: {question_type}\n"
                 f"You MUST generate a {question_type} question for this slot.\n\n"
             ) + user_prompt
+
+        # Calibrate evaluation_criteria against the real eval-bank check
+        # vocabulary (evaluations/test cases/) — unconditional, unlike the
+        # memory few-shots below which only exist once this topic has an
+        # approved run, so this is the model's grounding on its very first run.
+        eval_bank_block = _eval_bank.render_examples_block()
+        if eval_bank_block:
+            user_prompt = eval_bank_block + "\n\n" + user_prompt
 
         # Inject few-shot examples from past approved runs so the model has
         # concrete reference outputs calibrated to this skill+difficulty.

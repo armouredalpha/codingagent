@@ -52,7 +52,19 @@ REQUIREMENTS_TXT = "pytest>=7.0.0\n"
 _RUNTIME_CHECKS = {
     "node_exists", "topic_active", "topic_published", "topic_subscribed",
     "subscriber", "subscription", "service", "service_exists",
+    "topic_message_type", "message_field_contains",
+    "tf_frame_exists", "service_responds",
 }
+
+# Runtime checks that require an actual subscription + collected messages
+# (not just introspection metadata like node/topic/service names).
+_MESSAGE_COLLECTING_CHECKS = {"message_field_contains"}
+
+# Runtime checks that require a tf2 Buffer + TransformListener spin-up.
+_TF_CHECKS = {"tf_frame_exists"}
+
+# Runtime checks that require creating a service client and calling it.
+_SERVICE_CALL_CHECKS = {"service_responds"}
 
 
 def _slug(text: str) -> str:
@@ -217,12 +229,19 @@ def render_evaluate(q: Question, pkg: SimPackage | None) -> str:
     for ec in static_criteria:
         key = _criterion_key(ec)
         needle = ec.target or ec.expected
-        if needle:
-            static_lines.append(f"        {key!r}: {needle!r} in SRC,")
-        else:
+        if not needle:
             # No concrete needle to check against — fail rather than rubber-stamp.
             static_lines.append(f"        {key!r}: False,  # TODO: no target/expected on {ec.id} — author a real check")
-    static_block = "\n".join(static_lines) or "        pass"
+        elif ec.check == "string_absent":
+            # Negative check: the buggy/old value must be GONE, not just the
+            # fixed value present. Catches partial fixes that leave the wrong
+            # string sitting alongside the right one.
+            static_lines.append(f"        {key!r}: {needle!r} not in SRC,")
+        else:
+            static_lines.append(f"        {key!r}: {needle!r} in SRC,")
+    # NB: this fills a dict literal (`return {...}`), so the empty case must be
+    # "" (empty dict body), not "pass" — "pass" is a statement, invalid here.
+    static_block = "\n".join(static_lines)
 
     if pkg is None:
         return f'''#!/usr/bin/env python3
@@ -264,7 +283,61 @@ if __name__ == "__main__":
             runtime_lines.append(f"        {key!r}: {ec.target!r} in topic_types,")
         elif ec.check in ("service", "service_exists"):
             runtime_lines.append(f"        {key!r}: {ec.target!r} in service_names,")
+        elif ec.check == "topic_message_type":
+            # target = "/topic_name", expected = "std_msgs/msg/String" — the topic
+            # must exist AND be advertised with exactly this message type.
+            runtime_lines.append(
+                f"        {key!r}: {ec.expected!r} in topic_types.get({ec.target!r}, []),"
+            )
+        elif ec.check == "message_field_contains":
+            # target = "/topic_name", expected = substring to find in the
+            # received std_msgs/String .data field. Requires an actual
+            # subscription + spin, not just introspection — see `collected`.
+            runtime_lines.append(
+                f"        {key!r}: any({ec.expected!r} in d for d in collected.get({ec.target!r}, [])),"
+            )
+        elif ec.check == "tf_frame_exists":
+            # target = "frame_a" or "frame_a,frame_b" — every listed frame
+            # must be present in the currently-broadcast tf tree.
+            frames = [f.strip() for f in ec.target.split(",") if f.strip()]
+            runtime_lines.append(
+                f"        {key!r}: bool({frames!r}) and set({frames!r}).issubset(known_frames),"
+            )
+        elif ec.check == "service_responds":
+            # target = "/service_name", expected = "pkg.srv.Type" (dotted
+            # import path) — the service is called once and must respond.
+            runtime_lines.append(
+                f"        {key!r}: service_results.get({ec.target!r}, False),"
+            )
     runtime_block = "\n".join(runtime_lines) or "        pass"
+
+    # Topics this question's criteria actually need live message content from.
+    # Kept separate from node/topic/service introspection because it needs a
+    # real subscription + a longer spin window to collect samples.
+    message_topics = sorted({
+        ec.target for ec in runtime_criteria
+        if ec.check in _MESSAGE_COLLECTING_CHECKS and ec.target
+    })
+    # Frames referenced by tf_frame_exists criteria, flattened and deduped —
+    # only spun up (tf2 Buffer + TransformListener) when actually needed.
+    tf_frames_needed = sorted({
+        frame.strip()
+        for ec in runtime_criteria if ec.check in _TF_CHECKS and ec.target
+        for frame in ec.target.split(",") if frame.strip()
+    })
+    # (service_name, dotted_type_path) pairs to actually call, deduped —
+    # only spun up when a service_responds criterion needs it.
+    service_calls_needed = sorted({
+        (ec.target, ec.expected) for ec in runtime_criteria
+        if ec.check in _SERVICE_CALL_CHECKS and ec.target and ec.expected
+    })
+    spin_seconds = 5.0 if message_topics else 3.0
+
+    _extra_imports = "\n".join(filter(None, [
+        "import yaml\nfrom tf2_ros.buffer import Buffer\nfrom tf2_ros.transform_listener import TransformListener"
+        if tf_frames_needed else "",
+        "import importlib" if service_calls_needed else "",
+    ]))
 
     return f'''#!/usr/bin/env python3
 """Auto-generated evaluate.py
@@ -279,6 +352,8 @@ from pathlib import Path
 
 import rclpy
 from rclpy.node import Node
+from std_msgs.msg import String
+{_extra_imports}
 
 WORKSPACE_ROOT = Path(os.getcwd())
 _PKG_CANDIDATES = [
@@ -287,6 +362,21 @@ _PKG_CANDIDATES = [
 ]
 
 FILE_TO_EDIT = {file_name!r}
+
+# Topics that need actual message content inspected (message_field_contains
+# criteria), not just introspected. Assumed std_msgs/String — the common case
+# for this pipeline's small single-node questions; a question needing a
+# different message type should use topic_message_type instead/as well.
+MESSAGE_TOPICS = {message_topics!r}
+SPIN_SECONDS = {spin_seconds!r}
+
+# Frames a tf_frame_exists criterion needs present in the live tf tree.
+TF_FRAMES_NEEDED = {tf_frames_needed!r}
+
+# (service_name, "pkg.srv.Type") pairs a service_responds criterion needs
+# actually called once, dotted-import-path style so any service type works
+# without hardcoding std_srvs specifically.
+SERVICE_CALLS_NEEDED = {service_calls_needed!r}
 
 
 def _find_pkg() -> Path:
@@ -314,6 +404,13 @@ def _static_checks() -> dict:
 class RuntimeChecker(Node):
     def __init__(self):
         super().__init__('{_slug(q.question_id)}_evaluator')
+        self.collected: dict = {{topic: [] for topic in MESSAGE_TOPICS}}
+        for topic in MESSAGE_TOPICS:
+            self.create_subscription(
+                String, topic,
+                lambda msg, _t=topic: self.collected[_t].append(msg.data),
+                10,
+            )
 
 
 def run_evaluation():
@@ -321,11 +418,49 @@ def run_evaluation():
 
     rclpy.init()
     node = RuntimeChecker()
-    rclpy.spin_once(node, timeout_sec=3.0)
+
+    if MESSAGE_TOPICS:
+        # A single spin_once only catches messages already in flight at that
+        # instant; message_field_contains criteria need an actual sampling
+        # window of repeated short spins to accumulate samples.
+        import time as _time
+        deadline = _time.time() + SPIN_SECONDS
+        while _time.time() < deadline:
+            rclpy.spin_once(node, timeout_sec=0.2)
+    else:
+        rclpy.spin_once(node, timeout_sec=SPIN_SECONDS)
 
     node_names = {{n for n, _ in node.get_node_names_and_namespaces()}}
     topic_types = dict(node.get_topic_names_and_types())
     service_names = {{n for n, _ in node.get_service_names_and_types()}}
+    collected = node.collected
+
+    known_frames: set = set()
+    if TF_FRAMES_NEEDED:
+        buffer = Buffer()
+        TransformListener(buffer, node, spin_thread=False)
+        for _ in range(30):
+            rclpy.spin_once(node, timeout_sec=0.2)
+        try:
+            known_frames = set(yaml.safe_load(buffer.all_frames_as_yaml()) or {{}})
+        except yaml.YAMLError:
+            known_frames = set()
+
+    service_results: dict = {{}}
+    for service_name, type_path in SERVICE_CALLS_NEEDED:
+        try:
+            module_path, cls_name = type_path.rsplit('.', 1)
+            srv_cls = getattr(importlib.import_module(module_path), cls_name)
+            client = node.create_client(srv_cls, service_name)
+            if not client.wait_for_service(timeout_sec=5.0):
+                service_results[service_name] = False
+                continue
+            future = client.call_async(srv_cls.Request())
+            rclpy.spin_until_future_complete(node, future, timeout_sec=5.0)
+            result = future.result() if future.done() else None
+            service_results[service_name] = bool(result) and getattr(result, 'success', True)
+        except Exception:
+            service_results[service_name] = False
 
     runtime = {{
 {runtime_block}

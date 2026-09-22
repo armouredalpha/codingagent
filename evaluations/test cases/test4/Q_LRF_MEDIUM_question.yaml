@@ -1,0 +1,137 @@
+question_id: Q_LRF_MEDIUM_fix_pubsub_node
+metadata:
+  topic: Linux & ROS2 Fundamentals
+  difficulty_level: medium
+  estimated_time_minutes: 30
+  language: Python
+  ros_version: ROS2 Humble
+  concepts:
+  - Publisher node
+  - Subscriber node
+  - Timer callback
+title: Fix the broken status publisher so the listener can hear it
+context: A team has a small ROS2 package where one node publishes robot status
+  strings and another subscribes and logs them. After a rushed refactor, the
+  publisher has two blank lines where the timer and publish call should be, and
+  the subscriber is listening on the wrong topic name and uses the wrong message
+  field. Fix and complete the two files so they communicate correctly.
+scenario: ''
+prerequisites:
+- Basic ROS2 publisher and subscriber concepts
+- std_msgs/String message structure
+notes: The candidate is not writing the nodes from scratch. Most of the code is
+  given. They must fill in 2 blanks in the publisher and fix 2 bugs in the
+  subscriber.
+objective: ''
+constraints:
+- Do not restructure the nodes or rename existing methods
+- Only edit the marked TODO lines and the two bugs described
+tested_skills:
+- complete a String publisher and fix topic name and message field bugs in a
+  companion subscriber
+common_mistakes:
+- Setting the timer period as an integer instead of a float
+- Calling self.publish() instead of self.publisher_.publish()
+- Subscribing to /robot_status instead of /robot/status (wrong slash structure)
+- Accessing msg.string instead of msg.data for std_msgs/String
+parts: []
+tasks:
+- 'Task 1: Fill in the two TODO lines in status_publisher.py — create the
+  timer with a 1.0 second period and call publish on the publisher with the msg'
+- 'Task 2: Fix the subscriber topic name (currently /robot_status) to match
+  the publisher topic /robot/status'
+- 'Task 3: Fix the subscriber message field access (currently msg.string) to
+  the correct field msg.data'
+file_structure:
+  ros_package: my_robot_pkg
+  dependencies:
+  - rclpy
+  - std_msgs
+  files_to_create:
+  - path: my_robot_pkg/status_publisher.py
+    role: Publisher sending robot status strings (has 2 TODO blanks)
+  - path: my_robot_pkg/status_listener.py
+    role: Subscriber logging status messages (has 2 bugs)
+starter_code: |
+  # --- status_publisher.py (has 2 TODOs) ---
+  import rclpy
+  from rclpy.node import Node
+  from std_msgs.msg import String
+
+  class StatusPublisher(Node):
+      def __init__(self):
+          super().__init__('status_publisher')
+          self.publisher_ = self.create_publisher(String, '/robot/status', 10)
+          self.count = 0
+          # TODO 1: create a timer with period 1.0 second calling self.timer_callback
+          self.timer = None
+
+      def timer_callback(self):
+          msg = String()
+          msg.data = f'STATUS:{self.count}'
+          self.count += 1
+          # TODO 2: publish msg using self.publisher_
+
+  def main(args=None):
+      rclpy.init(args=args)
+      node = StatusPublisher()
+      rclpy.spin(node)
+      node.destroy_node()
+      rclpy.shutdown()
+
+  if __name__ == '__main__':
+      main()
+
+  # --- status_listener.py (has 2 bugs) ---
+  import rclpy
+  from rclpy.node import Node
+  from std_msgs.msg import String
+
+  class StatusListener(Node):
+      def __init__(self):
+          super().__init__('status_listener')
+          # BUG: wrong topic name, should be /robot/status
+          self.subscription = self.create_subscription(
+              String, '/robot_status', self.listener_callback, 10
+          )
+
+      def listener_callback(self, msg):
+          # BUG: wrong field, std_msgs/String uses msg.data not msg.string
+          self.get_logger().info(f'Received: {msg.string}')
+
+  def main(args=None):
+      rclpy.init(args=args)
+      node = StatusListener()
+      rclpy.spin(node)
+      node.destroy_node()
+      rclpy.shutdown()
+
+  if __name__ == '__main__':
+      main()
+expected_output:
+- shell: 'Shell #1 (publisher)'
+  output: '[INFO] [status_publisher]: Publishing STATUS:0'
+- shell: 'Shell #2 (listener)'
+  output: '[INFO] [status_listener]: Received: STATUS:0'
+run_commands:
+- ros2 run my_robot_pkg status_publisher
+- ros2 run my_robot_pkg status_listener
+evaluation_criteria:
+  compiles_without_error: true
+  primary_skill:
+    skill: complete a String publisher and fix topic name and message field bugs in
+      a companion subscriber
+    weight: 70
+  secondary_concepts:
+    weight: 30
+    concepts:
+    - Publisher node
+    - Subscriber node
+    - Timer callback
+  nodes: null
+  topics_subscribed:
+  - /robot/status
+  topics_published:
+  - /robot/status
+  services: null
+  publish_rate: 1.0
