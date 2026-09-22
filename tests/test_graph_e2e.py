@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import pytest
 
-from robo_assess.graph import AssessmentState, build_assessment_graph
-from robo_assess.graph.state import AssessmentState as _StateCheck
+from coding_agent.graph import AssessmentState, build_assessment_graph
+from coding_agent.graph.state import AssessmentState as _StateCheck
 
 
 # ---------------------------------------------------------------------------
@@ -37,19 +37,19 @@ def test_assessment_state_has_required_keys():
 # ---------------------------------------------------------------------------
 
 def test_graph_package_imports():
-    """robo_assess.graph package exports must be importable."""
-    from robo_assess.graph import AssessmentState, build_assessment_graph  # noqa: F401
+    """coding_agent.graph package exports must be importable."""
+    from coding_agent.graph import AssessmentState, build_assessment_graph  # noqa: F401
     assert AssessmentState is not None
     assert build_assessment_graph is not None
 
 
 def test_graph_compiles(tmp_settings):
     """Graph must compile without errors."""
-    from robo_assess.agents.orchestrator import Orchestrator
+    from coding_agent.agents.orchestrator import Orchestrator
     from unittest.mock import patch, MagicMock
 
     # Stub the Qdrant connection only — no LLM mocking
-    with patch("robo_assess.agents.orchestrator.VectorStore") as MockVS:
+    with patch("coding_agent.agents.orchestrator.VectorStore") as MockVS:
         MockVS.from_settings.return_value = MagicMock()
         orch = Orchestrator(tmp_settings)
         graph = orch._build_graph()
@@ -59,10 +59,10 @@ def test_graph_compiles(tmp_settings):
 
 def test_graph_cached_on_second_call(tmp_settings):
     """_build_graph() must return the same compiled instance on every call."""
-    from robo_assess.agents.orchestrator import Orchestrator
+    from coding_agent.agents.orchestrator import Orchestrator
     from unittest.mock import patch, MagicMock
 
-    with patch("robo_assess.agents.orchestrator.VectorStore") as MockVS:
+    with patch("coding_agent.agents.orchestrator.VectorStore") as MockVS:
         MockVS.from_settings.return_value = MagicMock()
         orch = Orchestrator(tmp_settings)
         g1 = orch._build_graph()
@@ -73,10 +73,10 @@ def test_graph_cached_on_second_call(tmp_settings):
 
 def test_graph_nodes_present(tmp_settings):
     """All 7 expected nodes must be wired into the compiled graph."""
-    from robo_assess.agents.orchestrator import Orchestrator
+    from coding_agent.agents.orchestrator import Orchestrator
     from unittest.mock import patch, MagicMock
 
-    with patch("robo_assess.agents.orchestrator.VectorStore") as MockVS:
+    with patch("coding_agent.agents.orchestrator.VectorStore") as MockVS:
         MockVS.from_settings.return_value = MagicMock()
         orch = Orchestrator(tmp_settings)
         graph = orch._build_graph()
@@ -91,10 +91,10 @@ def test_graph_nodes_present(tmp_settings):
 
 def test_graph_none_before_first_run(tmp_settings):
     """_graph must be None until _build_graph() is called."""
-    from robo_assess.agents.orchestrator import Orchestrator
+    from coding_agent.agents.orchestrator import Orchestrator
     from unittest.mock import patch, MagicMock
 
-    with patch("robo_assess.agents.orchestrator.VectorStore") as MockVS:
+    with patch("coding_agent.agents.orchestrator.VectorStore") as MockVS:
         MockVS.from_settings.return_value = MagicMock()
         orch = Orchestrator(tmp_settings)
 
@@ -103,11 +103,11 @@ def test_graph_none_before_first_run(tmp_settings):
 
 def test_nodes_module_importable():
     """graph.nodes must import without errors."""
-    from robo_assess.graph.nodes import make_nodes  # noqa: F401
+    from coding_agent.graph.nodes import make_nodes  # noqa: F401
     assert callable(make_nodes)
 
 
 def test_builder_module_importable():
     """graph.builder must import without errors."""
-    from robo_assess.graph.builder import build_assessment_graph  # noqa: F401
+    from coding_agent.graph.builder import build_assessment_graph  # noqa: F401
     assert callable(build_assessment_graph)

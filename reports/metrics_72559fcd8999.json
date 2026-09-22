@@ -1,0 +1,92 @@
+{
+  "run": {
+    "run_id": "72559fcd8999",
+    "topic": "Robot_Mathematics",
+    "started_at": "2026-09-22T11:18:49.119925+00:00",
+    "ended_at": "2026-09-22T11:19:57.460995+00:00",
+    "total_elapsed_ms": 0.0
+  },
+  "questions": {
+    "generated": 3,
+    "passed_bar": 1,
+    "pass_rate_pct": 33.3
+  },
+  "tokens": {
+    "total": 26558,
+    "cost_usd": 0.003647
+  },
+  "agents": {
+    "md_summary": {
+      "calls": 1,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0.0,
+      "max_elapsed_ms": 0.0
+    },
+    "context_retrieval": {
+      "calls": 1,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0.0,
+      "max_elapsed_ms": 0.0
+    },
+    "skill_triage": {
+      "calls": 1,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0.0,
+      "max_elapsed_ms": 0.0
+    },
+    "question_generator": {
+      "calls": 2,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0.0,
+      "max_elapsed_ms": 0.0
+    },
+    "originality_agent": {
+      "calls": 2,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 33.5,
+      "min_elapsed_ms": 12,
+      "max_elapsed_ms": 55
+    },
+    "difficulty_agent": {
+      "calls": 2,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 2524.5,
+      "min_elapsed_ms": 1890,
+      "max_elapsed_ms": 3159
+    },
+    "supervisor": {
+      "calls": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0,
+      "max_elapsed_ms": 0.0
+    },
+    "confidence_agent": {
+      "calls": 2,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0,
+      "max_elapsed_ms": 0.0
+    },
+    "human_review": {
+      "calls": 2,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0,
+      "max_elapsed_ms": 0.0
+    }
+  }
+}

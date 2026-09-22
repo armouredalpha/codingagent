@@ -1,7 +1,7 @@
 {
-  "name": "robo-assess-gui",
+  "name": "coding-agent-gui",
   "version": "0.1.0",
-  "description": "Robo Assess GUI — ROS2 coding question generator (Electron + React + Tailwind)",
+  "description": "Coding Agent GUI — ROS2 coding question generator (Electron + React + Tailwind)",
   "private": true,
   "main": "dist-electron/main.js",
   "scripts": {

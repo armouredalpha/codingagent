@@ -12,11 +12,11 @@ import json
 
 import pytest
 
-from robo_assess.agents.question_generator import (
+from coding_agent.agents.question_generator import (
     _parse_three_block_response,
     _parse_llm_question,
 )
-from robo_assess.schemas import Difficulty, BloomLevel
+from coding_agent.schemas import Difficulty, BloomLevel
 
 from .conftest import (
     make_question_json,

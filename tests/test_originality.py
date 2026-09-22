@@ -11,10 +11,10 @@ from __future__ import annotations
 
 import pytest
 
-from robo_assess.agents.originality_agent import OriginalityAgent
-from robo_assess.agents.context_retrieval import _structural_hash
-from robo_assess.schemas import Difficulty, BloomLevel, Question
-from robo_assess.vectorstore import VectorStore
+from coding_agent.agents.originality_agent import OriginalityAgent
+from coding_agent.agents.context_retrieval import _structural_hash
+from coding_agent.schemas import Difficulty, BloomLevel, Question
+from coding_agent.vectorstore import VectorStore
 
 
 # ---------------------------------------------------------------------------
@@ -82,7 +82,7 @@ def test_layer_a_external_known_hash_catches_different_batch(tmp_settings):
     Layer A.  This test verifies the boundary: only truly identical text triggers
     the hash hit.
     """
-    from robo_assess.agents.originality_agent import _question_text
+    from coding_agent.agents.originality_agent import _question_text
 
     scenario = "publisher geometry_msgs Twist velocity cmd_vel warehouse"
     # Simulate a PREVIOUS question with the same scenario but different title/objective
@@ -163,7 +163,7 @@ def test_originality_does_not_load_memory_stems(tmp_settings, tmp_path):
     re-runs see their own questions as near-duplicates (similarity≈1.0) with no
     escape via regeneration. Memory is only consulted via _finish_run for approved
     questions, so previously rejected questions never poison future runs."""
-    from robo_assess.memory import Memory
+    from coding_agent.memory import Memory
     mem = Memory(str(tmp_path / "mem.db"))
     mem.remember_question("MEM001", "Old topic",
                           "publisher Twist velocity cmd_vel warehouse sensor")
@@ -188,7 +188,7 @@ def test_originality_does_not_save_to_memory(tmp_settings, tmp_path):
     by orchestrator._finish_run() for APPROVED questions after the full run
     completes. Writing here (before supervisor approval) caused rejected questions
     to pollute future originality checks."""
-    from robo_assess.memory import Memory
+    from coding_agent.memory import Memory
     mem = Memory(str(tmp_path / "mem.db"))
 
     agent = OriginalityAgent(settings=tmp_settings, memory=mem)

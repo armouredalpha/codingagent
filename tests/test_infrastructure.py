@@ -6,9 +6,8 @@ import tempfile
 import json
 from pathlib import Path
 
-from robo_assess.learned_confidence_improved import load_improved_reference_scores_from_json as load_reference_scores_from_json
-from robo_assess.skill_taxonomy import SkillGraph
-from robo_assess.schemas import SkillEntry
+from coding_agent.skill_taxonomy import SkillGraph
+from coding_agent.schemas import SkillEntry
 
 
 def test_state_manager():
@@ -18,7 +17,7 @@ def test_state_manager():
     Skipped when the module is absent so the rest of the file still runs.
     """
     StateManager = pytest.importorskip(
-        "robo_assess.state_manager",
+        "coding_agent.state_manager",
         reason="StateManager removed — superseded by LangGraph checkpointer",
     ).StateManager
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -95,38 +94,6 @@ def test_skill_graph():
     print("✓ SkillGraph.validate_coverage()")
 
     print("✅ SkillGraph tests passed\n")
-
-
-def test_reference_scores():
-    """Test reference score loading (improved confidence scorer format)."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        evals_dir = Path(tmpdir)
-
-        # Improved scorer reads confidence.json with a questions array
-        confidence_data = {
-            "questions": [
-                {
-                    "question_id": "q1",
-                    "title": "Create a Publisher",
-                    "difficulty": "easy",
-                    "scenario": "Write code to create a ROS2 publisher",
-                    "skills": ["ROS2"],
-                    "quality_score": 85,
-                    "confidence_predicted_by_system": 80,
-                    "student_attempts": [{"passed": True}, {"passed": False}],
-                }
-            ]
-        }
-        (evals_dir / "confidence.json").write_text(json.dumps(confidence_data))
-        print("✓ Created mock confidence.json")
-
-        refs = load_reference_scores_from_json(str(evals_dir))
-        assert "q1" in refs, "Reference not loaded"
-        assert "quality_score" in refs["q1"], "quality_score field missing"
-        assert 0 <= refs["q1"]["quality_score"] <= 100, "quality_score out of range"
-        print("✓ load_improved_reference_scores_from_json()")
-
-    print("✅ Reference score tests passed\n")
 
 
 def test_batch_processor():

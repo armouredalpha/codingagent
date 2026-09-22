@@ -1,0 +1,84 @@
+{
+  "run": {
+    "run_id": "1742f63aaf26",
+    "topic": "SLAM",
+    "started_at": "2026-08-03T10:20:50.177172+00:00",
+    "ended_at": "2026-08-03T10:32:36.483502+00:00",
+    "total_elapsed_ms": 0.0
+  },
+  "questions": {
+    "generated": 2,
+    "passed_bar": 0,
+    "pass_rate_pct": 0.0
+  },
+  "tokens": {
+    "total": 16700,
+    "cost_usd": 0.00372
+  },
+  "agents": {
+    "context_retrieval": {
+      "calls": 1,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0.0,
+      "max_elapsed_ms": 0.0
+    },
+    "skill_triage": {
+      "calls": 1,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0.0,
+      "max_elapsed_ms": 0.0
+    },
+    "question_generator": {
+      "calls": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0.0,
+      "max_elapsed_ms": 0.0
+    },
+    "difficulty_agent": {
+      "calls": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 972.8,
+      "min_elapsed_ms": 2,
+      "max_elapsed_ms": 2162
+    },
+    "originality_agent": {
+      "calls": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 2091.8,
+      "min_elapsed_ms": 828,
+      "max_elapsed_ms": 3361
+    },
+    "supervisor": {
+      "calls": 3,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0,
+      "max_elapsed_ms": 0.0
+    },
+    "confidence_agent": {
+      "calls": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.5,
+      "min_elapsed_ms": 0,
+      "max_elapsed_ms": 2
+    },
+    "human_review": {
+      "calls": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0,
+      "max_elapsed_ms": 0.0
+    }
+  }
+}

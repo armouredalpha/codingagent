@@ -24,8 +24,19 @@ function loadProfiles(): Record<string, FullConfig> {
 }
 
 const KNOWN_AGENTS = [
-  'question_generator', 'skill_picker', 'triage_agent', 'difficulty_agent',
-  'scope_agent', 'quality_judge', 'supervisor_judge', 'eval_comparator', 'md_summary',
+  'question_generator', 'skill_triage', 'difficulty_agent',
+  'supervisor_judge', 'md_summary',
+]
+
+// confidence_weights components — auto_grading was removed (no sandbox
+// execution ever runs in this pipeline, so it had no real signal to score;
+// its former 60-point weight is now spread evenly across these five).
+const CONFIDENCE_WEIGHT_KEYS = [
+  { key: 'coverage', label: 'Coverage' },
+  { key: 'difficulty', label: 'Difficulty' },
+  { key: 'originality', label: 'Originality' },
+  { key: 'format_quality', label: 'Format Quality' },
+  { key: 'eval_calibration', label: 'Eval Calibration' },
 ]
 
 export default function ConfigTab() {
@@ -210,15 +221,42 @@ export default function ConfigTab() {
 
         <Accordion title="D — Quality Gates">
           <div className="grid grid-cols-2 gap-4">
-            {slider('min_confidence', 'Min Confidence', 50, 100, 1)}
+            {slider('min_confidence_score', 'Min Confidence Score (pass bar)', 0, 100, 1,
+              'THE approve/reject bar — a question needs a confidence score at or above this to be APPROVED')}
+            {slider('quality_bar.min_confidence', 'Planner Quality-Bar Min Confidence', 0, 100, 1,
+              'Separate, stricter in-loop bar PlannerAgent uses before shipping a question at all')}
             {slider('similarity_reject_threshold', 'Similarity Reject Threshold', 0.5, 1.0, 0.05)}
-            {num('min_realism_score', 'Min Realism Score', { min: 0, max: 100, step: 5 })}
+            {num('originality_lookback_days', 'Originality Lookback (days)', {
+              min: 0, max: 365,
+              hint: 'Only compare against questions generated in the last N days; 0 = compare against entire history. Undated/legacy entries are always included.',
+            })}
+            {num('supervisor_min_validation_score', 'Supervisor Min Validation Score', { min: 0, max: 100, step: 5 })}
             {num('critic_batch_size', 'Critic Batch Size', { min: 1, max: 20 })}
+          </div>
+          <div className="mt-4 rounded-lg border border-border bg-bg p-4">
+            <p className="mb-3 text-sm font-medium">Confidence Weights (must sum to 100)</p>
+            <p className="mb-3 text-xs text-muted">
+              auto_grading was removed — no sandbox execution ever runs in this pipeline, so it had no real
+              signal to score. Its former 60-point weight is now spread across these five components.
+            </p>
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+              {CONFIDENCE_WEIGHT_KEYS.map(({ key, label }) => (
+                <div key={key}>{num(`confidence_weights.${key}`, label, { min: 0, max: 100, step: 5 })}</div>
+              ))}
+            </div>
+            {(() => {
+              const weights = (staged.confidence_weights ?? {}) as Record<string, number>
+              const sum = CONFIDENCE_WEIGHT_KEYS.reduce((acc, { key }) => acc + Number(weights[key] ?? 0), 0)
+              return (
+                <p className={`mt-2 text-xs ${sum === 100 ? 'text-muted' : 'text-danger'}`}>
+                  Current sum: {sum}{sum !== 100 ? ' — should be 100' : ''}
+                </p>
+              )
+            })()}
           </div>
           <div className="mt-4 rounded-lg border border-border bg-bg p-4">
             <p className="mb-3 text-sm font-medium">Quality Bar</p>
             <div className="grid grid-cols-2 gap-4">
-              {toggle('quality_bar.require_discriminating', 'Require Discriminating', 'Grading tests must prove starter fails')}
               {toggle('quality_bar.require_judge_approve', 'Require Judge Approve', 'LLM quality judge must not reject')}
               {toggle('quality_bar.require_in_scope', 'Require In-Scope')}
               {slider('quality_bar.max_similarity', 'Max Similarity', 0.5, 1.0, 0.05)}
@@ -227,19 +265,7 @@ export default function ConfigTab() {
           </div>
         </Accordion>
 
-        <Accordion title="E — Grading Backend">
-          <div className="grid grid-cols-2 gap-4">
-            {seg('grading_backend', 'Grading Backend', ['ast', 'docker'])}
-            {text('sandbox_image', 'Sandbox Image')}
-            {num('sandbox_timeout_s', 'Timeout (s)')}
-            {num('sandbox_warmup_s', 'Warmup (s)', { step: 0.5 })}
-            {text('sandbox_cpus', 'CPUs')}
-            {text('sandbox_memory', 'Memory')}
-            {num('sandbox_pids_limit', 'PIDs Limit')}
-          </div>
-        </Accordion>
-
-        <Accordion title="F — Human Review">
+        <Accordion title="E — Human Review">
           <div className="grid grid-cols-2 gap-4">
             {toggle('human_review_enabled', 'Enable Human Review')}
             {seg('human_review_mode', 'Review Mode', ['log', 'defer', 'block'])}
@@ -248,11 +274,11 @@ export default function ConfigTab() {
           </div>
         </Accordion>
 
-        <Accordion title="G — Autonomy">
+        <Accordion title="F — Autonomy">
           {num('max_planner_steps', 'Max Planner Steps', { min: 1, max: 20 })}
         </Accordion>
 
-        <Accordion title="H — Pricing (USD / 1M tokens)">
+        <Accordion title="G — Pricing (USD / 1M tokens)">
           <div className="grid grid-cols-2 gap-4">
             {num('pricing.input_per_million_tokens', 'Input / 1M', { min: 0, step: 0.01 })}
             {num('pricing.output_per_million_tokens', 'Output / 1M', { min: 0, step: 0.01 })}

@@ -1,4 +1,4 @@
-// All shared types for robo-assess GUI.
+// All shared types for coding-agent GUI.
 
 export type TabId = 'config' | 'dashboard' | 'run' | 'questions' | 'review' | 'qdrant'
 
@@ -215,7 +215,9 @@ export interface QuestionRow {
   run_id: string
   run_dir: string
   status: 'approved' | 'rejected'
-  boilerplate_code?: string
+  sim_package_id?: string
+  readme?: string
+  ros_ws_files?: { name: string; content: string }[]
 }
 export interface SupervisorVerdictReport {
   supervisor_status: string
@@ -277,24 +279,25 @@ export interface FullConfig {
   coverage_target: number
   auto_scale_questions: boolean
   max_questions: number
-  min_confidence: number
   similarity_reject_threshold: number
-  min_realism_score: number
+  originality_lookback_days: number
   critic_batch_size: number
+  min_confidence_score: number
+  confidence_weights: {
+    coverage: number
+    difficulty: number
+    originality: number
+    format_quality: number
+    eval_calibration: number
+  }
+  supervisor_min_validation_score: number
   quality_bar: {
-    require_discriminating: boolean
+    min_confidence: number
     require_judge_approve: boolean
     max_similarity: number
     require_in_scope: boolean
     min_difficulty_fit: number
   }
-  grading_backend: string
-  sandbox_image: string
-  sandbox_timeout_s: number
-  sandbox_warmup_s: number
-  sandbox_cpus: string
-  sandbox_memory: string
-  sandbox_pids_limit: number
   max_planner_steps: number
   human_review_enabled: boolean
   human_review_mode: string

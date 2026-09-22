@@ -9,7 +9,7 @@ function createWindow() {
     minWidth: 1100,
     minHeight: 700,
     backgroundColor: '#0a0e1a',
-    title: 'Robo Assess',
+    title: 'Coding Agent',
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),

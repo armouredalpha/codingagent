@@ -105,5 +105,5 @@ rl.on('line', async line => {
 });
 rl.on('close', async () => { await COMMANDS.quit(); process.exit(0); });
 
-console.log('robo-assess driver — "help" for commands, "launch" to start');
+console.log('coding-agent driver — "help" for commands, "launch" to start');
 rl.prompt();

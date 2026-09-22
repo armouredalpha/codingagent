@@ -20,7 +20,7 @@ export default function HomeBanner() {
       <p className="text-sm font-medium uppercase tracking-widest text-primary">
         NxtWave Robotics Engineering
       </p>
-      <h1 className="mt-2 text-4xl font-bold">Robo Assess</h1>
+      <h1 className="mt-2 text-4xl font-bold">Coding Agent</h1>
       <p className="mt-2 text-lg text-muted">ROS2 Coding Question Generator</p>
       <p className="mt-4 max-w-3xl leading-relaxed text-muted">
         Multi-agent pipeline that transforms Markdown teaching materials into high-quality

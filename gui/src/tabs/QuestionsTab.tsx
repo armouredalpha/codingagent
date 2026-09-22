@@ -52,7 +52,7 @@ export default function QuestionsTab() {
 
   const onExport = async () => {
     if (!rows.length) return
-    const defaultName = `robo_assess_questions_${new Date().toISOString().slice(0, 10)}`
+    const defaultName = `coding_agent_questions_${new Date().toISOString().slice(0, 10)}`
     await window.api.export.run(rows as unknown as QuestionRow[], { format: exportFormat, includeSolution }, defaultName)
   }
 
@@ -153,6 +153,9 @@ export default function QuestionsTab() {
                               <span className={`rounded px-2 py-0.5 text-xs font-medium ${DIFF_COLOR[q.difficulty] ?? ''}`}>{q.difficulty}</span>
                               <span className="rounded border border-border px-2 py-0.5 text-xs text-muted">{q.skill}</span>
                               <span className="rounded border border-border px-2 py-0.5 text-xs text-muted">~{q.estimated_time_minutes ?? '?'} min</span>
+                              {q.sim_package_id && (
+                                <span className="rounded border border-border px-2 py-0.5 text-xs text-muted">sim: {q.sim_package_id}</span>
+                              )}
                             </div>
                             {q.context && <p className="text-muted leading-relaxed">{q.context}</p>}
                             <p className="font-medium">{q.question}</p>
@@ -173,14 +176,24 @@ export default function QuestionsTab() {
                                 {q.notes.map((n, i) => <li key={i}>{n}</li>)}
                               </ul>
                             )}
-                            {q.boilerplate_code && (
+                            {q.readme && (
                               <div className="relative">
                                 <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs text-muted">Boilerplate</span>
-                                  <button onClick={() => navigator.clipboard.writeText(q.boilerplate_code!)}
+                                  <span className="text-xs text-muted">README.md</span>
+                                  <button onClick={() => navigator.clipboard.writeText(q.readme!)}
                                     className="text-xs text-primary hover:underline">Copy</button>
                                 </div>
-                                <pre className="overflow-auto rounded-lg bg-surface p-3 text-xs font-mono max-h-64 border border-border">{q.boilerplate_code}</pre>
+                                <pre className="overflow-auto rounded-lg bg-surface p-3 text-xs font-mono max-h-64 border border-border whitespace-pre-wrap">{q.readme}</pre>
+                              </div>
+                            )}
+                            {q.ros_ws_files && q.ros_ws_files.length > 0 && (
+                              <div>
+                                <span className="text-xs text-muted">Grading harness (ros_ws/)</span>
+                                <div className="mt-1 flex flex-wrap gap-2">
+                                  {q.ros_ws_files.map((f) => (
+                                    <span key={f.name} className="rounded bg-border px-2 py-0.5 font-mono text-xs">{f.name}</span>
+                                  ))}
+                                </div>
                               </div>
                             )}
                           </div>

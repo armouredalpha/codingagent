@@ -1,12 +1,17 @@
 # =============================================================================
-# robo_assess — system configuration
+# coding_agent — system configuration
 # =============================================================================
-# Set provider + model here (or override via .env / env vars).
+# Set provider + model here. The actual API key is NEVER put in this file —
+# it lives in .env (see .env.example) so it never gets committed to git.
 #
-# PROVIDER          KEY ENV VAR            EXAMPLE MODELS
+# PROVIDER          KEY GOES IN .env AS    EXAMPLE MODELS
 # -----------       -------------------    -----------------------------------
 # openrouter        OPENROUTER_API_KEY     openai/gpt-4o, anthropic/claude-sonnet-4-6
-# anthropic         ANTHROPIC_API_KEY      claude-haiku-4-5-20251001, claude-sonnet-4-6
+# anthropic         ANTHROPIC_API_KEY      claude-sonnet-4-6, claude-haiku-4-5-20251001
+#
+# To switch to direct Anthropic:
+#   1. Add to .env:  ANTHROPIC_API_KEY=sk-ant-...
+#   2. Set provider: anthropic and model: claude-sonnet-4-6 below
 # =============================================================================
 
 # ---- Provider ---------------------------------------------------------------
@@ -43,22 +48,6 @@ max_questions: 14
 generation_concurrency: 4
 generation_batch_size: 2        # generate and validate N questions at a time
 
-# ---- Executable grading backend ---------------------------------------------
-# "ast"          : static analysis — reference must call the required rclpy APIs
-#                  and the unsolved starter must fail (default; no ROS2 needed).
-# "ros2_sandbox" : runs the node for real in a network-isolated ros:humble
-#                  container and observes it with the ros2 CLI (live topics,
-#                  publish rates, services, TF). Degrades to SKIPPED_NO_RUNTIME
-#                  — never a false PASS — when Docker or the image is absent.
-#                  Prereq:  docker pull ros:humble
-grading_backend: docker
-sandbox_image: robo-grader
-sandbox_timeout_s: 60
-sandbox_warmup_s: 5.0
-sandbox_cpus: "2"
-sandbox_memory: 1g
-sandbox_pids_limit: 256
-
 # ---- Autonomy / planner -----------------------------------------------------
 # The run is driven by a PlannerAgent (observe → decide → act), not a fixed
 # sequence. It loops generate → validate → reflect → regenerate until the quality
@@ -68,7 +57,6 @@ max_planner_steps: 8          # hard ceiling on control-loop ticks (safety)
 
 quality_bar:
   min_confidence: 50.0
-  require_discriminating: true
   # IN-LOOP judge: PlannerAgent runs this after each validate round.
   # Controls whether the planner batch-judge must APPROVE before a question passes.
   # Distinct from enable_llm_judge (supervisor, post-loop, disabled by default).
@@ -79,8 +67,37 @@ quality_bar:
 
 # ---- Quality gates ----------------------------------------------------------
 similarity_reject_threshold: 0.85
-min_confidence: 50.0
-min_realism_score: 60
+
+# ---- Originality recency window ---------------------------------------------
+# When checking a new question against the vectorstore for near-duplicates,
+# only compare it against questions generated within this many days (e.g. 5
+# means "compare against anything generated from 5 days ago until now").
+# Set to 0 to compare against the entire history instead (no date filtering).
+# Entries with no recorded generation date (older/legacy data) are ALWAYS
+# included regardless of this setting — "no date mentioned" falls back to
+# comparing against everything rather than silently skipping them.
+originality_lookback_days: 5
+
+# ---- Confidence gate (single source of truth — see ConfidenceScoringAgent) --
+# auto_grading removed: no sandbox execution ever runs in this pipeline (the
+# reference/starter package is handed to the author to write by hand), so it
+# had no real signal to score. Its former 60-point weight is redistributed
+# evenly across the remaining five components below (sum = 100).
+#
+# min_confidence_score is THE PASS BAR — a question needs a confidence score
+# >= this number (out of 100, and no hard blockers like empty evaluation
+# criteria or a near-duplicate) to be marked APPROVED. Raise this to demand
+# higher-quality questions; lower it to let more through.
+min_confidence_score: 50.0
+confidence_weights:
+  coverage: 20
+  difficulty: 20
+  originality: 20
+  format_quality: 20
+  eval_calibration: 20
+
+# ---- Supervisor (final-audit gate) ------------------------------------------
+supervisor_min_validation_score: 75
 
 critic_batch_size: 10
 
@@ -102,13 +119,15 @@ reports_dir: reports
 # Use a different model for each role. Falls back to `model` if not set.
 # Uncomment and edit to activate. Any agent name can be overridden.
 #
+# NOTE: the supervisor's override key MUST be "supervisor_judge" (not
+# "supervisor") — that's the exact agent name orchestrator.py looks up when
+# building the Supervisor's LLM client. Using "supervisor" here is a silent
+# no-op (the key is simply never read).
 agent_models:
   question_generator: google/gemini-2.5-flash-lite        # generation — keep slightly better
   skill_triage:       google/gemini-2.5-flash-lite    # cheapest — triage + skill picking
   difficulty_agent:   google/gemini-2.5-flash-lite    # cheapest — critic
-  scope_quality:      google/gemini-2.5-flash-lite    # cheapest — skill-drift check + offline scoring
-  eval_comparator:    google/gemini-2.5-flash-lite    # cheapest — critic
-  supervisor:         google/gemini-2.5-flash-lite    # cheapest — gatekeeper
+  supervisor_judge:   google/gemini-2.5-flash-lite    # cheapest — gatekeeper
   md_summary:         google/gemini-2.5-flash-lite    # cheapest — summariser
 
 # ---- Human review (mid-run) -------------------------------------------------
@@ -120,7 +139,7 @@ agent_models:
 #           On the NEXT run with the same --md, approved decisions are restored.
 #
 # For post-run manual review without mid-run interruption, use instead:
-#   robo-assess review outputs/<run_dir>/
+#   coding-agent review outputs/<run_dir>/
 # That command records instructor approve/reject to calibration/observations.jsonl
 # weighted 3× over auto-generated grading labels (improves confidence EMA faster).
 human_review_enabled: true

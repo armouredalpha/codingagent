@@ -119,7 +119,7 @@ def seed(outputs_dir: str, db_path: str, dry_run: bool = False) -> int:
 
     # Ensure DB + table exists by initialising Memory
     sys.path.insert(0, str(Path(__file__).parent.parent))
-    from robo_assess.memory import Memory
+    from coding_agent.memory import Memory
     Memory(db_path)  # creates tables/migrations
 
     already_in_db = _existing_qids(db_path)
@@ -209,7 +209,7 @@ def main() -> int:
     if not db_path:
         try:
             sys.path.insert(0, str(Path(__file__).parent.parent))
-            from robo_assess.config import Settings
+            from coding_agent.config import Settings
             settings = Settings.load(args.config)
             db_path = settings.memory_db_path
         except Exception:

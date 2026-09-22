@@ -1,0 +1,67 @@
+# Registry of simulation_ws robot-model packages.
+#
+# Each entry describes ONE pre-built, shared robot/simulation dependency that
+# a question's ros_ws/src/<pkg> can launch against at runtime. Students never
+# edit simulation_ws — it's just sourced/available in the grading container.
+#
+# `workspace` / `sim_workspace` are relative to Settings.sim_workspaces_root
+# (an external path — these are full ROS2 workspaces with build/install/log
+# dirs and, for turtlebot3, gazebo meshes and vendored git submodules, so they
+# live outside the repo, not inside coding_agent/).
+#
+# Add one entry per new robot model. Nothing else in the pipeline needs to
+# change — SkillTriageAgent/QuestionGeneratorAgent pick an entry by matching
+# `domain_tags` against the question's skills/industry_domain.
+
+- id: patrol_bot
+  robot_model: custom_diff_drive
+  sim_workspace: simulation_ws        # shared dependency (turtlebot3 stack)
+  student_workspace: ros_ws           # per-question student package root
+  ros_package: patrol_bot
+  launch_file: patrol_bringup.launch.py
+  domain_tags: [navigation, amcl, patrol, localization]
+  editable_files:
+    - path: config/amcl_params.yaml
+      role: AMCL localization parameters
+    - path: patrol_bot/send_waypoints.py
+      role: waypoint publisher logic
+  known_nodes: [map_server, amcl]
+  known_topics: ["/scan", "/cmd_vel", "/amcl_pose"]
+  known_services: []
+
+- id: turtlebot3_nav
+  robot_model: turtlebot3
+  sim_workspace: simulation_ws
+  student_workspace: ros_ws
+  ros_package: turtlebot3_navigation2
+  launch_file: navigation2.launch.py
+  domain_tags: [navigation, slam, nav2, path-planning]
+  editable_files:
+    - path: param/burger.yaml
+      role: nav2 costmap/planner parameters
+  known_nodes: [controller_server, planner_server, bt_navigator]
+  known_topics: ["/cmd_vel", "/scan", "/map"]
+  known_services: []
+
+- id: franka_manipulation
+  robot_model: franka_panda
+  sim_workspace: simulation_ws
+  student_workspace: ros_ws
+  ros_package: franka_manipulation
+  launch_file: franka_bringup.launch.py
+  domain_tags: [manipulation, arm, moveit, grasping, kinematics, pick-and-place]
+  editable_files:
+    - path: config/moveit_controllers.yaml
+      role: MoveIt controller/planning parameters
+    - path: franka_manipulation/pick_place.py
+      role: pick-and-place motion logic
+  known_nodes: [move_group, franka_control_node]
+  known_topics: ["/joint_states", "/franka_gripper/gripper_action"]
+  known_services: ["/compute_ik", "/plan_kinematic_path"]
+# NOTE: franka_manipulation package (simulation_ws) not built yet — this entry
+# lets SkillTriageAgent/QuestionGeneratorAgent target franka questions ahead
+# of the workspace being wired up. Fill in real file paths/nodes/topics once built.
+
+# TODO: add more robot models here as they're wired up in simulation_ws
+# (e.g. a different diff-drive robot). id and
+# domain_tags are the only fields QuestionGeneratorAgent needs to pick one.

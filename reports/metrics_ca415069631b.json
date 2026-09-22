@@ -1,0 +1,92 @@
+{
+  "run": {
+    "run_id": "ca415069631b",
+    "topic": "Computer_Vision",
+    "started_at": "2026-08-03T10:50:59.688298+00:00",
+    "ended_at": "2026-08-03T11:00:36.006982+00:00",
+    "total_elapsed_ms": 0.0
+  },
+  "questions": {
+    "generated": 3,
+    "passed_bar": 1,
+    "pass_rate_pct": 33.3
+  },
+  "tokens": {
+    "total": 61917,
+    "cost_usd": 0.008376
+  },
+  "agents": {
+    "md_summary": {
+      "calls": 1,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0.0,
+      "max_elapsed_ms": 0.0
+    },
+    "context_retrieval": {
+      "calls": 1,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0.0,
+      "max_elapsed_ms": 0.0
+    },
+    "skill_triage": {
+      "calls": 1,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0.0,
+      "max_elapsed_ms": 0.0
+    },
+    "question_generator": {
+      "calls": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0.0,
+      "max_elapsed_ms": 0.0
+    },
+    "difficulty_agent": {
+      "calls": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 2162.2,
+      "min_elapsed_ms": 1580,
+      "max_elapsed_ms": 3560
+    },
+    "originality_agent": {
+      "calls": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 4063.0,
+      "min_elapsed_ms": 2957,
+      "max_elapsed_ms": 5276
+    },
+    "supervisor": {
+      "calls": 6,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0,
+      "max_elapsed_ms": 0.0
+    },
+    "confidence_agent": {
+      "calls": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.8,
+      "min_elapsed_ms": 0,
+      "max_elapsed_ms": 3
+    },
+    "human_review": {
+      "calls": 4,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "avg_elapsed_ms": 0.0,
+      "min_elapsed_ms": 0,
+      "max_elapsed_ms": 0.0
+    }
+  }
+}

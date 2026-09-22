@@ -29,7 +29,7 @@ export function startRun(win: BrowserWindow, params: RunParams): void {
   }
 
   const args = [
-    '-m', 'robo_assess.cli',
+    '-m', 'coding_agent.cli',
     '--config', 'config/config.yaml',
     'generate',
     '--md', params.mdPath,

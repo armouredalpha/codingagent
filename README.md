@@ -10,18 +10,18 @@
 [![CI](https://github.com/armouredalpha/codingagent/actions/workflows/ci.yml/badge.svg)](https://github.com/armouredalpha/codingagent/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
-[![Orchestration: LangGraph](https://img.shields.io/badge/orchestration-LangGraph-8A2BE2.svg)](robo_assess/graph/builder.py)
-[![ROS2: Humble](https://img.shields.io/badge/ROS2-Humble-22314E.svg)](Dockerfile.grading)
+[![Orchestration: LangGraph](https://img.shields.io/badge/orchestration-LangGraph-8A2BE2.svg)](coding_agent/graph/builder.py)
 
 </div>
 
 ---
 
-Hand it a lesson `.md` file. Seventeen specialized agents read it, figure out
-what's being taught, write original coding questions, generate starter code +
-reference solutions, actually **run the reference solution in a sandboxed
-Docker container** to make sure it's not broken, and only ship a batch once a
-Supervisor agent signs off.
+Hand it a lesson `.md` file. Specialized agents read it, figure out what's
+being taught, write original coding questions, generate a starter/reference
+scaffold and the grading harness, and only ship a batch once a Supervisor
+agent signs off. The reference solution and package itself are written by
+the author afterward, by hand — the pipeline hands off the question spec and
+grading harness, not a proven-working implementation.
 
 ---
 
@@ -155,20 +155,6 @@ You can optionally use **Qdrant** (a cloud vector database) for semantic
 
 ---
 
-### Docker / Grading Backend (`grading_backend: docker`)
-The system can actually *run* generated code inside a safe, isolated ROS2
-container (Docker) and check if it behaves correctly.
-
-- **`docker` mode** — spins up a `ros:humble` container, runs the student's
-  node, checks topics/services/TF. Best grading signal.
-- **`ast` mode** — just reads the code statically (no Docker needed). Checks
-  that the right ROS2 API calls are present.
-
-If Docker isn't installed or the image isn't built, it automatically falls back
-to `ast` mode — never crashes.
-
----
-
 ### Grading Points (10 points per task)
 Every question is broken into a `tasks` list — the concrete steps a student
 must complete. Each task gets exactly **one evaluation criterion worth 10
@@ -185,7 +171,7 @@ node don't get squeezed into the same scale.
 
 ### Calibration / EMA
 The confidence scorer learns over time. Every time an instructor manually
-approves or rejects a question (`robo-assess review`), that feedback is saved
+approves or rejects a question (`coding-agent review`), that feedback is saved
 and the scorer recalibrates. "EMA" (Exponential Moving Average) just means
 recent feedback matters more than old feedback.
 
@@ -203,7 +189,7 @@ pip install -r requirements.txt
 pip install --no-build-isolation -e .
 
 # Verify install
-robo-assess --help
+coding-agent --help
 ```
 
 ### 2. Configure API Keys
@@ -215,23 +201,12 @@ cp .env.example .env
 
 ```env
 # Choose one provider:
-ROBO_PROVIDER=openrouter
+CODING_PROVIDER=openrouter
 OPENROUTER_API_KEY=sk-or-...        # get from openrouter.ai
 
 # OR for direct Anthropic:
-# ROBO_PROVIDER=anthropic
+# CODING_PROVIDER=anthropic
 # ANTHROPIC_API_KEY=sk-ant-...
-```
-
-### 3. (Optional) Build the Docker grader
-
-Only needed if you want live ROS2 execution grading. Without this, the system
-uses static code analysis instead.
-
-```bash
-make grader-build
-# or manually:
-docker build -f Dockerfile.grading -t robo-grader .
 ```
 
 ---
@@ -241,7 +216,7 @@ docker build -f Dockerfile.grading -t robo-grader .
 ### Generate questions from a teaching material
 
 ```bash
-robo-assess generate --md configs/Simulation_Assessment.docx.md
+coding-agent generate --md syllabus/Simulation_Assessment.docx.md
 ```
 
 The system will:
@@ -254,32 +229,32 @@ The system will:
 ### Use a specific config file
 
 ```bash
-robo-assess generate --md configs/Navigation_Assessment.docx.md --config config/config.yaml
+coding-agent generate --md syllabus/Navigation_Assessment.docx.md --config config/config.yaml
 ```
 
 ### Run up to 3 loops until Supervisor approves (skip prompt between loops)
 
 ```bash
-robo-assess generate --md configs/SLAM_Assessment.docx.md --max-loops 3 --yes
+coding-agent generate --md syllabus/SLAM_Assessment.docx.md --max-loops 3 --yes
 ```
 
 ### Single loop (generate once, no retries)
 
 ```bash
-robo-assess generate --md configs/Computer_Vision_Assessment.docx.md --max-loops 1
+coding-agent generate --md syllabus/Computer_Vision_Assessment.docx.md --max-loops 1
 ```
 
 ### Resume a failed run
 
 ```bash
-robo-assess runs                          # list recent runs, find run_id
-robo-assess generate --md configs/... --resume <run_id>
+coding-agent runs                          # list recent runs, find run_id
+coding-agent generate --md syllabus/... --resume <run_id>
 ```
 
 ### Enable mid-run human review of borderline questions
 
 ```bash
-robo-assess generate --md configs/... --human-review
+coding-agent generate --md syllabus/... --human-review
 ```
 
 Borderline = confidence between 82–87%. The system pauses and asks you to
@@ -289,7 +264,7 @@ continues.
 ### GUI mode (emit JSON events for the Electron frontend)
 
 ```bash
-robo-assess generate --md configs/... --json-events
+coding-agent generate --md syllabus/... --json-events
 ```
 
 ---
@@ -299,13 +274,13 @@ robo-assess generate --md configs/... --json-events
 ### List all past runs
 
 ```bash
-robo-assess runs
+coding-agent runs
 ```
 
 ### Review generated questions as an instructor
 
 ```bash
-robo-assess review outputs/2026-06-28_10-30-00_simulation/
+coding-agent review outputs/2026-06-28_10-30-00_simulation/
 ```
 
 This walks you through each question interactively (y/n/skip). Your decisions
@@ -316,10 +291,10 @@ scores.
 
 ```bash
 # Student passed Q001 in 8 minutes
-robo-assess record-attempt --qid Q001 --passed --difficulty easy --time-minutes 8
+coding-agent record-attempt --qid Q001 --passed --difficulty easy --time-minutes 8
 
 # Student failed Q003
-robo-assess record-attempt --qid Q003 --no-passed --difficulty hard --notes "forgot to spin"
+coding-agent record-attempt --qid Q003 --no-passed --difficulty hard --notes "forgot to spin"
 ```
 
 ---
@@ -362,7 +337,6 @@ outputs/2026-06-28_10-30-00_ros2_nodes/
 | `max_regeneration_attempts` | `2` | Retries per failing question within one loop |
 | `generation_batch_size` | `2` | How many questions to generate at once |
 | `generation_concurrency` | `4` | Parallel API calls during generation |
-| `grading_backend` | `docker` | `docker` (live ROS2) or `ast` (static) |
 | `human_review_mode` | `log` | `log` / `defer` / `block` for borderline questions |
 
 ---
@@ -405,7 +379,7 @@ Costs vary by token count of your input `.md` file.
 
 ## Troubleshooting
 
-**`robo-assess: command not found`**
+**`coding-agent: command not found`**
 ```bash
 pip install --no-build-isolation -e .
 # or add ~/.local/bin to PATH:
@@ -417,9 +391,6 @@ export PATH="$HOME/.local/bin:$PATH"
 cp .env.example .env
 # edit .env and fill in your key
 ```
-
-**Docker grading falls back to AST**
-This is expected if `make grader-build` hasn't been run. AST mode still works.
 
 **Questions keep getting rejected (Supervisor REJECTED)**
 - Lower `min_confidence` to 80 in `config.yaml` for a first test run
@@ -451,7 +422,6 @@ Your .md file
         │  Difficulty calibration                  │
         │  Originality check (vectorstore)         │
         │  Scope, realism & skill-drift check      │
-        │  Executable grading (Docker/AST)         │
         │  Confidence scoring (0–100)              │
         └─────────────────────────────────────────┘
      │
@@ -464,7 +434,7 @@ Your .md file
 [Supervisor Agent]      ← Final APPROVED / REJECTED verdict
      │
      ▼
-[Export]                ← Writes YAML files, solution, grading.py to outputs/
+[Export]                ← Writes question.yaml, README.md, grading harness to outputs/
 ```
 
 ---
@@ -501,7 +471,7 @@ npm run build
 | **Dashboard** | Analytics across all runs — total questions, approval rate, cost per run, confidence distribution, approval-by-topic charts. Reads `logs/runs.db` + `outputs/usage_history.jsonl`. |
 | **Run** | Kick off a new generation run from the GUI — pick a `.md` file, set difficulty/question count, watch live progress instead of using the CLI. |
 | **Questions** | Browse, filter (by run/status/difficulty), and export every question ever generated across all runs in `outputs/` — as JSON, XLSX, or DOCX. |
-| **Review** | Instructor-facing pass: step through generated questions one at a time and approve/reject them manually. Decisions feed back into the confidence calibration the same way `robo-assess review` does from the CLI. |
+| **Review** | Instructor-facing pass: step through generated questions one at a time and approve/reject them manually. Decisions feed back into the confidence calibration the same way `coding-agent review` does from the CLI. |
 | **Qdrant** | Inspect/manage the vector store used for originality checks — see what's indexed, when Qdrant Cloud is configured as the semantic backend instead of local TF-IDF. |
 | **Config** | Edit `config/config.yaml` values (model, temperature, thresholds, per-agent model overrides) through a form instead of hand-editing YAML. |
 

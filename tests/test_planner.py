@@ -16,8 +16,8 @@ from __future__ import annotations
 
 import pytest
 
-from robo_assess.agents.planner import PlannerAgent, RunState
-from robo_assess.schemas import (
+from coding_agent.agents.planner import PlannerAgent, RunState
+from coding_agent.schemas import (
     BloomLevel,
     CoverageMatrix,
     Difficulty,
@@ -33,7 +33,7 @@ from robo_assess.schemas import (
 # ---------------------------------------------------------------------------
 
 def _settings():
-    from robo_assess.config import Settings
+    from coding_agent.config import Settings
     s = Settings()
     s.api_key = "fake"
     return s
@@ -177,11 +177,10 @@ def test_unvalidated_questions_routes_to_validate():
 # ---------------------------------------------------------------------------
 
 def test_evaluate_quality_passes_high_confidence(tmp_path):
-    from robo_assess.config import Settings
+    from coding_agent.config import Settings
     s = Settings()
     s.api_key = "fake"
     s.quality_bar.min_confidence = 85.0
-    s.quality_bar.require_discriminating = False
     s.quality_bar.require_judge_approve = False
     s.quality_bar.require_in_scope = False
 
@@ -196,11 +195,10 @@ def test_evaluate_quality_passes_high_confidence(tmp_path):
 
 
 def test_evaluate_quality_fails_low_confidence(tmp_path):
-    from robo_assess.config import Settings
+    from coding_agent.config import Settings
     s = Settings()
     s.api_key = "fake"
     s.quality_bar.min_confidence = 85.0
-    s.quality_bar.require_discriminating = False
     s.quality_bar.require_judge_approve = False
     s.quality_bar.require_in_scope = False
 
@@ -214,11 +212,10 @@ def test_evaluate_quality_fails_low_confidence(tmp_path):
 
 
 def test_evaluate_quality_fails_near_duplicate():
-    from robo_assess.config import Settings
+    from coding_agent.config import Settings
     s = Settings()
     s.api_key = "fake"
     s.quality_bar.min_confidence = 85.0
-    s.quality_bar.require_discriminating = False
     s.quality_bar.require_judge_approve = False
     s.quality_bar.require_in_scope = False
     s.quality_bar.max_similarity = 0.75
@@ -235,11 +232,10 @@ def test_evaluate_quality_fails_near_duplicate():
 
 
 def test_evaluate_quality_fails_scope_violation():
-    from robo_assess.config import Settings
+    from coding_agent.config import Settings
     s = Settings()
     s.api_key = "fake"
     s.quality_bar.min_confidence = 85.0
-    s.quality_bar.require_discriminating = False
     s.quality_bar.require_judge_approve = False
     s.quality_bar.require_in_scope = True
 

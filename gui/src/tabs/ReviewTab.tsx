@@ -12,7 +12,7 @@ const REJECTION_REASONS = [
   { value: 'too_vague', label: 'Too Vague' },
   { value: 'wrong_domain', label: 'Wrong Domain' },
   { value: 'duplicate', label: 'Duplicate / Similar' },
-  { value: 'bad_boilerplate', label: 'Bad Boilerplate' },
+  { value: 'bad_spec', label: 'Bad Spec / README' },
   { value: 'wrong_difficulty', label: 'Wrong Difficulty' },
   { value: 'off_topic', label: 'Off Topic' },
   { value: 'poor_quality', label: 'Poor Quality' },
@@ -32,7 +32,7 @@ function toYaml(q: EvalQuestion): string {
     tasks: q.tasks,
     notes: q.notes,
   }
-  if (q.boilerplate_code) fields.boilerplate_code = q.boilerplate_code
+  if (q.sim_package_id) fields.sim_package_id = q.sim_package_id
   const lines: string[] = []
   for (const [k, v] of Object.entries(fields)) {
     if (v == null) continue
@@ -146,14 +146,24 @@ function QuestionCard({ q, onDecision, onUpdateNotes, onUpdateReason, reason }: 
             </ul>
           </div>
         )}
-        {q.boilerplate_code && (
+        {q.readme && (
           <div>
             <div className="flex items-center justify-between mb-1">
-              <p className="text-xs font-medium text-muted">Boilerplate Code</p>
-              <button onClick={() => navigator.clipboard.writeText(q.boilerplate_code!)}
+              <p className="text-xs font-medium text-muted">README.md</p>
+              <button onClick={() => navigator.clipboard.writeText(q.readme!)}
                 className="text-xs text-primary hover:underline">Copy</button>
             </div>
-            <pre className="overflow-auto rounded-lg bg-bg p-3 text-xs font-mono border border-border whitespace-pre-wrap">{q.boilerplate_code}</pre>
+            <pre className="overflow-auto rounded-lg bg-bg p-3 text-xs font-mono border border-border whitespace-pre-wrap">{q.readme}</pre>
+          </div>
+        )}
+        {q.ros_ws_files && q.ros_ws_files.length > 0 && (
+          <div>
+            <p className="text-xs font-medium text-muted mb-1">Grading harness (ros_ws/)</p>
+            <div className="flex flex-wrap gap-2">
+              {q.ros_ws_files.map((f) => (
+                <span key={f.name} className="rounded bg-border px-2 py-0.5 font-mono text-xs">{f.name}</span>
+              ))}
+            </div>
           </div>
         )}
       </div>

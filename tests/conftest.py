@@ -1,4 +1,4 @@
-"""Shared pytest fixtures and helpers for the robo_assess test-suite."""
+"""Shared pytest fixtures and helpers for the coding_agent test-suite."""
 from __future__ import annotations
 
 import json
@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from robo_assess.config import Settings
+from coding_agent.config import Settings
 
 
 # ---------------------------------------------------------------------------

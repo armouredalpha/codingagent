@@ -2,7 +2,7 @@
 Integration tests — Memory (SQLite).
 
 Covers: few_shots save/retrieve, prompt_hash versioning, fallback behaviour,
-student attempt recording, pass-rate tallies, recalibrate_from_memory.
+student attempt recording, pass-rate tallies.
 """
 from __future__ import annotations
 
@@ -10,8 +10,7 @@ import json
 
 import pytest
 
-from robo_assess.memory import Memory
-from robo_assess.learned_confidence_improved import ImprovedConfidenceScorer
+from coding_agent.memory import Memory
 
 
 # ---------------------------------------------------------------------------
@@ -144,44 +143,3 @@ def test_get_pass_rates_empty_returns_empty_dict(mem):
     rates = mem.get_difficulty_pass_rates()
     assert rates == {}
 
-
-# ---------------------------------------------------------------------------
-# recalibrate_from_memory
-# ---------------------------------------------------------------------------
-
-def test_recalibrate_updates_multipliers_with_sufficient_data(mem):
-    # Seed 6 easy attempts: 5 passed → pass_rate = 5/6 ≈ 0.833
-    for i in range(5):
-        mem.record_attempt(f"Q{i:03d}", "easy", passed=True)
-    mem.record_attempt("Q999", "easy", passed=False)
-
-    scorer = ImprovedConfidenceScorer()
-    old_mult = scorer.difficulty_multipliers["easy"]
-    summary = scorer.recalibrate_from_memory(mem, min_attempts=5)
-
-    assert "easy" in summary
-    assert summary["easy"]["attempts"] == 6
-    assert summary["easy"]["pass_rate"] == pytest.approx(5 / 6, abs=0.01)
-    # multiplier should have changed
-    assert scorer.difficulty_multipliers["easy"] != old_mult
-
-
-def test_recalibrate_skips_insufficient_data(mem):
-    mem.record_attempt("Q001", "hard", passed=True)  # only 1 attempt
-
-    scorer = ImprovedConfidenceScorer()
-    summary = scorer.recalibrate_from_memory(mem, min_attempts=5)
-
-    assert summary["hard"].get("skipped") is True
-    # multiplier unchanged
-    assert scorer.difficulty_multipliers["hard"] == pytest.approx(0.85)
-
-
-def test_recalibrate_clamps_to_sane_range(mem):
-    # All hard questions passed → very high pass rate → multiplier should clamp at 2.0
-    for i in range(10):
-        mem.record_attempt(f"Q{i:03d}", "hard", passed=True)
-
-    scorer = ImprovedConfidenceScorer()
-    scorer.recalibrate_from_memory(mem, min_attempts=5)
-    assert scorer.difficulty_multipliers["hard"] <= 2.0

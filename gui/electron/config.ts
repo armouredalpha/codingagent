@@ -35,7 +35,7 @@ export function dumpConfig(defaults = false): Promise<unknown> {
     const proc = spawn(py, ['-c', `
 import json, sys
 sys.path.insert(0, '.')
-from robo_assess.config import Settings
+from coding_agent.config import Settings
 s = Settings()
 print(json.dumps(s.model_dump()))
 `], { cwd: REPO_ROOT, env: { ...process.env, PYTHONIOENCODING: 'utf-8' } })

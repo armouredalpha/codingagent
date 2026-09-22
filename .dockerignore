@@ -1,9 +1,36 @@
-__pycache__/
-*.pyc
-.venv/
+# --- VCS / caches -----------------------------------------------------
 .git/
+.github/
+__pycache__/
+**/__pycache__/
+*.pyc
 .pytest_cache/
-outputs/*/
-reports/*/
+.venv/
 *.egg-info/
+build/
+dist/
+
+# --- Electron/React GUI — not part of the CLI/generator image ---------
+# gui/node_modules alone is 500MB+; shipping it into the build context
+# on every `docker build .` is pure waste and slows every rebuild.
+gui/node_modules/
+gui/dist/
+gui/dist-electron/
+gui/.vite/
+
+# --- Runtime data / secrets — must never be baked into an image -------
+# (mount these as volumes instead; see README "Docker" section)
 .env
+.env.*
+!.env.example
+outputs/
+logs/
+memory/
+vectorstore/
+reports/
+calibration/*.db
+:memory:
+
+# --- Editor / OS cruft --------------------------------------------------
+.DS_Store
+*.swp

@@ -1,9 +1,9 @@
 # ---------------------------------------------------------------------------
-# robo_assess — developer convenience targets
+# coding_agent — developer convenience targets
 # ---------------------------------------------------------------------------
 PY ?= python
 
-.PHONY: help install dev datasets examples generate test eval calibrate docker-build docker-run grader-build clean
+.PHONY: help install dev datasets examples generate test eval calibrate docker-build docker-run clean
 
 help:
 	@echo "Targets:"
@@ -17,7 +17,6 @@ help:
 	@echo "  calibrate    Refit the confidence calibrator from grading outcomes"
 	@echo "  docker-build Build the generator Docker image"
 	@echo "  docker-run   Generate inside the container"
-	@echo "  grader-build Build the ROS2 grading sandbox image (robo-grader)"
 	@echo "  clean        Remove caches and generated runtime artefacts"
 
 install:
@@ -33,26 +32,28 @@ examples:
 	PYTHONPATH=. $(PY) tools/build_examples.py
 
 generate:
-	$(PY) -m robo_assess.cli generate --request configs/ros2_fundamentals.yaml
+	$(PY) -m coding_agent.cli generate --md "syllabus/Linux_ROS2_Fundamentals.md"
 
 test:
 	PYTHONPATH=. $(PY) -m pytest
 
 eval:
-	PYTHONPATH=. $(PY) -m robo_assess.cli eval
+	PYTHONPATH=. $(PY) -m coding_agent.cli eval
 
 calibrate:
-	PYTHONPATH=. $(PY) -m robo_assess.cli calibrate --write
+	PYTHONPATH=. $(PY) -m coding_agent.cli calibrate --write
 
 docker-build:
-	docker build -t robo-assess:latest .
+	docker build -t coding-agent:latest .
 
 docker-run:
-	docker run --rm -v $$(pwd)/outputs:/app/outputs robo-assess:latest \
-		generate --request configs/ros2_fundamentals.yaml
-
-grader-build:
-	docker build -f Dockerfile.grading -t robo-grader .
+	docker run --rm \
+		-e OPENROUTER_API_KEY -e ANTHROPIC_API_KEY -e CODING_PROVIDER \
+		-v $$(pwd)/outputs:/app/outputs \
+		-v $$(pwd)/memory:/app/memory \
+		-v $$(pwd)/vectorstore:/app/vectorstore \
+		coding-agent:latest \
+		generate --md "syllabus/Linux_ROS2_Fundamentals.md"
 
 clean:
 	rm -rf .pytest_cache **/__pycache__ *.egg-info build dist

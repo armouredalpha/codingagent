@@ -22,7 +22,7 @@ export function readUsageHistory(): { run_id: string; [key: string]: unknown }[]
 }
 
 // Leaf-content directory names: never contain nested run folders, so recursion stops here.
-const LEAF_DIRS = new Set(['questions', 'rejected', 'reports', 'boilerplate', 'evaluation', 'solution'])
+const LEAF_DIRS = new Set(['questions', 'rejected', 'reports', 'ros_ws'])
 
 function isRunDir(full: string, entries: fs.Dirent[]): boolean {
   if (fs.existsSync(path.join(full, 'run_metadata.json'))) return true
@@ -110,17 +110,26 @@ export function loadQuestions(dir: string, status: 'approved' | 'rejected' | 'al
       const qPath = path.join(full, qd)
       const stat = fs.statSync(qPath)
       let q: Record<string, unknown> | null = null
-      let boilerplate_code: string | undefined
+      let readme: string | undefined
+      let ros_ws_files: { name: string; content: string }[] | undefined
 
       if (stat.isDirectory()) {
         q = readQuestionFolder(qPath)
         if (!q) return
-        const bpDir = path.join(qPath, 'boilerplate')
-        if (fs.existsSync(bpDir)) {
-          const bpFiles = fs.readdirSync(bpDir)
-          if (bpFiles.length) {
-            try { boilerplate_code = fs.readFileSync(path.join(bpDir, bpFiles[0]), 'utf-8') } catch { /* ignore */ }
-          }
+        const readmePath = path.join(qPath, 'README.md')
+        if (fs.existsSync(readmePath)) {
+          try { readme = fs.readFileSync(readmePath, 'utf-8') } catch { /* ignore */ }
+        }
+        // Grading harness: pytest.ini, conftest.py, evaluate.py, requirements.txt,
+        // test_<qid>.py — written flat into ros_ws/ by sandbox/harness.py.
+        const wsDir = path.join(qPath, 'ros_ws')
+        if (fs.existsSync(wsDir)) {
+          ros_ws_files = fs.readdirSync(wsDir)
+            .filter((f) => fs.statSync(path.join(wsDir, f)).isFile())
+            .map((f) => {
+              try { return { name: f, content: fs.readFileSync(path.join(wsDir, f), 'utf-8') } }
+              catch { return { name: f, content: '' } }
+            })
         }
       } else if (qd.endsWith('.json')) {
         // Flat-file question format (no per-question subfolder).
@@ -135,7 +144,8 @@ export function loadQuestions(dir: string, status: 'approved' | 'rejected' | 'al
         run_id: runId,
         run_dir: dir,
         status: qStatus,
-        boilerplate_code,
+        readme,
+        ros_ws_files,
       })
     })
   }

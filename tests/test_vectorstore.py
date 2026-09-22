@@ -11,7 +11,7 @@ import math
 
 import pytest
 
-from robo_assess.vectorstore import VectorStore, text_similarity
+from coding_agent.vectorstore import VectorStore, text_similarity
 
 
 # ---------------------------------------------------------------------------

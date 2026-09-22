@@ -123,7 +123,7 @@ def collect_questions(outputs_dir: Path) -> list[dict]:
         questions.append(payload)
 
     # ------------------------------------------------------------------
-    # 1. APPROVED — question.json (per-question dirs) and flat Q*.json
+    # 1a. APPROVED — question.json (legacy per-question dirs, if any exist)
     # ------------------------------------------------------------------
     _EXCLUDE_NAMES = {"solution.json", "grading.json", "questions.json"}
 
@@ -139,6 +139,25 @@ def collect_questions(outputs_dir: Path) -> list[dict]:
             raw = json.loads(qfile.read_text())
         except Exception as e:
             print(f"  SKIP (parse error) {qfile}: {e}", file=sys.stderr)
+            continue
+        fallback_topic = _infer_topic(qfile)
+        payload = normalise(raw, fallback_topic)
+        if payload is None:
+            continue
+        payload["status"] = "approved"
+        payload["generated_at"] = _infer_timestamp(qfile)
+        _add(payload)
+
+    # ------------------------------------------------------------------
+    # 1b. APPROVED — question.yaml inside questions/ (current export format)
+    # ------------------------------------------------------------------
+    for qfile in sorted(outputs_dir.rglob("questions/*/question.yaml")):
+        try:
+            raw = yaml.safe_load(qfile.read_text())
+        except Exception as e:
+            print(f"  SKIP (parse error) {qfile}: {e}", file=sys.stderr)
+            continue
+        if not isinstance(raw, dict):
             continue
         fallback_topic = _infer_topic(qfile)
         payload = normalise(raw, fallback_topic)

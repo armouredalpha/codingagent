@@ -9,7 +9,7 @@ export const OUTPUTS_DIR = path.join(REPO_ROOT, 'outputs')
 export const CALIBRATION_DIR = path.join(REPO_ROOT, 'calibration')
 
 export function resolvePython(): string {
-  const override = process.env.ROBO_PYTHON ?? process.env.MCQ_PYTHON
+  const override = process.env.CODING_PYTHON ?? process.env.MCQ_PYTHON
   if (override && fs.existsSync(override)) return override
   const candidates =
     process.platform === 'win32'

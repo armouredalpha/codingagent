@@ -5,10 +5,13 @@ DIFFICULTY: {difficulty}
 TOTAL QUESTIONS: {total_questions}
 SYLLABUS SKILLS (all available):
 {all_skills_list}
-ALREADY GENERATED (do not re-pick these):
+ALREADY GENERATED (do not re-pick these — this batch only):
 {already_generated}
 PAST EXEMPLARS (nearest from question bank):
 {exemplars}
+CROSS-RUN SKILL USAGE HISTORY (prior runs on this exact topic — skills already
+tested and the difficulty/domain/archetype combos already tried for each):
+{skill_usage_history}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ARCHETYPE GUIDE
@@ -40,6 +43,11 @@ SELECTION RULES:
 3. UNIQUENESS — Each slot tests a DIFFERENT mathematical concept or ROS2 pattern.
 4. DIFFICULTY — Match requested difficulty. Use difficulty_hint from skills list as a guide.
 5. ARCHETYPE FIT — Assign the archetype that makes the skill testable (math skill → TYPE_A or TYPE_C).
+6. CROSS-RUN DIVERSITY — Consult CROSS-RUN SKILL USAGE HISTORY above. Prefer skills with a LOW or
+   zero prior-use count over skills that already have several combos tried. If the syllabus is small
+   and a heavily-used skill must be picked anyway (no fresh skill available), assign it a
+   difficulty/archetype combo that is NOT already listed in its "combos tried" — never repeat an
+   identical (skill, difficulty, archetype) combination that already exists in the history.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 OUTPUT — ONLY JSON, NO PROSE, NO MARKDOWN

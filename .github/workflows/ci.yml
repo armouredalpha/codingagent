@@ -26,11 +26,11 @@ jobs:
 
       - name: Import check
         run: |
-          python -c "import robo_assess"
-          python -c "from robo_assess.agents.orchestrator import Orchestrator"
-          python -c "from robo_assess.learned_confidence_improved import ImprovedConfidenceScorer"
-          python -c "from robo_assess.tools.registry import ToolRegistry"
-          python -c "from robo_assess.cli import main"
+          python -c "import coding_agent"
+          python -c "from coding_agent.agents.orchestrator import Orchestrator"
+          python -c "from coding_agent.agents.confidence_agent import ConfidenceScoringAgent"
+          python -c "from coding_agent.tools.registry import ToolRegistry"
+          python -c "from coding_agent.cli import main"
 
       - name: Run tests
         env:
@@ -41,21 +41,11 @@ jobs:
         run: pytest -q tests/
 
   docker-build:
-    name: Build Docker images
+    name: Build Docker image
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Build generator image
-        run: docker build -t robo-assess:ci .
-
-      - name: Build grader image
-        run: docker build -f Dockerfile.grading -t robo-grader:ci .
-
-      - name: Smoke-test grader image
-        run: |
-          docker run --rm robo-grader:ci python3 -c "
-          import rclpy, sensor_msgs, geometry_msgs, nav_msgs
-          print('rclpy and message packages importable')
-          "
+        run: docker build -t coding-agent:ci .

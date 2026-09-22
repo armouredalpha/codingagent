@@ -1,7 +1,7 @@
 """
 Integration tests — thread-safe patch dict pattern.
 
-Verifies that validator agents (difficulty, scope_quality, originality)
+Verifies that validator agents (difficulty, originality)
 return patches rather than mutating Question objects in-place, and that the
 orchestrator's atomic merge correctly applies all patches.
 
@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import pytest
 
-from robo_assess.schemas import (
+from coding_agent.schemas import (
     BloomLevel, Difficulty, Question, SyllabusAnalysis, CoverageMatrix,
 )
 
@@ -46,7 +46,7 @@ def _analysis(skills=None) -> SyllabusAnalysis:
 # ---------------------------------------------------------------------------
 
 def test_scope_agent_returns_patches_not_mutation(tmp_settings):
-    from robo_assess.agents.scope_agent import ScopeComplianceAgent
+    from coding_agent.agents.scope_agent import ScopeComplianceAgent
     q = _q("Q001", scenario="This question uses Nav2 for path planning.")
     agent = ScopeComplianceAgent(settings=tmp_settings, llm=None)
     result = agent.run([q], _analysis())
@@ -65,7 +65,7 @@ def test_scope_agent_returns_patches_not_mutation(tmp_settings):
 
 
 def test_scope_agent_clean_question_has_empty_violations(tmp_settings):
-    from robo_assess.agents.scope_agent import ScopeComplianceAgent
+    from coding_agent.agents.scope_agent import ScopeComplianceAgent
     q = _q("Q001", scenario="Publish geometry_msgs Twist to /cmd_vel at 10 Hz.")
     agent = ScopeComplianceAgent(settings=tmp_settings, llm=None)
     result = agent.run([q], _analysis())
@@ -78,7 +78,7 @@ def test_scope_agent_clean_question_has_empty_violations(tmp_settings):
 # ---------------------------------------------------------------------------
 
 def test_originality_agent_returns_patches(tmp_settings):
-    from robo_assess.agents.originality_agent import OriginalityAgent
+    from coding_agent.agents.originality_agent import OriginalityAgent
     q = _q("Q001")
     agent = OriginalityAgent(settings=tmp_settings)
     result = agent.run([q])
@@ -90,26 +90,6 @@ def test_originality_agent_returns_patches(tmp_settings):
     # Original object must NOT be mutated
     assert q.similarity_score == 0.0
 
-
-# ---------------------------------------------------------------------------
-# Scope-quality agent — patches dict, skill-drift merged in (no LLM)
-# ---------------------------------------------------------------------------
-
-def test_scope_quality_agent_returns_patches(tmp_settings):
-    from robo_assess.agents.scope_quality_agent import ScopeQualityAgent
-    q = _q("Q001")
-    agent = ScopeQualityAgent(settings=tmp_settings, llm=None)
-    result = agent.run([q], _analysis(), assigned_skills={"Q001": "ROS2 publisher"})
-
-    assert "patches" in result.payload
-    patches = result.payload["patches"]
-    assert "Q001" in patches
-    assert "realism_score" in patches["Q001"]
-    # No LLM configured -> skill-drift check is skipped, defaults to "no drift"
-    assert patches["Q001"]["skill_drift"] is False
-    assert patches["Q001"]["scope_violations"] == []
-    # Original object must NOT be mutated
-    assert q.skill_drift is False
 
 
 # ---------------------------------------------------------------------------

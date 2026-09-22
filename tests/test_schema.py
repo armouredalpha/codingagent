@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from robo_assess.schemas import (
+from coding_agent.schemas import (
     AssessmentRequest,
     BloomLevel,
     CoverageMatrix,
@@ -52,14 +52,14 @@ def test_question_approved_property_false_without_confidence():
 
 
 def test_question_approved_property_true_with_status():
-    from robo_assess.schemas import ConfidenceBreakdown
+    from coding_agent.schemas import ConfidenceBreakdown
     q = _minimal_question()
     q.confidence = ConfidenceBreakdown(confidence=91.0, status="APPROVED")
     assert q.approved is True
 
 
 def test_question_approved_property_false_when_pending():
-    from robo_assess.schemas import ConfidenceBreakdown
+    from coding_agent.schemas import ConfidenceBreakdown
     q = _minimal_question()
     q.confidence = ConfidenceBreakdown(confidence=75.0, status="PENDING")
     assert q.approved is False

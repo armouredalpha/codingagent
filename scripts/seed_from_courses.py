@@ -27,9 +27,9 @@ from pathlib import Path
 # Allow running from project root without installing the package
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from robo_assess.memory import Memory
-from robo_assess.tools.course_index import COURSE_EXERCISES
-from robo_assess.tools.external_search import WebSearchClient
+from coding_agent.memory import Memory
+from coding_agent.tools.course_index import COURSE_EXERCISES
+from coding_agent.tools.external_search import WebSearchClient
 
 # ---------------------------------------------------------------------------
 # GitHub example files to fetch and seed as reference code
